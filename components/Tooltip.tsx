@@ -34,10 +34,7 @@ export function Tooltip({ label, children }: TooltipProps) {
     const role = useRole(context, { role: "tooltip" });
     const { getReferenceProps, getFloatingProps } = useInteractions([hover, dismiss, role]);
 
-    const referenceEl = cloneElement(children, getReferenceProps({
-        ref: refs.setReference,
-        ...children.props,
-    } as any));
+    const referenceEl = cloneElement(children, getReferenceProps({ ref: refs.setReference } as any));
 
     return (
         <>
