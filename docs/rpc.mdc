@@ -1,0 +1,23 @@
+---
+alwaysApply: true
+title: RPC via Proto
+---
+
+# RPC via Protocol Buffers
+
+## Source of truth
+- Define APIs in `proto/**.proto` only; no REST endpoints.
+- Example: `proto/echo/v1/echo.proto` with `EchoService`.
+
+## Generation
+- Requires `protoc` and dev dependency `ts-proto`.
+- Generate TS to `src/proto/`:
+
+```bash
+pnpm proto:gen
+```
+
+## Tips
+- Version your packages and services (`echo.v1`).
+- Keep messages backwards compatible when possible.
+

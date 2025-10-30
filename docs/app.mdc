@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+title: App Directory
+---
+
+# `app/` Directory
+
+## Structure
+- `app/layout.tsx`: Root layout, metadata, viewport; applies global styles.
+- `app/page.tsx`: Home page; demonstrates responsive layout and realtime status.
+- `app/globals.css`: Tailwind entry and small mobile-first tweaks.
+
+## Server vs Client components
+- Default to Server Components in `app/` for data/render efficiency.
+- Mark interactive pieces as Client Components using `'use client'`.
+- Prefer lifting side-effects into client components only where necessary.
+
+## Styling
+- Tailwind utilities; use `container`, `grid`, `flex` responsive breakpoints.
+- Keep layout logic in app-level components; keep reusable UI in `components/`.
+

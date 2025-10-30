@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+title: Testing
+---
+
+# Testing
+
+## Framework
+- Use Vitest for unit tests and component tests.
+- Mock global features for coverage and isolation.
+
+## Setup (planned)
+- Add `vitest`, `@testing-library/react`, and `jsdom`.
+- Configure `vitest.config.ts` and basic `test` script in `package.json`.
+
+## Guidelines
+- Test public surface of components (props → UI behavior).
+- Mock network/realtime boundaries; don’t hit real routers in unit tests.
+- Keep tests fast; avoid global state bleed.
+

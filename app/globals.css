@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Removed TailwindCSS directives */
 
 /* Mobile-first base tweaks */
 html, body {

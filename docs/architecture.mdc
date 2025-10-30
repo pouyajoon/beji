@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+title: Architecture Overview
+---
+
+# Architecture
+
+## Runtime stack
+- Next.js (App Router) + React 18
+- TypeScript (strict)
+- Tailwind CSS for responsive UI
+- RPC defined in Protocol Buffers; generated TS via ts-proto
+
+## High-level flow
+1. UI (server + client components) renders via Next.js App Router in `app/`.
+2. Data contract defined in `proto/**.proto`; TS types generated to `src/proto/`.
+
+## Folders
+- `app/`: routes, layouts, pages (App Router)
+- `components/`: reusable UI blocks (client components by default)
+- `src/lib/`: libraries and service clients
+- `proto/`: source `.proto` files (single source of truth for APIs)
+- `src/proto/`: generated TypeScript from `.proto`
+- `scripts/`: maintenance and generation scripts
+
+## Conventions
+- Mobile-first, responsive by default
+- No REST endpoints; APIs live in proto definitions
+- Import order grouped and alphabetized
+- Avoid `any`; prefer precise types
+

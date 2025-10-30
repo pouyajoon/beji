@@ -1,13 +1,13 @@
-add git repo https://github.com/pouyajoon/beji.git
-
-the app needs real time features.
+---
+alwaysApply: true
+---
 
 rest api are exclusively in RPC proto files
-
-
-
+use websocket protocol for real time features.
 
 as a developer create testing of the project using vitest.
 global features needs to haved mocked tests to ensure coverage.
+
+never keep DEPRECATED code in the project.
 
 

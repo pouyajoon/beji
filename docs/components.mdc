@@ -1,0 +1,17 @@
+---
+alwaysApply: true
+title: Components Guidelines
+---
+
+# Components
+
+## Location
+- `components/` for reusable UI blocks.
+- Client by default; if a component has no interactivity, consider server composition in `app/`.
+
+## Patterns
+- Props-first design: explicit, typed props; avoid implicit globals.
+- Composition over inheritance; keep components small and focused.
+- Accessibility: semantic HTML, labels, focus states.
+- Responsiveness: use Tailwind breakpoints; avoid fixed pixel sizes when possible.
+

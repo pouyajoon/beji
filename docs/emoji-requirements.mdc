@@ -1,0 +1,100 @@
+### Emoji Game/App Requirements
+
+#### 1) Goal
+- Build an app/game that lets users:
+  - Select an emoji by its standard Unicode code/sequence, or browse using a basic font-rendered grid.
+  - After selecting an emoji, change the skin tone and switch the artwork source across three emoji libraries.
+
+#### 2) Scope
+- 2D and 3D artwork supported.
+- Commercial use allowed via open-source licensed assets and datasets.
+- Desktop and mobile web are in-scope; native apps out-of-scope initially.
+
+#### 3) Terminology
+- Emoji sequence: ordered Unicode code points (e.g., 1F469-1F3FD-200D-1F4BB).
+- ZWJ: Zero Width Joiner (200D) that combines sequences.
+- VS16: Variation Selector-16 (FE0F) to force emoji presentation.
+
+#### 4) Licensing Requirements
+- Only use assets/data with commercial-friendly licenses:
+  - Artwork options:
+    - Microsoft Fluent Emoji (3D and flat variants) — MIT
+    - Noto Emoji (2D) — Apache-2.0
+    - Twemoji (2D) — CC BY 4.0 (requires visible attribution)
+  - Data options:
+    - Emojibase — MIT (primary emoji DB)
+    - Unicode CLDR/emoji-test data — Unicode License (supplemental names/annotations)
+- App must include licenses in distribution and attribution text when required (Twemoji).
+- Avoid CC BY-SA for artwork (e.g., OpenMoji) to prevent ShareAlike obligations on modified assets.
+
+#### 5) Data Sources and Versions
+- Emoji DB: Emojibase as the canonical source for sequences, names, keywords, categories, skin-tone and gender variants.
+- Unicode version alignment: Lock a Unicode version (e.g., 15.1). Ensure DB and artwork set are from compatible versions.
+
+#### 6) Functional Requirements
+- Selection
+  - Users can select by:
+    - Entering a Unicode code point/sequence (hex), e.g., "1F600" or "1F469-1F3FD-200D-1F4BB".
+    - Browsing a grid rendered via a basic emoji font (system emoji font/Noto Emoji color font) as a discovery view.
+  - Search by short name and keywords using Emojibase metadata.
+- Skin Tone and Variant Handling
+  - When an emoji supports skin tones, provide selectable tones (1F3FB–1F3FF) and apply to the base sequence.
+  - Preserve and apply ZWJ and gender variants (e.g., professions, families) as defined by the DB.
+  - Normalize variation selectors: include VS16 only if required by the target artwork/filename scheme.
+- Artwork Switching (three libraries)
+  - Allow switching the rendered artwork for the selected emoji between three sets:
+    - Fluent Emoji (3D)
+    - Noto Emoji (2D)
+    - Twemoji (2D)
+  - If a target set lacks a complex ZWJ sequence, gracefully fall back to the closest supported base emoji in that set.
+- Rendering
+  - 2D sets: prefer SVG when available; PNG fallback for performance-sensitive views.
+  - 3D Fluent: use provided PNG renders by default; optional future custom renders.
+- Fallback Behavior
+  - If no asset available for a sequence in the active set, display a missing glyph indicator and provide a link to switch sets.
+
+#### 7) Non-Functional Requirements
+- Performance
+  - Lazy-load artwork per category/page.
+  - Precompute availability maps to avoid runtime 404s.
+- Accessibility
+  - Provide accessible names from Emojibase/CLDR.
+  - Keyboard navigation for grid and tone selectors.
+- Internationalization
+  - Use CLDR annotations for localized search (future).
+
+#### 8) Asset Resolution Contract
+- Input: emoji sequence (array of code points or hyphenated hex string), target artwork set ID.
+- Process:
+  - Normalize: lowercase hex, hyphen-join, include/exclude VS16 per set rules.
+  - Filename/Path mapping per set:
+    - Twemoji: "1f600.svg" or "1f469-1f3fd-200d-1f4bb.svg"
+    - Noto: similar hyphenated filenames in SVG/PNG
+    - Fluent: per-emoji directories/files; expose a mapping index at build time
+- Output: stable asset URL or null if not available.
+
+#### 9) UI Flows (MVP)
+- Home: toggle between "Font Grid" and "Code Input" tabs.
+  - Font Grid: category filters; click an emoji to open details.
+  - Code Input: paste/enter hex sequence; validate and show preview.
+- Emoji Details Panel:
+  - Shows current artwork (set selector: Fluent/Noto/Twemoji)
+  - Skin tone selector (only when supported)
+  - Copy buttons: sequence (hex), shortcode, and PNG/SVG asset link
+
+#### 10) Testing and Validation
+- Build-time script:
+  - Iterate Emojibase full dataset; for each sequence, verify asset existence in each enabled artwork set; produce availability map JSON and coverage stats.
+- Runtime tests:
+  - Unit tests for sequence normalization and filename mapping.
+  - Snapshot tests for availability fallbacks.
+
+#### 11) Compliance
+- Include MIT/Apache-2.0 license files as-is in distribution.
+- Include Twemoji attribution in Credits/About screen when Twemoji is enabled.
+
+#### 12) Open Questions
+- Do we ship all assets or fetch on-demand from a CDN?
+- Which Unicode version to lock for v1?
+- Do we include monochrome/HC variants (Fluent, Noto) in MVP?
+

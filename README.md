@@ -43,3 +43,14 @@ pnpm dev
 ```bash
 chmod +x .husky/*
 ```
+
+## RPC via Proto files
+
+- Define APIs only in `proto/**.proto`. Example: `proto/echo/v1/echo.proto`.
+- Generate TypeScript types/services (requires `protoc` installed):
+
+```bash
+pnpm proto:gen
+```
+
+Generated files go to `src/proto/`.
