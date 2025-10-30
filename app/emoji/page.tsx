@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useAtom, useSetAtom } from "jotai";
+import { Map } from "../../components/Map";
+import { currentPlayerIdAtom, bejiAtom, playersAtom, type Player, type Beji } from "../../components/atoms";
+import { generateRandomEmojiSet } from "./random";
 
 type ArtworkSet = "twemoji" | "noto" | "fluent3d";
 
@@ -86,35 +90,19 @@ function codepointsToEmoji(cps: number[]): string {
     return String.fromCodePoint(...cps);
 }
 
-const BASIC_GRID: number[][] = [
-    [0x1f600], // 😀
-    [0x1f603], // 😃
-    [0x1f604], // 😄
-    [0x1f601], // 😁
-    [0x1f602], // 😂
-    [0x1f605], // 😅
-    [0x1f606], // 😆
-    [0x1f923], // 🤣
-    [0x1f642], // 🙂
-    [0x1f60a], // 😊
-    [0x1f60d], // 😍
-    [0x1f609], // 😉
-    [0x1f44d], // 👍
-    [0x1f44e], // 👎
-    [0x1f44f], // 👏
-    [0x270a, VS16], // ✊
-    [0x270b, VS16], // ✋
-    [0x1f64f], // 🙏
-    [0x1f468, ZWJ, 0x1f4bb], // 👨‍💻
-    [0x1f469, ZWJ, 0x1f4bb], // 👩‍💻
-];
 
 export default function EmojiPage() {
     const [activeTab, setActiveTab] = useState<"grid" | "code">("grid");
+    const randomGrid = useMemo(() => generateRandomEmojiSet(200), []);
     const [codeInput, setCodeInput] = useState("1f600");
-    const [selected, setSelected] = useState<number[] | null>([0x1f600]);
+    const [selected, setSelected] = useState<number[] | null>(randomGrid[0] ?? [0x1f600]);
     const [skin, setSkin] = useState<number | null>(null);
     const [artSet, setArtSet] = useState<ArtworkSet>("twemoji");
+
+    // Jotai atoms for game state
+    const [currentPlayerId, setCurrentPlayerId] = useAtom(currentPlayerIdAtom);
+    const [players, setPlayers] = useAtom(playersAtom);
+    const [beji, setBeji] = useAtom(bejiAtom);
 
     const effectiveSequence = useMemo(() => {
         if (!selected) return null;
@@ -140,9 +128,61 @@ export default function EmojiPage() {
         if (cps && cps.length) setSelected(cps);
     };
 
+    const handleStartGame = () => {
+        if (!effectiveSequence) return;
+
+        const emojiChar = codepointsToEmoji(effectiveSequence);
+        const playerId = `player-${Date.now()}`;
+
+        // Create new player
+        const newPlayer: Player = {
+            id: playerId,
+            emoji: emojiChar,
+            emojiCodepoints: effectiveSequence,
+        };
+
+        setPlayers([...players, newPlayer]);
+        setCurrentPlayerId(playerId);
+
+        // Add initial beji for the player
+        const newBeji: Beji = {
+            id: `beji-${Date.now()}`,
+            playerId: playerId,
+            emoji: emojiChar,
+            name: `Beji ${players.length + 1}`,
+            x: 400,
+            y: 400,
+            targetX: 400,
+            targetY: 400,
+        };
+
+        setBeji([...beji, newBeji]);
+    };
+
+    const handleAddBeji = () => {
+        if (!currentPlayerId || !effectiveSequence) return;
+
+        const currentPlayer = players.find((p) => p.id === currentPlayerId);
+        if (!currentPlayer) return;
+
+        const bejiCount = beji.filter((b) => b.playerId === currentPlayerId).length;
+        const newBeji: Beji = {
+            id: `beji-${Date.now()}`,
+            playerId: currentPlayerId,
+            emoji: currentPlayer.emoji,
+            name: `Beji ${bejiCount + 1}`,
+            x: 400,
+            y: 400,
+            targetX: 400,
+            targetY: 400,
+        };
+
+        setBeji([...beji, newBeji]);
+    };
+
     return (
         <div style={{ background: "#fff", color: "#000", padding: 16 }}>
-            <h2 style={{ fontWeight: 600, marginBottom: 12 }}>Emoji Selector (MVP)</h2>
+            <h2 style={{ fontWeight: 600, marginBottom: 12 }}>Beji 🎮</h2>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 <button
@@ -172,7 +212,7 @@ export default function EmojiPage() {
             {
                 activeTab === "grid" ? (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 40px)", gap: 8, marginBottom: 16 }}>
-                        {BASIC_GRID.map((cps, idx) => (
+                        {randomGrid.map((cps, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => setSelected(cps)}
@@ -288,6 +328,72 @@ export default function EmojiPage() {
 
             <div style={{ marginTop: 24, fontSize: 12, color: "#6b7280" }}>
                 Note: Twemoji requires attribution for distribution. Include license files for all sets used.
+            </div>
+
+            {/* Game Controls */}
+            <div style={{ marginTop: 32, paddingTop: 24, borderTop: "2px solid #e5e7eb" }}>
+                <h3 style={{ fontWeight: 600, marginBottom: 16 }}>Game Controls</h3>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
+                    <button
+                        onClick={handleStartGame}
+                        disabled={!effectiveSequence}
+                        style={{
+                            padding: "8px 16px",
+                            border: "1px solid #e5e7eb",
+                            background: effectiveSequence ? "#3b82f6" : "#9ca3af",
+                            color: "#fff",
+                            cursor: effectiveSequence ? "pointer" : "not-allowed",
+                            borderRadius: 4,
+                            fontWeight: 500,
+                        }}
+                    >
+                        {currentPlayerId ? "Change Player Emoji" : "Start Game with Selected Emoji"}
+                    </button>
+                    {currentPlayerId && (
+                        <button
+                            onClick={handleAddBeji}
+                            style={{
+                                padding: "8px 16px",
+                                border: "1px solid #e5e7eb",
+                                background: "#10b981",
+                                color: "#fff",
+                                cursor: "pointer",
+                                borderRadius: 4,
+                                fontWeight: 500,
+                            }}
+                        >
+                            Add Beji
+                        </button>
+                    )}
+                    {currentPlayerId && (
+                        <button
+                            onClick={() => setCurrentPlayerId(null)}
+                            style={{
+                                padding: "8px 16px",
+                                border: "1px solid #e5e7eb",
+                                background: "#ef4444",
+                                color: "#fff",
+                                cursor: "pointer",
+                                borderRadius: 4,
+                                fontWeight: 500,
+                            }}
+                        >
+                            End Game
+                        </button>
+                    )}
+                </div>
+
+                {currentPlayerId && (
+                    <div style={{ marginBottom: 16, fontSize: 14, color: "#6b7280" }}>
+                        Active Player: {players.find((p) => p.id === currentPlayerId)?.emoji} ({beji.filter((b) => b.playerId === currentPlayerId).length} beji)
+                    </div>
+                )}
+            </div>
+
+            {/* Map Gameplay */}
+            <div style={{ marginTop: 32 }}>
+                <h3 style={{ fontWeight: 600, marginBottom: 16 }}>Game Map</h3>
+                <Map />
             </div>
         </div >
     );

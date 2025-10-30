@@ -1,0 +1,11 @@
+{
+  "Start": {
+    "subtitle": "Choisissez votre émoji et donnez-lui un nom pour commencer l'aventure !",
+    "chooseEmojiLabel": "Choisissez votre émoji",
+    "nameLabel": "Donnez un nom à votre Beji",
+    "namePlaceholder": "ex. Beji le Brave",
+    "startButton": "Commencer l'aventure ! 🚀"
+  }
+}
+
+

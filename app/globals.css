@@ -11,3 +11,91 @@ button, a {
 }
 
 
+/* Minimalist black & white theme with system preference */
+:root {
+  --bg: #ffffff;
+  --fg: #000000;
+  --muted: #6b7280; /* neutral gray for placeholders, borders in light */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --fg: #ffffff;
+    --muted: #9ca3af;
+  }
+}
+
+html {
+  background: var(--bg);
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Layout primitives */
+#__next, body > div:first-child {
+  min-height: 100dvh;
+}
+
+/* Links: simple underline with white text */
+a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Buttons: monochrome outline, no shadows */
+button {
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--fg);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+/* Inputs: transparent bg, white text, subtle border */
+input, select, textarea {
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--muted);
+  padding: 0.5rem 0.625rem;
+  border-radius: 6px;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--muted);
+}
+
+/* Images/Media: no extra decoration */
+img, svg, video {
+  display: block;
+  max-width: 100%;
+}
+
+/* Tables: simple borders */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid var(--muted);
+  padding: 0.5rem;
+}
+
+

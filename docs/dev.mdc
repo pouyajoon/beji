@@ -11,3 +11,11 @@ global features needs to haved mocked tests to ensure coverage.
 never keep DEPRECATED code in the project.
 
 
+in nextjs, use indepdenant files for ts code and components and sub components, keep page.tsx small and focused on the page global logic
+
+keep the app minimalyst style with black and white colors.
+use react router to update the navigation between pages, prefer using <a> over button with onclick js routing
+
+to check the ts issues and application run use `pnpm dev` it's in watch mode so you can see the issues and errors in the console. it's really faster than doing `pnpm build` 
+
+don't cast to `any` without a good reason and withouy my approval, prefer to use the specific type.
