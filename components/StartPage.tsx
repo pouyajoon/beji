@@ -1,9 +1,10 @@
 "use client";
 
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom, useSetAtom } from "../lib/jotai";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMessages } from "../i18n/DictionaryProvider";
-import { currentPlayerIdAtom, bejiAtom, playersAtom, selectedBejiEmojiAtom, bejiNameAtom, type Player, type Beji } from "./atoms";
+import { bejiAtom, playersAtom, selectedBejiEmojiAtom, bejiNameAtom, type Player, type Beji } from "./atoms";
 import { generateRandomEmojiSet } from "../app/emoji/random";
 import { codepointsToEmoji } from "./emoji";
 import { Header } from "./start/Header";
@@ -16,33 +17,33 @@ import { SelectedPreview } from "./start/SelectedPreview";
 
 export function StartPage() {
     const { messages } = useMessages<{ Start: Record<string, string> }>();
+    const router = useRouter();
     const [randomGrid, setRandomGrid] = useState<number[][]>([]);
     useEffect(() => {
         // Generate on client only to avoid SSR/client mismatch
-        setRandomGrid(generateRandomEmojiSet(30));
+        setRandomGrid(generateRandomEmojiSet(35));
     }, []);
     const [selectedEmoji, setSelectedEmoji] = useAtom(selectedBejiEmojiAtom);
     const [bejiName, setBejiName] = useAtom(bejiNameAtom);
 
-    const setCurrentPlayerId = useSetAtom(currentPlayerIdAtom);
     const setPlayers = useSetAtom(playersAtom);
     const setBeji = useSetAtom(bejiAtom);
 
-    const handleStartGame = () => {
-        if (!selectedEmoji || !bejiName.trim()) return;
+    const handleStartGame = (emojiOverride?: number[]) => {
+        const effectiveEmoji = emojiOverride ?? selectedEmoji;
+        if (!effectiveEmoji || !bejiName.trim()) return;
 
-        const emojiChar = codepointsToEmoji(selectedEmoji);
+        const emojiChar = codepointsToEmoji(effectiveEmoji);
         const playerId = `player-${Date.now()}`;
 
         // Create new player
         const newPlayer: Player = {
             id: playerId,
             emoji: emojiChar,
-            emojiCodepoints: selectedEmoji,
+            emojiCodepoints: effectiveEmoji,
         };
 
         setPlayers([newPlayer]);
-        setCurrentPlayerId(playerId);
 
         // Add initial beji for the player
         const newBeji: Beji = {
@@ -57,8 +58,7 @@ export function StartPage() {
         };
 
         setBeji([newBeji]);
-
-        // Navigation is handled by the anchor element's href
+        router.push("/emoji");
     };
 
     return (
@@ -88,7 +88,12 @@ export function StartPage() {
                     label={messages.Start?.chooseEmojiLabel ?? "Choose Your Emoji"}
                     emojiGrid={randomGrid}
                     selectedEmoji={selectedEmoji}
-                    onSelect={setSelectedEmoji}
+                    onSelect={(cps) => {
+                        setSelectedEmoji(cps);
+                        if (bejiName.trim()) {
+                            handleStartGame(cps);
+                        }
+                    }}
                 />
 
                 <BejiNameInput

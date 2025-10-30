@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import JotaiProvider from '../components/JotaiProvider';
 
 export const metadata: Metadata = {
   title: 'Beji',
@@ -25,7 +26,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <JotaiProvider>
+          {children}
+        </JotaiProvider>
       </body>
     </html>
   );
