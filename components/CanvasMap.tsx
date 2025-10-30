@@ -8,10 +8,7 @@ import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
 import { registerShortcut, unregisterShortcutById, useShortcuts, RESERVED_KEYS } from "../src/lib/shortcuts";
 import { VirtualJoystick } from "./VirtualJoystick";
-
-const MAP_SIZE = 800; // meters
-const DEFAULT_PX_PER_M = 100; // zoom 1 => 100 pixels per meter
-const BEJI_SPEED_MPS = 5; // meters per second
+import { MAP_SIZE, BEJI_SPEED_MPS } from "../lib/constants";
 
 export function CanvasMap() {
     const beji = useAtomValue(bejiAtom);
@@ -580,7 +577,7 @@ export function CanvasMap() {
         // Update ETA endpoint immediately so guidance line stays in sync with zoom
         mouseWorldRef.current = { x: worldBeforeX, y: worldBeforeY };
 
-        // Desired view size after zoom
+        // Desired view size after zoom (clamped to map bounds)
         const nextViewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, nextPixelsPerMeter));
         const nextViewHeight = Math.min(MAP_SIZE, viewport.height / Math.max(1, nextPixelsPerMeter));
 
@@ -598,10 +595,21 @@ export function CanvasMap() {
 
         // Update zoom and camera offset relative to player-follow target
         setPixelsPerMeter(nextPixelsPerMeter);
-        setCameraOffset({
-            x: desiredCenterX - cameraTarget.x,
-            y: desiredCenterY - cameraTarget.y,
-        });
+
+        // Only update camera offset if we're not clamped to the map bounds
+        // This prevents jumps when zooming out to the minimum where view covers entire map
+        const isClamped = nextViewX <= 0 && nextViewY <= 0 &&
+            nextViewWidth >= MAP_SIZE && nextViewHeight >= MAP_SIZE;
+
+        if (!isClamped) {
+            setCameraOffset({
+                x: desiredCenterX - cameraTarget.x,
+                y: desiredCenterY - cameraTarget.y,
+            });
+        } else {
+            // When fully zoomed out, reset offset to center on player
+            setCameraOffset({ x: 0, y: 0 });
+        }
     };
 
     const tooltipLabel = (followMouse ? "Following mouse (click to stop)" : "Not following mouse (click to enable)") + " • Shortcut: F";

@@ -7,8 +7,8 @@ import type { Beji } from "./atoms";
 import { bejiAtom, playersAtom } from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
 import { VirtualJoystick } from "./VirtualJoystick";
+import { MAP_SIZE } from "../lib/constants";
 
-const MAP_SIZE = 800;
 const CELL_SIZE = 40;
 
 function BejiSprite({

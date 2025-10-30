@@ -12,6 +12,7 @@ import { EmojiPicker } from "./start/EmojiPicker";
 import { BejiNameInput } from "./start/BejiNameInput";
 import { StartAction } from "./start/StartAction";
 import { SelectedPreview } from "./start/SelectedPreview";
+import { MAP_SIZE } from "../lib/constants";
 
 // Use shared generateRandomEmojiSet based on Emoji_Presentation allowlist
 
@@ -46,18 +47,18 @@ export function StartPage() {
         setPlayers([newPlayer]);
 
         // Load last saved position if available
-        let startX = 400;
-        let startY = 400;
+        let startX = MAP_SIZE / 2;
+        let startY = MAP_SIZE / 2;
         if (typeof window !== "undefined") {
             try {
                 const raw = window.localStorage.getItem("beji:lastPosition");
                 if (raw) {
                     const parsed = JSON.parse(raw);
                     if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
-                        // Clamp to map bounds (0..800) to be safe
+                        // Clamp to map bounds (0..MAP_SIZE) to be safe
                         const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-                        startX = clamp(parsed.x, 0, 800);
-                        startY = clamp(parsed.y, 0, 800);
+                        startX = clamp(parsed.x, 0, MAP_SIZE);
+                        startY = clamp(parsed.y, 0, MAP_SIZE);
                     }
                 }
             } catch { }
