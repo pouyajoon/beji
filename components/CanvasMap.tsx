@@ -66,7 +66,11 @@ export function CanvasMap() {
     const [pixelsPerMeter, setPixelsPerMeter] = useAtom(zoomPxPerMeterAtom);
     const [followMouse, setFollowMouse] = useState(true);
     const followMouseRef = useRef<boolean>(true);
-    useEffect(() => { followMouseRef.current = followMouse; }, [followMouse]);
+    const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
+    const prevFollowMouseRef = useRef<boolean>(true);
+    useEffect(() => {
+        followMouseRef.current = followMouse;
+    }, [followMouse]);
     useEffect(() => {
         if (typeof window === "undefined") return;
         const mediaQuery = window.matchMedia("(pointer: coarse)");
@@ -164,6 +168,24 @@ export function CanvasMap() {
         }
     }, [beji]);
 
+    // When follow is turned off, stop the beji by setting target to current position
+    useEffect(() => {
+        // Only run when follow changes from true to false
+        if (prevFollowMouseRef.current && !followMouse && currentPlayerId) {
+            const playerBeji = bejiRef.current.find((b) => b.playerId === currentPlayerId);
+            if (playerBeji) {
+                const pos = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
+                const updated: Beji[] = bejiRef.current.map((b: Beji) => (
+                    b.playerId === currentPlayerId
+                        ? { ...b, targetX: pos.x, targetY: pos.y }
+                        : b
+                ));
+                setBeji(updated);
+            }
+        }
+        prevFollowMouseRef.current = followMouse;
+    }, [followMouse, currentPlayerId, setBeji]);
+
     // Mouse follow + hover pause (hit test against player's beji)
     const bejiHoverRadiusMeters = 0.6; // ~1m sized beji; use 0.6m hover radius
     const isPlayerBejiHoveredRef = useRef(false);
@@ -233,6 +255,7 @@ export function CanvasMap() {
 
     const handleMouseMove = (e: any) => {
         if (isTouchPreferred) return;
+        lastPointerClientRef.current = { x: e.clientX, y: e.clientY };
         const { x, y } = clientToWorld(e.clientX, e.clientY);
         mouseWorldRef.current = { x, y };
 
@@ -280,6 +303,22 @@ export function CanvasMap() {
         if (!followMouseRef.current) return;
         setTargetTo(x, y);
     };
+
+    // Keep ETA endpoint in sync when toggling follow via shortcut without moving the mouse
+    useEffect(() => {
+        // When turning follow ON, recompute mouse world position using last known client pointer
+        if (followMouse && lastPointerClientRef.current) {
+            const p = lastPointerClientRef.current;
+            const { x, y } = clientToWorld(p.x, p.y);
+            mouseWorldRef.current = { x, y };
+            // Immediately update target so movement starts without requiring mouse movement
+            setTargetTo(x, y);
+        }
+        // When turning follow OFF, hide ETA immediately by clearing endpoint
+        if (!followMouse) {
+            mouseWorldRef.current = null;
+        }
+    }, [followMouse]);
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (isTouchPreferred) return;
@@ -383,7 +422,10 @@ export function CanvasMap() {
                 ctx2.save();
                 ctx2.setTransform(1, 0, 0, 1, 0, 0);
                 const dpr = window.devicePixelRatio || 1;
-                ctx2.font = `${0.7 * pixelsPerMeter * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+                // Ensure beji remains readable when zoomed out by enforcing a minimum on-screen size (in CSS px)
+                const minEmojiCssPx = 24; // minimum visible size on screen
+                const emojiCssPx = Math.max(minEmojiCssPx, 0.7 * pixelsPerMeter);
+                ctx2.font = `${emojiCssPx * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
                 ctx2.textAlign = "center";
                 ctx2.textBaseline = "middle";
                 ctx2.fillText(b.emoji, screenX, screenY);
