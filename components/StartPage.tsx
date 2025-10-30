@@ -5,12 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useMessages } from "../i18n/DictionaryProvider";
 import { currentPlayerIdAtom, bejiAtom, playersAtom, selectedBejiEmojiAtom, bejiNameAtom, type Player, type Beji } from "./atoms";
 import { generateRandomEmojiSet } from "../app/emoji/random";
+import { codepointsToEmoji } from "./emoji";
+import { Header } from "./start/Header";
+import { EmojiPicker } from "./start/EmojiPicker";
+import { BejiNameInput } from "./start/BejiNameInput";
+import { StartAction } from "./start/StartAction";
+import { SelectedPreview } from "./start/SelectedPreview";
 
 // Use shared generateRandomEmojiSet based on Emoji_Presentation allowlist
-
-function codepointsToEmoji(cps: number[]): string {
-    return String.fromCodePoint(...cps);
-}
 
 export function StartPage() {
     const { messages } = useMessages<{ Start: Record<string, string> }>();
@@ -77,167 +79,38 @@ export function StartPage() {
                 maxWidth: 480,
                 width: "100%",
             }}>
-                <h1 style={{
-                    fontSize: 48,
-                    fontWeight: 700,
-                    marginBottom: 8,
-                    color: 'var(--fg)',
-                    textAlign: "center",
-                }}>
-                    Beji  🎮
-                </h1>
-                <p style={{
-                    fontSize: 16,
-                    color: "var(--muted)",
-                    textAlign: "center",
-                    marginBottom: 32,
-                }}>
-                    {messages.Start?.subtitle ?? "Choose your emoji and give it a name to start your adventure!"}
-                </p>
+                <Header
+                    title={"Beji  🎮"}
+                    subtitle={messages.Start?.subtitle ?? "Choose your emoji and give it a name to start your adventure!"}
+                />
 
-                <div style={{ marginBottom: 24 }}>
-                    <label style={{
-                        display: "block",
-                        fontSize: 14,
-                        fontWeight: 500,
-                        color: "var(--fg)",
-                        marginBottom: 8,
-                    }}>
-                        {messages.Start?.chooseEmojiLabel ?? "Choose Your Emoji"}
-                    </label>
-                    <div style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fill, minmax(64px, 64px))",
-                        gridAutoRows: "64px",
-                        // gap: 8,
-                        // padding: 16,
-                        background: "transparent",
-                        // borderRadius: 8,
-                        border: "1px solid var(--muted)",
-                        // maxHeight: 280,
-                        overflowY: "auto",
-                        justifyContent: "center",
-                    }}>
-                        {randomGrid.map((cps, idx) => {
-                            const isSelected =
-                                Array.isArray(selectedEmoji) &&
-                                selectedEmoji.length === cps.length &&
-                                cps.every((v, i) => v === selectedEmoji[i]);
-                            return (
-                                <button
-                                    key={idx}
-                                    onClick={() => setSelectedEmoji(cps)}
-                                    style={{
-                                        // padding: 8,
-                                        width: 64,
-                                        height: 64,
-                                        border: isSelected ? "2px solid var(--fg)" : "2px solid transparent",
-                                        background: "transparent",
-                                        cursor: "pointer",
-                                        fontSize: 32,
-                                        borderRadius: 8,
-                                        // transition: "all 0.2s",
-                                    }}
-                                    aria-pressed={isSelected}
-                                    onMouseEnter={(e) => {
-                                        // Keep minimalist hover: no change for unselected
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        // No-op
-                                    }}
-                                >
-                                    {codepointsToEmoji(cps)}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+                <EmojiPicker
+                    label={messages.Start?.chooseEmojiLabel ?? "Choose Your Emoji"}
+                    emojiGrid={randomGrid}
+                    selectedEmoji={selectedEmoji}
+                    onSelect={setSelectedEmoji}
+                />
 
-                <div style={{ marginBottom: 32 }}>
-                    <label style={{
-                        display: "block",
-                        fontSize: 14,
-                        fontWeight: 500,
-                        color: "var(--fg)",
-                        marginBottom: 8,
-                    }}>
-                        {messages.Start?.nameLabel ?? "Give Your Beji a Name"}
-                    </label>
-                    <input
-                        type="text"
-                        value={bejiName}
-                        onChange={(e) => setBejiName(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && bejiName.trim() && selectedEmoji) {
-                                handleStartGame();
-                            }
-                        }}
-                        placeholder={messages.Start?.namePlaceholder ?? "e.g. Beji the Brave"}
-                        style={{
-                            width: "100%",
-                            boxSizing: "border-box",
-                            padding: "12px 16px",
-                            border: "1px solid var(--muted)",
-                            borderRadius: 8,
-                            fontSize: 16,
-                            outline: "none",
-                            background: "transparent",
-                            color: "var(--fg)",
-                        }}
-                        onFocus={() => { }}
-                        onBlur={() => { }}
-                    />
-                </div>
-
-                <a
-                    href="/emoji"
-                    onClick={(e) => {
-                        if (!selectedEmoji || !bejiName.trim()) {
-                            e.preventDefault();
-                            return;
+                <BejiNameInput
+                    label={messages.Start?.nameLabel ?? "Give Your Beji a Name"}
+                    placeholder={messages.Start?.namePlaceholder ?? "e.g. Beji the Brave"}
+                    value={bejiName}
+                    onChange={setBejiName}
+                    onEnter={() => {
+                        if (bejiName.trim() && selectedEmoji) {
+                            handleStartGame();
                         }
-                        handleStartGame();
                     }}
-                    aria-disabled={!selectedEmoji || !bejiName.trim()}
-                    role="button"
-                    style={{
-                        display: "inline-block",
-                        textAlign: "center",
-                        textDecoration: "none",
-                        width: "100%",
-                        padding: "16px",
-                        border: !selectedEmoji || !bejiName.trim() ? "1px solid var(--muted)" : "1px solid var(--fg)",
-                        borderRadius: 8,
-                        fontSize: 18,
-                        fontWeight: 600,
-                        color: !selectedEmoji || !bejiName.trim() ? "var(--muted)" : "var(--fg)",
-                        background: "transparent",
-                        cursor: selectedEmoji && bejiName.trim() ? "pointer" : "not-allowed",
-                        transition: "all 0.2s",
-                    }}
-                >
-                    {messages.Start?.startButton ?? "Start Adventure! 🚀"}
-                </a>
+                />
 
-                {selectedEmoji && (
-                    <div style={{
-                        marginTop: 24,
-                        padding: 16,
-                        background: "transparent",
-                        border: "1px solid var(--muted)",
-                        borderRadius: 8,
-                        textAlign: "center",
-                    }}>
-                        <div style={{ fontSize: 48, marginBottom: 8 }}>
-                            {codepointsToEmoji(selectedEmoji)}
-                        </div>
-                        {bejiName && (
-                            <div style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)" }}>
-                                {bejiName}
-                            </div>
-                        )}
-                    </div>
-                )}
+                <StartAction
+                    label={messages.Start?.startButton ?? "Start Adventure! 🚀"}
+                    href="/emoji"
+                    disabled={!selectedEmoji || !bejiName.trim()}
+                    onActivate={handleStartGame}
+                />
+
+                <SelectedPreview emoji={selectedEmoji} name={bejiName} />
             </div>
         </div >
     );
