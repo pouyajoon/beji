@@ -71,3 +71,11 @@ export const bejiNameAtom = atomWithStorage<string>(
     nameStorage
 );
 
+// Zoom state (Canvas/SVG) persisted in localStorage
+const zoomStorage = createJSONStorage<number>(() => localStorage);
+export const zoomPxPerMeterAtom = atomWithStorage<number>(
+    "beji:zoomPxPerMeter",
+    100,
+    zoomStorage
+);
+

@@ -1,0 +1,58 @@
+---
+title: Gameplay
+---
+
+# Gameplay
+
+## Objective
+Control your beji (emoji character) to move around the grid world. Movement can be driven by mouse (desktop), touch joystick (mobile/tablet), or keyboard.
+
+## Controls
+
+### Desktop (mouse)
+- Move the mouse anywhere on the grid: your beji will continuously set its target to the mouse position and take the direct path toward it.
+- Hover over your beji: movement pauses while hovered. When the cursor enters the beji, the target snaps to the cursor; as long as you keep hovering, the beji holds position.
+
+Details:
+- We convert the mouse client coordinates into world coordinates using the SVG `viewBox` and the current camera viewport.
+- On each `mousemove` over the SVG, if not on a touch device and not hovering the beji, we update the current player's beji `targetX`/`targetY` to the world point under the cursor.
+- The beji sprite interpolates toward its target each animation frame, resulting in smooth direct-path movement.
+
+### Mobile / Tablet (touch)
+- A virtual joystick appears in the bottom-right. Drag to move; release to stop.
+- Touch devices are detected using `matchMedia('(pointer: coarse)')` after mount to avoid SSR hydration issues.
+
+### Keyboard
+- Arrow keys or WASD nudge your beji by fixed steps across the grid. This can be used on both desktop and touch devices.
+
+## Camera & Grid
+- The grid fills the entire viewport (full-screen). The camera centers on the current player's beji when present.
+- The map is expressed in meters. Each grid cell is 1m x 1m. Every 10m grid line is darker for orientation.
+- The renderer (SVG or Canvas) derives its view from the current zoom level and clamps to world bounds to avoid showing space outside the world.
+
+## Zoom & Scale
+- World unit: meter (m). A standard beji measures 1m x 1m.
+- Scale at zoom 1: 100 px/m (configurable). At this zoom, a 1m beji renders roughly 70 px tall.
+- Pixels per meter (px/m) is the zoom variable: increasing px/m zooms in (bigger beji, less world on screen), decreasing px/m zooms out (smaller beji, more world visible).
+- View size (in meters) is computed as: `viewWidthMeters = canvasCssWidthPx / pixelsPerMeter`, `viewHeightMeters = canvasCssHeightPx / pixelsPerMeter` and then clamped to map bounds.
+- On Canvas, emojis are drawn in screen space sized by `0.7 * pixelsPerMeter` to keep legibility consistent across platforms.
+- Mouse wheel (desktop): zooms in/out with a smooth factor. Current zoom is shown as a small HUD (px/m) in the bottom-left.
+- Touch devices: zoom UX is not enabled by pinch yet; joystick remains primary control at any zoom.
+
+## Movement Model
+- Each beji has a current position `(x, y)` and a target `(targetX, targetY)`.
+- Rendering smoothly approaches the target each frame by stepping a small amount (capped) toward it.
+- Keyboard/joystick update the target in discrete steps; mouse updates the target to the cursor on every move.
+- Hovering the beji sets a hold state so the target is not continuously updated while hovered.
+
+## SSR/Hydration Notes
+- Touch detection and initial camera `viewBox` are made deterministic on the server. We initialize `isTouchPreferred` as `false` and update it after mount; we also render a stable `viewBox` on first paint, then update when mounted to avoid mismatches.
+
+## File Pointers
+- Canvas map and zoom: `components/CanvasMap.tsx`
+- SVG map (alternate renderer): `components/SvgMap.tsx`
+- Beji sprite (SVG mode): `components/SvgMap.tsx` (component `BejiSprite`)
+- Grid (SVG mode): `components/MapGrid.tsx`
+- Keyboard input: `hooks/useKeyboardMovement.ts`
+- Virtual joystick: `components/VirtualJoystick.tsx`
+
