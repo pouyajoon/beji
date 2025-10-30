@@ -76,12 +76,17 @@ export function CanvasMap() {
         return focus ? { x: focus.x, y: focus.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
     }, [beji, currentPlayerId]);
 
+    // Camera offset allows zooming to mouse position without breaking player-following target
+    const [cameraOffset, setCameraOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const cameraCenterX = cameraTarget.x + cameraOffset.x;
+    const cameraCenterY = cameraTarget.y + cameraOffset.y;
+
     // Zoom-driven view size in world meters
     const viewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, pixelsPerMeter));
     const viewHeight = Math.min(MAP_SIZE, viewport.height / Math.max(1, pixelsPerMeter));
 
-    const viewX = Math.max(0, Math.min(MAP_SIZE - viewWidth, cameraTarget.x - viewWidth / 2));
-    const viewY = Math.max(0, Math.min(MAP_SIZE - viewHeight, cameraTarget.y - viewHeight / 2));
+    const viewX = Math.max(0, Math.min(MAP_SIZE - viewWidth, cameraCenterX - viewWidth / 2));
+    const viewY = Math.max(0, Math.min(MAP_SIZE - viewHeight, cameraCenterY - viewHeight / 2));
 
     const [mounted, setMounted] = useState(false);
     useEffect(() => {
@@ -98,19 +103,63 @@ export function CanvasMap() {
         bejiRef.current = beji;
     }, [beji]);
 
-    // Smoothed positions for rendering animation
-    const positionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+    // Physics positions (authoritative for render) live outside React to avoid re-renders
+    const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
     useEffect(() => {
         for (const b of beji) {
-            if (!positionsRef.current.has(b.id)) {
-                positionsRef.current.set(b.id, { x: b.x, y: b.y });
+            if (!physicsPositionsRef.current.has(b.id)) {
+                physicsPositionsRef.current.set(b.id, { x: b.x, y: b.y });
             }
+        }
+        // Remove positions for entities that no longer exist
+        const ids = new Set(beji.map((b) => b.id));
+        for (const id of Array.from(physicsPositionsRef.current.keys())) {
+            if (!ids.has(id)) physicsPositionsRef.current.delete(id);
         }
     }, [beji]);
 
     // Mouse follow + hover pause (hit test against player's beji)
     const bejiHoverRadiusMeters = 0.6; // ~1m sized beji; use 0.6m hover radius
     const isPlayerBejiHoveredRef = useRef(false);
+
+    // Fixed-timestep physics loop (decoupled from rendering)
+    useEffect(() => {
+        let raf = 0;
+        const fixedDt = 1 / 60; // seconds
+        const maxFrame = 0.25; // avoid spiral of death
+        let last = performance.now();
+        let acc = 0;
+
+        const step = () => {
+            const now = performance.now();
+            let frameTime = (now - last) / 1000;
+            last = now;
+            if (frameTime > maxFrame) frameTime = maxFrame;
+            acc += frameTime;
+
+            while (acc >= fixedDt) {
+                // Integrate towards targets
+                for (const b of bejiRef.current) {
+                    const pos = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
+                    const dx = b.targetX - pos.x;
+                    const dy = b.targetY - pos.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 1e-3) {
+                        physicsPositionsRef.current.set(b.id, { x: b.targetX, y: b.targetY });
+                    } else {
+                        const stepMeters = Math.min(BEJI_SPEED_MPS * fixedDt, dist);
+                        physicsPositionsRef.current.set(b.id, { x: pos.x + (dx / dist) * stepMeters, y: pos.y + (dy / dist) * stepMeters });
+                    }
+                }
+                acc -= fixedDt;
+            }
+
+            raf = requestAnimationFrame(step);
+        };
+
+        raf = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(raf);
+    }, []);
 
     function clientToWorld(clientX: number, clientY: number) {
         const canvas = canvasRef.current;
@@ -139,7 +188,7 @@ export function CanvasMap() {
         // hover detection against smoothed position if available, else current beji pos
         const playerBeji = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : undefined;
         if (playerBeji) {
-            const pos = positionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
+            const pos = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
             const dx = x - pos.x;
             const dy = y - pos.y;
             const isHover = Math.sqrt(dx * dx + dy * dy) <= bejiHoverRadiusMeters;
@@ -151,7 +200,7 @@ export function CanvasMap() {
         setTargetTo(x, y);
     };
 
-    // Draw loop
+    // Render loop (draw only; no simulation)
     useEffect(() => {
         let raf = 0;
         const canvas = canvasRef.current;
@@ -162,7 +211,6 @@ export function CanvasMap() {
 
         let lastTs = performance.now();
         function draw(ts: number) {
-            const deltaSeconds = Math.max(0, Math.min(0.1, (ts - lastTs) / 1000)); // clamp to avoid huge jumps
             lastTs = ts;
             // Resize canvas to device pixels for sharp rendering
             const dpr = window.devicePixelRatio || 1;
@@ -188,40 +236,33 @@ export function CanvasMap() {
 
             // grid lines every 1 meter; darker every 10 meters
             ctx2.lineWidth = 1 / Math.max(1, (canvasEl.width / renderViewWidth));
-            for (let x = 0; x <= MAP_SIZE; x += 1) {
+            const gxStart = Math.max(0, Math.floor(renderViewX));
+            const gxEnd = Math.min(MAP_SIZE, Math.ceil(renderViewX + renderViewWidth));
+            for (let x = gxStart; x <= gxEnd; x += 1) {
                 ctx2.beginPath();
                 ctx2.strokeStyle = x % 10 === 0 ? "#d1d5db" : "#eef2f7";
-                ctx2.moveTo(x, 0);
-                ctx2.lineTo(x, MAP_SIZE);
+                ctx2.moveTo(x, renderViewY);
+                ctx2.lineTo(x, renderViewY + renderViewHeight);
                 ctx2.stroke();
             }
-            for (let y = 0; y <= MAP_SIZE; y += 1) {
+            const gyStart = Math.max(0, Math.floor(renderViewY));
+            const gyEnd = Math.min(MAP_SIZE, Math.ceil(renderViewY + renderViewHeight));
+            for (let y = gyStart; y <= gyEnd; y += 1) {
                 ctx2.beginPath();
                 ctx2.strokeStyle = y % 10 === 0 ? "#d1d5db" : "#eef2f7";
-                ctx2.moveTo(0, y);
-                ctx2.lineTo(MAP_SIZE, y);
+                ctx2.moveTo(renderViewX, y);
+                ctx2.lineTo(renderViewX + renderViewWidth, y);
                 ctx2.stroke();
             }
 
-            // update and draw beji (time-based movement in meters/sec)
+            // draw beji from physics positions
             for (const b of bejiRef.current) {
-                const pos = positionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
-                const dx = b.targetX - pos.x;
-                const dy = b.targetY - pos.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 1) {
-                    positionsRef.current.set(b.id, { x: b.targetX, y: b.targetY });
-                } else {
-                    const step = Math.min(BEJI_SPEED_MPS * deltaSeconds, dist);
-                    positionsRef.current.set(b.id, { x: pos.x + (dx / dist) * step, y: pos.y + (dy / dist) * step });
-                }
-                const p = positionsRef.current.get(b.id)!;
-
+                const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
                 // shadow circle
                 ctx2.globalAlpha = 0.2;
                 ctx2.fillStyle = b.playerId === currentPlayerId ? "#3b82f6" : "#ef4444";
                 ctx2.beginPath();
-                ctx2.arc(b.x, b.y, 0.2, 0, Math.PI * 2); // 0.2m radius shadow
+                ctx2.arc(p.x, p.y, 0.2, 0, Math.PI * 2); // 0.2m radius shadow
                 ctx2.fill();
                 ctx2.globalAlpha = 1;
 
@@ -248,8 +289,44 @@ export function CanvasMap() {
         if (isTouchPreferred) return;
         e.preventDefault();
         const factor = e.deltaY > 0 ? 1 / 1.1 : 1.1;
-        const next = Math.max(10, Math.min(400, pixelsPerMeter * factor));
-        setPixelsPerMeter(next);
+        const nextPixelsPerMeter = Math.max(10, Math.min(400, pixelsPerMeter * factor));
+
+        // Compute mouse position as fraction of canvas and corresponding world point
+        const canvas = canvasRef.current;
+        if (!canvas) {
+            setPixelsPerMeter(nextPixelsPerMeter);
+            return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / Math.max(1, rect.width);
+        const py = (e.clientY - rect.top) / Math.max(1, rect.height);
+
+        // World point under cursor before zoom
+        const worldBeforeX = renderViewX + px * renderViewWidth;
+        const worldBeforeY = renderViewY + py * renderViewHeight;
+
+        // Desired view size after zoom
+        const nextViewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, nextPixelsPerMeter));
+        const nextViewHeight = Math.min(MAP_SIZE, viewport.height / Math.max(1, nextPixelsPerMeter));
+
+        // Desired camera center so that the same world point stays under the cursor
+        let desiredCenterX = worldBeforeX + (0.5 - px) * nextViewWidth;
+        let desiredCenterY = worldBeforeY + (0.5 - py) * nextViewHeight;
+
+        // Clamp to map bounds by clamping the future view rect
+        let nextViewX = desiredCenterX - nextViewWidth / 2;
+        let nextViewY = desiredCenterY - nextViewHeight / 2;
+        nextViewX = Math.max(0, Math.min(MAP_SIZE - nextViewWidth, nextViewX));
+        nextViewY = Math.max(0, Math.min(MAP_SIZE - nextViewHeight, nextViewY));
+        desiredCenterX = nextViewX + nextViewWidth / 2;
+        desiredCenterY = nextViewY + nextViewHeight / 2;
+
+        // Update zoom and camera offset relative to player-follow target
+        setPixelsPerMeter(nextPixelsPerMeter);
+        setCameraOffset({
+            x: desiredCenterX - cameraTarget.x,
+            y: desiredCenterY - cameraTarget.y,
+        });
     };
 
     return (
