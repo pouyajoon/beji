@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtomValue, useSetAtom } from "../lib/jotai";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapGrid } from "./MapGrid";
 import type { Beji } from "./atoms";
 import { bejiAtom, playersAtom } from "./atoms";
@@ -12,7 +12,17 @@ const MAP_SIZE = 800;
 const CELL_SIZE = 40;
 
 
-function BejiSprite({ beji, playerId }: { beji: Beji; playerId: string }) {
+function BejiSprite({
+    beji,
+    playerId,
+    onHoverEnter,
+    onHoverLeave,
+}: {
+    beji: Beji;
+    playerId: string;
+    onHoverEnter?: (e: any) => void;
+    onHoverLeave?: () => void;
+}) {
     const [position, setPosition] = useState({ x: beji.x, y: beji.y });
     const [target, setTarget] = useState({ x: beji.targetX, y: beji.targetY });
 
@@ -48,7 +58,8 @@ function BejiSprite({ beji, playerId }: { beji: Beji; playerId: string }) {
         Math.abs(position.x - target.x) > 1 || Math.abs(position.y - target.y) > 1;
 
     return (
-        <g>
+        <g onMouseEnter={onHoverEnter} onMouseLeave={onHoverLeave}
+        >
             <circle
                 cx={beji.x}
                 cy={beji.y}
@@ -166,9 +177,55 @@ export function Map() {
     const renderViewWidth = mounted ? viewWidth : MAP_SIZE;
     const renderViewHeight = mounted ? viewHeight : MAP_SIZE;
 
+    // Track hover over the current player's beji to optionally pause follow
+    const [isBejiHovered, setIsBejiHovered] = useState(false);
+
+    // SVG ref to translate client coordinates into world coordinates
+    const svgRef = useRef<SVGSVGElement | null>(null);
+
+    function clientToWorld(clientX: number, clientY: number) {
+        const svg = svgRef.current;
+        if (!svg) return { x: 0, y: 0 };
+        const rect = svg.getBoundingClientRect();
+        const px = (clientX - rect.left) / Math.max(1, rect.width);
+        const py = (clientY - rect.top) / Math.max(1, rect.height);
+        const x = renderViewX + px * renderViewWidth;
+        const y = renderViewY + py * renderViewHeight;
+        return { x: clamp(x, 0, MAP_SIZE), y: clamp(y, 0, MAP_SIZE) };
+    }
+
+    const setTargetTo = (worldX: number, worldY: number) => {
+        if (!currentPlayerId) return;
+        const updated: Beji[] = beji.map((b: Beji) => (
+            b.playerId === currentPlayerId
+                ? { ...b, targetX: clamp(worldX, 0, MAP_SIZE), targetY: clamp(worldY, 0, MAP_SIZE) }
+                : b
+        ));
+        setBeji(updated);
+    };
+
+    const handleSvgMouseMove = (e: any) => {
+        if (isTouchPreferred) return;
+        if (isBejiHovered) return; // pause movement when hovering the beji
+        const { x, y } = clientToWorld(e.clientX, e.clientY);
+        setTargetTo(x, y);
+    };
+
+    const handleBejiMouseEnter = (e: any) => {
+        setIsBejiHovered(true);
+        // Snap target to exact cursor position upon entering to stop movement
+        const { x, y } = clientToWorld(e.clientX, e.clientY);
+        setTargetTo(x, y);
+    };
+
+    const handleBejiMouseLeave = () => {
+        setIsBejiHovered(false);
+    };
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%", height: "100%", position: "relative" }}>
             <svg
+                ref={svgRef}
                 width="100%"
                 height="100%"
                 viewBox={`${renderViewX} ${renderViewY} ${renderViewWidth} ${renderViewHeight}`}
@@ -178,10 +235,17 @@ export function Map() {
                     background: "#ffffff",
                     flex: 1,
                 }}
+                onMouseMove={handleSvgMouseMove}
             >
                 <MapGrid mapSize={MAP_SIZE} cellSize={CELL_SIZE} />
                 {beji.map((b) => (
-                    <BejiSprite key={b.id} beji={b} playerId={currentPlayerId} />
+                    <BejiSprite
+                        key={b.id}
+                        beji={b}
+                        playerId={currentPlayerId}
+                        onHoverEnter={b.playerId === currentPlayerId ? handleBejiMouseEnter : undefined}
+                        onHoverLeave={b.playerId === currentPlayerId ? handleBejiMouseLeave : undefined}
+                    />
                 ))}
             </svg>
             {isTouchPreferred && (
