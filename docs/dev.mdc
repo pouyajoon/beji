@@ -19,3 +19,5 @@ use react router to update the navigation between pages, prefer using <a> over b
 to check the ts issues and application run use `pnpm dev` it's in watch mode so you can see the issues and errors in the console. it's really faster than doing `pnpm build` 
 
 don't cast to `any` without a good reason and withouy my approval, prefer to use the specific type.
+
+create tooltip for all actions and buttons in the app

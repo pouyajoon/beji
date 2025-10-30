@@ -3,6 +3,7 @@
 /* Mobile-first base tweaks */
 html, body {
   height: 100%;
+  overflow: hidden; /* prevent page scroll */
 }
 
 /* Better tap targets on mobile */
@@ -99,3 +100,44 @@ th, td {
 }
 
 
+/* Simple tooltip */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltip-content {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: #111827;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 1000;
+}
+
+.tooltip:hover .tooltip-content, .tooltip:focus-within .tooltip-content {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.tooltip .tooltip-content::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #111827;
+}

@@ -55,6 +55,7 @@ export function StartPage() {
             y: 400,
             targetX: 400,
             targetY: 400,
+            walk: true,
         };
 
         setBeji([newBeji]);

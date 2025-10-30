@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Beji } from "./atoms";
 import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
+import { registerShortcut, unregisterShortcutById, useShortcuts, RESERVED_KEYS } from "../src/lib/shortcuts";
 import { VirtualJoystick } from "./VirtualJoystick";
 
 const MAP_SIZE = 800; // meters
@@ -74,6 +75,21 @@ export function CanvasMap() {
         return () => mediaQuery.removeEventListener?.("change", handleChange);
     }, []);
 
+    // Global shortcuts
+    useShortcuts();
+    useEffect(() => {
+        // Avoid using reserved arrow keys
+        if (RESERVED_KEYS.has("f")) return;
+        registerShortcut({
+            id: "toggle-follow-mouse",
+            key: "f",
+            description: "Toggle follow mouse",
+            preventDefault: true,
+            handler: () => setFollowMouse((v) => !v),
+        });
+        return () => unregisterShortcutById("toggle-follow-mouse");
+    }, [setFollowMouse]);
+
     const cameraTarget = useMemo(() => {
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
         return focus ? { x: focus.x, y: focus.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
@@ -106,7 +122,18 @@ export function CanvasMap() {
         bejiRef.current = beji;
     }, [beji]);
 
-    // no HTML debug timer; debug is drawn within the canvas each frame
+    // Drag-to-pan state
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef<{
+        clientX: number;
+        clientY: number;
+        offsetX: number;
+        offsetY: number;
+        viewWidth: number;
+        viewHeight: number;
+    } | null>(null);
+
+    // no toolbar debug timer; debug rendered on canvas
 
     // Physics positions (authoritative for render) live outside React to avoid re-renders
     const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
@@ -146,6 +173,8 @@ export function CanvasMap() {
             while (acc >= fixedDt) {
                 // Integrate towards targets
                 for (const b of bejiRef.current) {
+                    // Skip movement if walk is false
+                    if (!b.walk) continue;
                     const pos = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
                     const dx = b.targetX - pos.x;
                     const dy = b.targetY - pos.y;
@@ -192,6 +221,36 @@ export function CanvasMap() {
         if (isTouchPreferred) return;
         const { x, y } = clientToWorld(e.clientX, e.clientY);
         mouseWorldRef.current = { x, y };
+
+        // Handle drag-to-pan (update cameraOffset in world space based on pixel delta)
+        if (isDragging && dragStartRef.current) {
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const dxPx = e.clientX - dragStartRef.current.clientX;
+                const dyPx = e.clientY - dragStartRef.current.clientY;
+                const dxWorld = (dxPx / Math.max(1, canvas.width)) * dragStartRef.current.viewWidth;
+                const dyWorld = (dyPx / Math.max(1, canvas.height)) * dragStartRef.current.viewHeight;
+
+                // Dragging right moves map right with cursor (content follows), so offset decreases
+                let nextOffsetX = dragStartRef.current.offsetX - dxWorld;
+                let nextOffsetY = dragStartRef.current.offsetY - dyWorld;
+
+                // Clamp using desired center within bounds at the start's view size
+                const desiredCenterX = cameraTarget.x + nextOffsetX;
+                const desiredCenterY = cameraTarget.y + nextOffsetY;
+                let nextViewX = desiredCenterX - dragStartRef.current.viewWidth / 2;
+                let nextViewY = desiredCenterY - dragStartRef.current.viewHeight / 2;
+                nextViewX = Math.max(0, Math.min(MAP_SIZE - dragStartRef.current.viewWidth, nextViewX));
+                nextViewY = Math.max(0, Math.min(MAP_SIZE - dragStartRef.current.viewHeight, nextViewY));
+                const clampedCenterX = nextViewX + dragStartRef.current.viewWidth / 2;
+                const clampedCenterY = nextViewY + dragStartRef.current.viewHeight / 2;
+                nextOffsetX = clampedCenterX - cameraTarget.x;
+                nextOffsetY = clampedCenterY - cameraTarget.y;
+
+                setCameraOffset({ x: nextOffsetX, y: nextOffsetY });
+            }
+            return; // do not update target while dragging
+        }
         // hover detection against smoothed position if available, else current beji pos
         const playerBeji = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : undefined;
         if (playerBeji) {
@@ -206,6 +265,28 @@ export function CanvasMap() {
         if (isPlayerBejiHoveredRef.current) return;
         if (!followMouseRef.current) return;
         setTargetTo(x, y);
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (isTouchPreferred) return;
+        if (e.button !== 0) return; // left button only
+        e.preventDefault();
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        setIsDragging(true);
+        dragStartRef.current = {
+            clientX: e.clientX,
+            clientY: e.clientY,
+            offsetX: cameraOffset.x,
+            offsetY: cameraOffset.y,
+            viewWidth: renderViewWidth,
+            viewHeight: renderViewHeight,
+        };
+    };
+
+    const endDrag = () => {
+        setIsDragging(false);
+        dragStartRef.current = null;
     };
 
     // Render loop (draw only; no simulation)
@@ -269,7 +350,8 @@ export function CanvasMap() {
                 const originScreenY = (0 - renderViewY) * (canvasEl.height / renderViewHeight);
                 ctx2.save();
                 ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                ctx2.font = `16px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+                const dpr = window.devicePixelRatio || 1;
+                ctx2.font = `${16 * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
                 ctx2.textAlign = "center";
                 ctx2.textBaseline = "middle";
                 ctx2.fillText("⭕", originScreenX, originScreenY);
@@ -286,7 +368,8 @@ export function CanvasMap() {
                 const screenY = (p.y - renderViewY) * (canvasEl.height / renderViewHeight);
                 ctx2.save();
                 ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                ctx2.font = `${0.7 * pixelsPerMeter}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+                const dpr = window.devicePixelRatio || 1;
+                ctx2.font = `${0.7 * pixelsPerMeter * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
                 ctx2.textAlign = "center";
                 ctx2.textBaseline = "middle";
                 ctx2.fillText(b.emoji, screenX, screenY);
@@ -296,7 +379,7 @@ export function CanvasMap() {
             // draw guidance line and ETA from current player's beji to mouse
             if (!isTouchPreferred && currentPlayerId && mouseWorldRef.current && followMouseRef.current) {
                 const playerBeji = bejiRef.current.find((bb) => bb.playerId === currentPlayerId);
-                if (playerBeji) {
+                if (playerBeji && playerBeji.walk) {
                     const p = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
                     const m = mouseWorldRef.current;
                     const dx = m.x - p.x;
@@ -320,9 +403,10 @@ export function CanvasMap() {
                         const etaText = `${etaSec.toFixed(1)}s`;
                         const mouseScreenX = (m.x - renderViewX) * (canvasEl.width / renderViewWidth);
                         const mouseScreenY = (m.y - renderViewY) * (canvasEl.height / renderViewHeight);
-                        const fontPx = 18; // larger constant px size regardless of zoom
-                        const padding = 4;
-                        const margin = 6;
+                        const dpr = window.devicePixelRatio || 1;
+                        const fontPx = 18 * dpr; // larger constant px size regardless of zoom
+                        const padding = 4 * dpr;
+                        const margin = 6 * dpr;
                         // offset label slightly away from mouse cursor
                         const normX = dx / dist;
                         const normY = dy / dist;
@@ -377,10 +461,11 @@ export function CanvasMap() {
 
                 ctx2.save();
                 ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                const fontPx = 11;
-                const lineH = 14;
-                const padding = 6;
-                const margin = 12;
+                const dpr = window.devicePixelRatio || 1;
+                const fontPx = 11 * dpr;
+                const lineH = 14 * dpr;
+                const padding = 6 * dpr;
+                const margin = 12 * dpr;
                 ctx2.font = `${fontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
                 let maxW = 0;
                 for (const line of lines) {
@@ -400,11 +485,12 @@ export function CanvasMap() {
                 ctx2.fill();
                 ctx2.stroke();
                 // text
-                ctx2.fillStyle = "#111827";
+                ctx2.fillStyle = "#000000";
                 ctx2.textAlign = "left";
                 ctx2.textBaseline = "top";
                 for (let i = 0; i < lines.length; i++) {
-                    ctx2.fillText(lines[i], boxX + padding, boxY + padding + i * lineH);
+                    const line = lines[i] ?? "";
+                    ctx2.fillText(line, boxX + padding, boxY + padding + i * lineH);
                 }
                 ctx2.restore();
             }
@@ -420,7 +506,7 @@ export function CanvasMap() {
         if (isTouchPreferred) return;
         e.preventDefault();
         const factor = e.deltaY > 0 ? 1 / 1.1 : 1.1;
-        const nextPixelsPerMeter = Math.max(10, Math.min(400, pixelsPerMeter * factor));
+        const nextPixelsPerMeter = Math.max(2, Math.min(400, pixelsPerMeter * factor));
 
         // Compute mouse position as fraction of canvas and corresponding world point
         const canvas = canvasRef.current;
@@ -463,22 +549,10 @@ export function CanvasMap() {
     };
 
     return (
-        <div ref={containerRef} onWheel={handleWheel} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", position: "relative", border: "2px solid #e5e7eb" }}>
-            <canvas
-                ref={canvasRef}
-                style={{
-                    cursor: "default",
-                    background: "#ffffff",
-                    boxSizing: "border-box",
-                    width: "100%",
-                    height: `${viewport.height}px`,
-                    display: "block",
-                }}
-                onMouseMove={handleMouseMove}
-            />
-            {/* Follow-mouse toggle */}
-            {!isTouchPreferred && (
-                <div style={{ position: "absolute", right: 12, top: 12 }}>
+        <div ref={containerRef} onWheel={handleWheel} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
+            {/* Top Action Bar (sibling to canvas) */}
+            <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, padding: "8px 12px", background: "#ffffff", borderBottom: "1px solid #e5e7eb" }}>
+                <div className="tooltip">
                     <button
                         type="button"
                         aria-pressed={followMouse}
@@ -498,11 +572,30 @@ export function CanvasMap() {
                     >
                         🦶
                     </button>
+                    <span className="tooltip-content" aria-hidden="true">
+                        {`Follow mouse: ${followMouse ? "on" : "off"}`}
+                    </span>
                 </div>
-            )}
+                {/* All debug is drawn on canvas */}
+            </div>
+            <canvas
+                ref={canvasRef}
+                style={{
+                    cursor: isDragging ? "grabbing" : "default",
+                    background: "#ffffff",
+                    boxSizing: "border-box",
+                    width: "100%",
+                    height: `${viewport.height}px`,
+                    display: "block",
+                }}
+                onMouseMove={handleMouseMove}
+                onMouseDown={handleMouseDown}
+                onMouseUp={endDrag}
+                onMouseLeave={endDrag}
+            />
             {/* (debug now rendered on canvas) */}
             {isTouchPreferred && (
-                <div style={{ position: "absolute", right: 16, bottom: 16 }}>
+                <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 1000 }}>
                     <VirtualJoystick
                         onVector={(vx, vy) => {
                             const speed = 8;
@@ -511,10 +604,7 @@ export function CanvasMap() {
                     />
                 </div>
             )}
-            {/* Simple zoom HUD */}
-            <div style={{ position: "absolute", left: 12, bottom: 12, background: "rgba(255,255,255,0.8)", border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 12 }}>
-                zoom: {Math.round(pixelsPerMeter)} px/m
-            </div>
+            {/* Zoom HUD moved to toolbar */}
         </div>
     );
 }

@@ -30,6 +30,9 @@ function BejiSprite({
     }, [beji.targetX, beji.targetY]);
 
     useEffect(() => {
+        // Skip movement if walk is false
+        if (!beji.walk) return;
+        
         const dx = target.x - position.x;
         const dy = target.y - position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -51,7 +54,7 @@ function BejiSprite({
         });
 
         return () => cancelAnimationFrame(timer);
-    }, [position.x, position.y, target.x, target.y]);
+    }, [position.x, position.y, target.x, target.y, beji.walk]);
 
     const isMoving =
         Math.abs(position.x - target.x) > 1 || Math.abs(position.y - target.y) > 1;

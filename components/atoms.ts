@@ -16,6 +16,7 @@ export type Beji = {
     y: number;
     targetX: number;
     targetY: number;
+    walk: boolean;
 };
 
 export type GameState = {
@@ -24,7 +25,37 @@ export type GameState = {
 };
 
 // Atoms
-const gameStorage = createJSONStorage<GameState>(() => localStorage);
+const gameStorage = createJSONStorage<GameState>(() => {
+    const baseStorage = localStorage;
+    return {
+        getItem: (key: string): string | null => {
+            try {
+                const value = baseStorage.getItem(key);
+                if (value === null) return null;
+                const parsed: any = JSON.parse(value);
+                // Migrate old Beji objects to include walk property
+                if (parsed && parsed.beji && Array.isArray(parsed.beji)) {
+                    parsed.beji = parsed.beji.map((b: any) => ({
+                        ...b,
+                        walk: b.walk !== undefined ? b.walk : true,
+                    }));
+                    // Write back the migrated data
+                    baseStorage.setItem(key, JSON.stringify(parsed));
+                    return JSON.stringify(parsed);
+                }
+                return value;
+            } catch {
+                return null;
+            }
+        },
+        setItem: (key: string, newValue: string): void => {
+            baseStorage.setItem(key, newValue);
+        },
+        removeItem: (key: string): void => {
+            baseStorage.removeItem(key);
+        },
+    };
+});
 
 export const gameStateAtom = atomWithStorage<GameState>(
     "beji:gameState",
