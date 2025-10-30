@@ -128,10 +128,15 @@ export function Map() {
 
     useKeyboardMovement((dx, dy) => stepBy(dx, dy), { enabled: true, stepSize: CELL_SIZE });
 
-    const isTouchPreferred = useMemo(() => {
-        if (typeof window === "undefined") return false;
-        const mq = window.matchMedia("(pointer: coarse)");
-        return mq.matches;
+    // Detect touch preference after mount to avoid SSR/CSR hydration mismatch
+    const [isTouchPreferred, setIsTouchPreferred] = useState(false);
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const mediaQuery = window.matchMedia("(pointer: coarse)");
+        setIsTouchPreferred(mediaQuery.matches);
+        const handleChange = (e: MediaQueryListEvent) => setIsTouchPreferred(e.matches);
+        mediaQuery.addEventListener?.("change", handleChange);
+        return () => mediaQuery.removeEventListener?.("change", handleChange);
     }, []);
 
     // Joystick on touch: periodic small steps in the direction vector
