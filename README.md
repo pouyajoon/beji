@@ -1,12 +1,11 @@
 # Beji
 
-TypeScript + Next.js + Tailwind starter with strict dev rules (pnpm, ESLint, Prettier, Husky, Commitlint).
+TypeScript + Next.js + Tailwind starter with strict dev rules (pnpm, ESLint, Prettier, Commitlint).
 
 ## Quick start
 
 ```bash
 pnpm install
-pnpm prepare
 pnpm dev
 ```
 
@@ -34,15 +33,6 @@ pnpm dev
 - `pnpm lint` — run ESLint
 - `pnpm typecheck` — run TypeScript checks
 - `pnpm format` — run Prettier write
-
-## Notes
-
-- After cloning, run `pnpm install && pnpm prepare` to activate Husky hooks.
-- If hooks don’t run, ensure execute permissions on `.husky/*`:
-
-```bash
-chmod +x .husky/*
-```
 
 ## RPC via Proto files
 
