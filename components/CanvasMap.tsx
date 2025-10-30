@@ -62,6 +62,9 @@ export function CanvasMap() {
 
     const [isTouchPreferred, setIsTouchPreferred] = useState(false);
     const [pixelsPerMeter, setPixelsPerMeter] = useAtom(zoomPxPerMeterAtom);
+    const [followMouse, setFollowMouse] = useState(true);
+    const followMouseRef = useRef<boolean>(true);
+    useEffect(() => { followMouseRef.current = followMouse; }, [followMouse]);
     useEffect(() => {
         if (typeof window === "undefined") return;
         const mediaQuery = window.matchMedia("(pointer: coarse)");
@@ -103,12 +106,7 @@ export function CanvasMap() {
         bejiRef.current = beji;
     }, [beji]);
 
-    // Debug overlay ticker to refresh HTML stats periodically without heavy re-renders
-    const [debugTick, setDebugTick] = useState(0);
-    useEffect(() => {
-        const id = setInterval(() => setDebugTick((t) => (t + 1) % 1_000_000), 100);
-        return () => clearInterval(id);
-    }, []);
+    // no HTML debug timer; debug is drawn within the canvas each frame
 
     // Physics positions (authoritative for render) live outside React to avoid re-renders
     const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
@@ -206,6 +204,7 @@ export function CanvasMap() {
             isPlayerBejiHoveredRef.current = false;
         }
         if (isPlayerBejiHoveredRef.current) return;
+        if (!followMouseRef.current) return;
         setTargetTo(x, y);
     };
 
@@ -295,7 +294,7 @@ export function CanvasMap() {
             }
 
             // draw guidance line and ETA from current player's beji to mouse
-            if (!isTouchPreferred && currentPlayerId && mouseWorldRef.current) {
+            if (!isTouchPreferred && currentPlayerId && mouseWorldRef.current && followMouseRef.current) {
                 const playerBeji = bejiRef.current.find((bb) => bb.playerId === currentPlayerId);
                 if (playerBeji) {
                     const p = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
@@ -358,6 +357,56 @@ export function CanvasMap() {
                         ctx2.restore();
                     }
                 }
+            }
+
+            // draw debug overlay at top-left in screen space
+            {
+                const mouse = mouseWorldRef.current;
+                const bejiLines = bejiRef.current.map((b) => {
+                    const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
+                    return `${b.emoji}  x:${p.x.toFixed(2)}  y:${p.y.toFixed(2)}  (player:${b.playerId ?? "-"})`;
+                });
+                const lines = [
+                    `zoom: ${Math.round(pixelsPerMeter)} px/m`,
+                    `view: x:${renderViewX.toFixed(2)} y:${renderViewY.toFixed(2)} w:${renderViewWidth.toFixed(2)} h:${renderViewHeight.toFixed(2)}`,
+                    mouse ? `mouse: x:${mouse.x.toFixed(2)} y:${mouse.y.toFixed(2)}` : `mouse: -`,
+                    `follow: ${followMouseRef.current ? "on" : "off"}`,
+                    `beji:`,
+                    ...bejiLines,
+                ];
+
+                ctx2.save();
+                ctx2.setTransform(1, 0, 0, 1, 0, 0);
+                const fontPx = 11;
+                const lineH = 14;
+                const padding = 6;
+                const margin = 12;
+                ctx2.font = `${fontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
+                let maxW = 0;
+                for (const line of lines) {
+                    const w = ctx2.measureText(line).width;
+                    if (w > maxW) maxW = w;
+                }
+                const boxW = Math.min(maxW + padding * 2, Math.max(160, maxW + padding * 2));
+                const boxH = padding * 2 + lines.length * lineH;
+                const boxX = margin;
+                const boxY = margin;
+                // background
+                ctx2.fillStyle = "rgba(255,255,255,0.85)";
+                ctx2.strokeStyle = "#e5e7eb";
+                ctx2.lineWidth = 1;
+                ctx2.beginPath();
+                ctx2.rect(boxX, boxY, boxW, boxH);
+                ctx2.fill();
+                ctx2.stroke();
+                // text
+                ctx2.fillStyle = "#111827";
+                ctx2.textAlign = "left";
+                ctx2.textBaseline = "top";
+                for (let i = 0; i < lines.length; i++) {
+                    ctx2.fillText(lines[i], boxX + padding, boxY + padding + i * lineH);
+                }
+                ctx2.restore();
             }
 
             raf = requestAnimationFrame(draw);
@@ -427,40 +476,31 @@ export function CanvasMap() {
                 }}
                 onMouseMove={handleMouseMove}
             />
-            {/* Debug overlay (HTML) */}
-            <div
-                style={{
-                    position: "absolute",
-                    left: 12,
-                    top: 12,
-                    background: "rgba(255,255,255,0.85)",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 6,
-                    padding: "6px 8px",
-                    fontSize: 11,
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace",
-                    color: "#111827",
-                    maxWidth: 280,
-                    pointerEvents: "none",
-                    whiteSpace: "pre-wrap",
-                }}
-            >
-                {(() => {
-                    const mouse = mouseWorldRef.current;
-                    const bejiLines = bejiRef.current.map((b) => {
-                        const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
-                        return `${b.emoji}  x:${p.x.toFixed(2)}  y:${p.y.toFixed(2)}  (player:${b.playerId ?? "-"})`;
-                    });
-                    return [
-                        `zoom: ${Math.round(pixelsPerMeter)} px/m`,
-                        `view: x:${renderViewX.toFixed(2)} y:${renderViewY.toFixed(2)} w:${renderViewWidth.toFixed(2)} h:${renderViewHeight.toFixed(2)}`,
-                        mouse ? `mouse: x:${mouse.x.toFixed(2)} y:${mouse.y.toFixed(2)}` : `mouse: -`,
-                        `beji:`,
-                        ...bejiLines,
-                        `t:${debugTick}`,
-                    ].join("\n");
-                })()}
-            </div>
+            {/* Follow-mouse toggle */}
+            {!isTouchPreferred && (
+                <div style={{ position: "absolute", right: 12, top: 12 }}>
+                    <button
+                        type="button"
+                        aria-pressed={followMouse}
+                        onClick={() => setFollowMouse((v) => !v)}
+                        title={followMouse ? "Following mouse (click to stop)" : "Not following mouse (click to enable)"}
+                        style={{
+                            fontSize: 18,
+                            lineHeight: 1,
+                            padding: "6px 8px",
+                            borderRadius: 8,
+                            border: `1px solid ${followMouse ? "#10b981" : "#d1d5db"}`,
+                            background: followMouse ? "#ecfdf5" : "#ffffff",
+                            color: "#0f172a",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                            cursor: "pointer",
+                        }}
+                    >
+                        🦶
+                    </button>
+                </div>
+            )}
+            {/* (debug now rendered on canvas) */}
             {isTouchPreferred && (
                 <div style={{ position: "absolute", right: 16, bottom: 16 }}>
                     <VirtualJoystick
