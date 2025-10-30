@@ -162,16 +162,7 @@ export function Map() {
     const renderViewHeight = mounted ? viewHeight : MAP_SIZE;
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%", height: "100%" }}>
-            <div
-                style={{
-                    fontSize: 14,
-                    color: "#6b7280",
-                    textAlign: "center",
-                }}
-            >
-                {beji.length > 0 ? `${beji.length} beji on map` : "No beji yet"}
-            </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%", height: "100%", position: "relative" }}>
             <svg
                 width="100%"
                 height="100%"
@@ -180,6 +171,7 @@ export function Map() {
                     border: "2px solid #e5e7eb",
                     cursor: "default",
                     background: "#ffffff",
+                    flex: 1,
                 }}
             >
                 <MapGrid mapSize={MAP_SIZE} cellSize={CELL_SIZE} />
@@ -188,21 +180,14 @@ export function Map() {
                 ))}
             </svg>
             {isTouchPreferred && (
-                <VirtualJoystick
-                    onVector={(vx, vy) => {
-                        // Scale vector to world units per tick
-                        const speed = 8; // pixels per emit
-                        stepBy(vx * speed, vy * speed);
-                    }}
-                />
-            )}
-            {beji.length > 0 && (
-                <div style={{ fontSize: 12, color: "#9ca3af", textAlign: "center" }}>
-                    {beji.map((b) => (
-                        <span key={b.id} style={{ marginRight: 8 }}>
-                            {b.name}: {b.emoji}
-                        </span>
-                    ))}
+                <div style={{ position: "absolute", right: 16, bottom: 16 }}>
+                    <VirtualJoystick
+                        onVector={(vx, vy) => {
+                            // Scale vector to world units per tick
+                            const speed = 8; // pixels per emit
+                            stepBy(vx * speed, vy * speed);
+                        }}
+                    />
                 </div>
             )}
         </div>

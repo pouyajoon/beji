@@ -7,14 +7,15 @@ export default async function LocaleLayout({
   params
 }: {
   children: ReactNode;
-  params: Promise<{ locale: AppLocale }>;
+  params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const messages = await loadMessages(locale);
-  const isRtl = locale === 'fa';
+  const typedLocale = locale as AppLocale;
+  const messages = await loadMessages(typedLocale);
+  const isRtl = typedLocale === 'fa';
 
   return (
-    <DictionaryProvider value={{ locale, messages }}>
+    <DictionaryProvider value={{ locale: typedLocale, messages }}>
       <div dir={isRtl ? 'rtl' : 'ltr'}>
         {children}
       </div>

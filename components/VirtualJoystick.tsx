@@ -78,16 +78,24 @@ export function VirtualJoystick({ onVector }: Props) {
         >
             <div
                 ref={containerRef}
-                onTouchStart={(e) => start(e.touches[0].clientX, e.touches[0].clientY)}
-                onTouchMove={(e) => move(e.touches[0].clientX, e.touches[0].clientY)}
+                onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    if (!touch) return;
+                    start(touch.clientX, touch.clientY);
+                }}
+                onTouchMove={(e) => {
+                    const touch = e.touches[0];
+                    if (!touch) return;
+                    move(touch.clientX, touch.clientY);
+                }}
                 onTouchEnd={end}
                 onPointerDown={(e) => {
-                    if ((e as PointerEvent).pointerType === "touch") {
+                    if (e.pointerType === "touch") {
                         start(e.clientX, e.clientY);
                     }
                 }}
                 onPointerMove={(e) => {
-                    if ((e as PointerEvent).pointerType === "touch" && active) {
+                    if (e.pointerType === "touch" && active) {
                         move(e.clientX, e.clientY);
                     }
                 }}
