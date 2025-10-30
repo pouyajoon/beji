@@ -2,6 +2,7 @@
 
 import { useAtom, useAtomValue, useSetAtom } from "../lib/jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Tooltip } from "./Tooltip";
 import type { Beji } from "./atoms";
 import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
@@ -121,6 +122,19 @@ export function CanvasMap() {
     useEffect(() => {
         bejiRef.current = beji;
     }, [beji]);
+
+    // Persist current player's latest intended position (target) to localStorage
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const b = currentPlayerId ? beji.find((v) => v.playerId === currentPlayerId) : undefined;
+        if (!b) return;
+        try {
+            window.localStorage.setItem(
+                "beji:lastPosition",
+                JSON.stringify({ x: Math.round(b.targetX), y: Math.round(b.targetY) })
+            );
+        } catch { }
+    }, [beji, currentPlayerId]);
 
     // Drag-to-pan state
     const [isDragging, setIsDragging] = useState(false);
@@ -548,22 +562,24 @@ export function CanvasMap() {
         });
     };
 
+    const tooltipLabel = (followMouse ? "Following mouse (click to stop)" : "Not following mouse (click to enable)") + " • Shortcut: F";
+
     return (
         <div ref={containerRef} onWheel={handleWheel} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
             {/* Top Action Bar (sibling to canvas) */}
             <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, padding: "8px 12px", background: "#ffffff", borderBottom: "1px solid #e5e7eb" }}>
-                <div className="tooltip">
+                <Tooltip label={tooltipLabel}>
                     <button
                         type="button"
                         aria-pressed={followMouse}
+                        aria-label={tooltipLabel}
                         onClick={() => setFollowMouse((v) => !v)}
-                        title={followMouse ? "Following mouse (click to stop)" : "Not following mouse (click to enable)"}
                         style={{
                             fontSize: 18,
                             lineHeight: 1,
                             padding: "6px 8px",
                             borderRadius: 8,
-                            border: `1px solid ${followMouse ? "#10b981" : "#d1d5db"}`,
+                            border: followMouse ? "1px solid #10b981" : "1px solid #d1d5db",
                             background: followMouse ? "#ecfdf5" : "#ffffff",
                             color: "#0f172a",
                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
@@ -572,10 +588,7 @@ export function CanvasMap() {
                     >
                         🦶
                     </button>
-                    <span className="tooltip-content" aria-hidden="true">
-                        {`Follow mouse: ${followMouse ? "on" : "off"}`}
-                    </span>
-                </div>
+                </Tooltip>
                 {/* All debug is drawn on canvas */}
             </div>
             <canvas
@@ -594,18 +607,20 @@ export function CanvasMap() {
                 onMouseLeave={endDrag}
             />
             {/* (debug now rendered on canvas) */}
-            {isTouchPreferred && (
-                <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 1000 }}>
-                    <VirtualJoystick
-                        onVector={(vx, vy) => {
-                            const speed = 8;
-                            stepBy(vx * speed, vy * speed);
-                        }}
-                    />
-                </div>
-            )}
+            {
+                isTouchPreferred && (
+                    <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 1000 }}>
+                        <VirtualJoystick
+                            onVector={(vx, vy) => {
+                                const speed = 8;
+                                stepBy(vx * speed, vy * speed);
+                            }}
+                        />
+                    </div>
+                )
+            }
             {/* Zoom HUD moved to toolbar */}
-        </div>
+        </div >
     );
 }
 

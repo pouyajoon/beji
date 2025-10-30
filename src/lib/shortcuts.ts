@@ -42,7 +42,7 @@ export function getRegisteredShortcuts(): ReadonlyArray<Shortcut> {
 }
 
 export function useShortcuts() {
-    const handlerRef = useRef<(e: KeyboardEvent) => void>();
+    const handlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
     useEffect(() => {
         handlerRef.current = (e: KeyboardEvent) => {

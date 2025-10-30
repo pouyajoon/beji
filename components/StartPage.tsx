@@ -45,16 +45,34 @@ export function StartPage() {
 
         setPlayers([newPlayer]);
 
+        // Load last saved position if available
+        let startX = 400;
+        let startY = 400;
+        if (typeof window !== "undefined") {
+            try {
+                const raw = window.localStorage.getItem("beji:lastPosition");
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+                        // Clamp to map bounds (0..800) to be safe
+                        const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+                        startX = clamp(parsed.x, 0, 800);
+                        startY = clamp(parsed.y, 0, 800);
+                    }
+                }
+            } catch { }
+        }
+
         // Add initial beji for the player
         const newBeji: Beji = {
             id: `beji-${Date.now()}`,
             playerId: playerId,
             emoji: emojiChar,
             name: bejiName.trim(),
-            x: 400,
-            y: 400,
-            targetX: 400,
-            targetY: 400,
+            x: startX,
+            y: startY,
+            targetX: startX,
+            targetY: startY,
             walk: true,
         };
 

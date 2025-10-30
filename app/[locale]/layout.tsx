@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { type AppLocale, loadMessages } from '../../src/i18n';
+import { locales, defaultLocale, type AppLocale, loadMessages } from '../../src/i18n';
 import { DictionaryProvider } from '../../i18n/DictionaryProvider';
 
 export default async function LocaleLayout({
@@ -10,12 +10,15 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const typedLocale = locale as AppLocale;
-  const messages = await loadMessages(typedLocale);
-  const isRtl = typedLocale === 'fa';
+  const candidate = locale as string;
+  const effectiveLocale = (locales as readonly string[]).includes(candidate)
+    ? (candidate as AppLocale)
+    : defaultLocale;
+  const messages = await loadMessages(effectiveLocale);
+  const isRtl = effectiveLocale === 'fa';
 
   return (
-    <DictionaryProvider value={{ locale: typedLocale, messages }}>
+    <DictionaryProvider value={{ locale: effectiveLocale, messages }}>
       <div dir={isRtl ? 'rtl' : 'ltr'}>
         {children}
       </div>
