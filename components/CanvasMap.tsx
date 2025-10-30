@@ -103,6 +103,13 @@ export function CanvasMap() {
         bejiRef.current = beji;
     }, [beji]);
 
+    // Debug overlay ticker to refresh HTML stats periodically without heavy re-renders
+    const [debugTick, setDebugTick] = useState(0);
+    useEffect(() => {
+        const id = setInterval(() => setDebugTick((t) => (t + 1) % 1_000_000), 100);
+        return () => clearInterval(id);
+    }, []);
+
     // Physics positions (authoritative for render) live outside React to avoid re-renders
     const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
     useEffect(() => {
@@ -121,6 +128,7 @@ export function CanvasMap() {
     // Mouse follow + hover pause (hit test against player's beji)
     const bejiHoverRadiusMeters = 0.6; // ~1m sized beji; use 0.6m hover radius
     const isPlayerBejiHoveredRef = useRef(false);
+    const mouseWorldRef = useRef<{ x: number; y: number } | null>(null);
 
     // Fixed-timestep physics loop (decoupled from rendering)
     useEffect(() => {
@@ -185,6 +193,7 @@ export function CanvasMap() {
     const handleMouseMove = (e: any) => {
         if (isTouchPreferred) return;
         const { x, y } = clientToWorld(e.clientX, e.clientY);
+        mouseWorldRef.current = { x, y };
         // hover detection against smoothed position if available, else current beji pos
         const playerBeji = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : undefined;
         if (playerBeji) {
@@ -255,16 +264,23 @@ export function CanvasMap() {
                 ctx2.stroke();
             }
 
+            // draw world origin marker (0,0) with ⭕ in screen space for consistent size
+            {
+                const originScreenX = (0 - renderViewX) * (canvasEl.width / renderViewWidth);
+                const originScreenY = (0 - renderViewY) * (canvasEl.height / renderViewHeight);
+                ctx2.save();
+                ctx2.setTransform(1, 0, 0, 1, 0, 0);
+                ctx2.font = `16px system-ui, Apple Color Emoji, Segoe UI Emoji`;
+                ctx2.textAlign = "center";
+                ctx2.textBaseline = "middle";
+                ctx2.fillText("⭕", originScreenX, originScreenY);
+                ctx2.restore();
+            }
+
             // draw beji from physics positions
             for (const b of bejiRef.current) {
                 const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
-                // shadow circle
-                ctx2.globalAlpha = 0.2;
-                ctx2.fillStyle = b.playerId === currentPlayerId ? "#3b82f6" : "#ef4444";
-                ctx2.beginPath();
-                ctx2.arc(p.x, p.y, 0.2, 0, Math.PI * 2); // 0.2m radius shadow
-                ctx2.fill();
-                ctx2.globalAlpha = 1;
+                // removed background shadow for clear emoji visibility
 
                 // draw emoji in screen space so size tracks pixels per meter cleanly
                 const screenX = (p.x - renderViewX) * (canvasEl.width / renderViewWidth);
@@ -276,6 +292,72 @@ export function CanvasMap() {
                 ctx2.textBaseline = "middle";
                 ctx2.fillText(b.emoji, screenX, screenY);
                 ctx2.restore();
+            }
+
+            // draw guidance line and ETA from current player's beji to mouse
+            if (!isTouchPreferred && currentPlayerId && mouseWorldRef.current) {
+                const playerBeji = bejiRef.current.find((bb) => bb.playerId === currentPlayerId);
+                if (playerBeji) {
+                    const p = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
+                    const m = mouseWorldRef.current;
+                    const dx = m.x - p.x;
+                    const dy = m.y - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 1e-3) {
+                        // world-space line
+                        ctx2.save();
+                        ctx2.globalAlpha = 0.7;
+                        ctx2.strokeStyle = "#3b82f6";
+                        ctx2.lineWidth = 2 / Math.max(1, (canvasEl.width / renderViewWidth));
+                        ctx2.setLineDash([1.5, 1.5]);
+                        ctx2.beginPath();
+                        ctx2.moveTo(p.x, p.y);
+                        ctx2.lineTo(m.x, m.y);
+                        ctx2.stroke();
+                        ctx2.restore();
+
+                        // ETA label in screen space near the mouse position (independent of zoom)
+                        const etaSec = dist / BEJI_SPEED_MPS;
+                        const etaText = `${etaSec.toFixed(1)}s`;
+                        const mouseScreenX = (m.x - renderViewX) * (canvasEl.width / renderViewWidth);
+                        const mouseScreenY = (m.y - renderViewY) * (canvasEl.height / renderViewHeight);
+                        const fontPx = 18; // larger constant px size regardless of zoom
+                        const padding = 4;
+                        const margin = 6;
+                        // offset label slightly away from mouse cursor
+                        const normX = dx / dist;
+                        const normY = dy / dist;
+                        // perpendicular offset to avoid overlapping the line; also push forward
+                        const offX = normX * 8 - normY * 8;
+                        const offY = normY * 8 + normX * 8;
+                        let labelX = mouseScreenX + offX;
+                        let labelY = mouseScreenY + offY;
+
+                        ctx2.save();
+                        ctx2.setTransform(1, 0, 0, 1, 0, 0);
+                        ctx2.font = `${fontPx}px system-ui, -apple-system, Segoe UI, Roboto`;
+                        ctx2.textAlign = "center";
+                        ctx2.textBaseline = "bottom";
+                        const metrics = ctx2.measureText(etaText);
+                        const textW = metrics.width;
+                        const textH = fontPx;
+
+                        // clamp inside canvas bounds
+                        const minX = margin + textW / 2 + padding;
+                        const maxX = canvasEl.width - (margin + textW / 2 + padding);
+                        const minY = margin + textH + padding;
+                        const maxY = canvasEl.height - margin;
+                        labelX = Math.max(minX, Math.min(maxX, labelX));
+                        labelY = Math.max(minY, Math.min(maxY, labelY));
+
+                        // backdrop for readability
+                        ctx2.fillStyle = "rgba(255,255,255,0.9)";
+                        ctx2.fillRect(labelX - textW / 2 - padding, labelY - textH - padding, textW + padding * 2, textH + padding);
+                        ctx2.fillStyle = "#111827";
+                        ctx2.fillText(etaText, labelX, labelY - 2);
+                        ctx2.restore();
+                    }
+                }
             }
 
             raf = requestAnimationFrame(draw);
@@ -304,6 +386,8 @@ export function CanvasMap() {
         // World point under cursor before zoom
         const worldBeforeX = renderViewX + px * renderViewWidth;
         const worldBeforeY = renderViewY + py * renderViewHeight;
+        // Update ETA endpoint immediately so guidance line stays in sync with zoom
+        mouseWorldRef.current = { x: worldBeforeX, y: worldBeforeY };
 
         // Desired view size after zoom
         const nextViewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, nextPixelsPerMeter));
@@ -343,6 +427,40 @@ export function CanvasMap() {
                 }}
                 onMouseMove={handleMouseMove}
             />
+            {/* Debug overlay (HTML) */}
+            <div
+                style={{
+                    position: "absolute",
+                    left: 12,
+                    top: 12,
+                    background: "rgba(255,255,255,0.85)",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "6px 8px",
+                    fontSize: 11,
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace",
+                    color: "#111827",
+                    maxWidth: 280,
+                    pointerEvents: "none",
+                    whiteSpace: "pre-wrap",
+                }}
+            >
+                {(() => {
+                    const mouse = mouseWorldRef.current;
+                    const bejiLines = bejiRef.current.map((b) => {
+                        const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
+                        return `${b.emoji}  x:${p.x.toFixed(2)}  y:${p.y.toFixed(2)}  (player:${b.playerId ?? "-"})`;
+                    });
+                    return [
+                        `zoom: ${Math.round(pixelsPerMeter)} px/m`,
+                        `view: x:${renderViewX.toFixed(2)} y:${renderViewY.toFixed(2)} w:${renderViewWidth.toFixed(2)} h:${renderViewHeight.toFixed(2)}`,
+                        mouse ? `mouse: x:${mouse.x.toFixed(2)} y:${mouse.y.toFixed(2)}` : `mouse: -`,
+                        `beji:`,
+                        ...bejiLines,
+                        `t:${debugTick}`,
+                    ].join("\n");
+                })()}
+            </div>
             {isTouchPreferred && (
                 <div style={{ position: "absolute", right: 16, bottom: 16 }}>
                     <VirtualJoystick

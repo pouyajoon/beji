@@ -1,7 +1,13 @@
 [build]
   command = "pnpm build"
+  # With the Next.js plugin, the publish directory is managed automatically.
+  # Setting it explicitly is fine and future-proof for static assets.
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
 
 [[plugins]]
-  package = "@netlify/next"
+  package = "@netlify/plugin-nextjs"
 
 

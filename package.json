@@ -24,6 +24,7 @@
     "negotiator": "^1.0.0"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.0.0",
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
     "@types/node": "^20.11.30",
