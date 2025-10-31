@@ -24,16 +24,16 @@ export function StartAction(props: StartActionProps) {
                     display: "inline-block",
                     textAlign: "center",
                     textDecoration: "none",
-                    // width: "100%",
-                    padding: "16px",
+                    padding: "clamp(12px, 3vw, 16px) clamp(20px, 5vw, 32px)",
                     border: disabled ? "1px solid var(--muted)" : "1px solid var(--fg)",
                     borderRadius: 8,
-                    fontSize: 18,
+                    fontSize: "clamp(16px, 4vw, 18px)",
                     fontWeight: 600,
                     color: disabled ? "var(--muted)" : "var(--fg)",
                     background: "transparent",
                     cursor: disabled ? "not-allowed" : "pointer",
                     transition: "all 0.2s",
+                    minWidth: "min(200px, 80vw)",
                 }}
             >
                 {label}

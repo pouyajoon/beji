@@ -10,18 +10,18 @@ export function SelectedPreview(props: SelectedPreviewProps) {
     if (!emoji) return null;
     return (
         <div style={{
-            marginTop: 24,
-            padding: 16,
+            marginTop: "clamp(20px, 5vw, 24px)",
+            padding: "clamp(12px, 3vw, 16px)",
             background: "transparent",
             border: "1px solid var(--muted)",
             borderRadius: 8,
             textAlign: "center",
         }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>
+            <div style={{ fontSize: "clamp(36px, 9vw, 48px)", marginBottom: "clamp(6px, 1.5vw, 8px)" }}>
                 {codepointsToEmoji(emoji)}
             </div>
             {name && (
-                <div style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)" }}>
+                <div style={{ fontSize: "clamp(16px, 4vw, 18px)", fontWeight: 600, color: "var(--fg)" }}>
                     {name}
                 </div>
             )}

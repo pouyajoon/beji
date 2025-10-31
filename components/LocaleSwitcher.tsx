@@ -29,23 +29,25 @@ export default function LocaleSwitcher() {
   };
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <div style={{ display: "flex", gap: "clamp(4px, 1vw, 8px)", flexWrap: "wrap" }}>
       {LOCALES.map(({ code, flag, label }) => (
         <Link
           key={code}
           href={makeHref(code)}
           aria-label={label}
           style={{
-            fontSize: 20,
-            lineHeight: "24px",
+            fontSize: "clamp(16px, 4vw, 20px)",
+            lineHeight: "1",
             textDecoration: "none",
             border: "1px solid var(--muted)",
-            borderRadius: 6,
-            padding: "4px 6px",
+            borderRadius: "clamp(4px, 1vw, 6px)",
+            padding: "clamp(3px, 0.75vw, 4px) clamp(4px, 1vw, 6px)",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "transparent"
+            background: "var(--bg)",
+            minWidth: "clamp(28px, 7vw, 32px)",
+            minHeight: "clamp(28px, 7vw, 32px)",
           }}
         >
           <span aria-hidden>{flag}</span>

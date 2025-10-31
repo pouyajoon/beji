@@ -3,8 +3,13 @@ import { StartPage } from '../../components/StartPage';
 
 export default function HomeLocalePage() {
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 10 }}>
+    <div style={{ padding: 0, minHeight: '100vh', position: 'relative' }}>
+      <div style={{ 
+        position: 'fixed', 
+        top: 'max(clamp(8px, 2vw, 12px), env(safe-area-inset-top, 0px))', 
+        right: 'max(clamp(8px, 2vw, 12px), env(safe-area-inset-right, 0px))', 
+        zIndex: 1000,
+      }}>
         <LocaleSwitcher />
       </div>
       <StartPage />

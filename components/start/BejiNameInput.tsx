@@ -9,10 +9,10 @@ type BejiNameInputProps = {
 export function BejiNameInput(props: BejiNameInputProps) {
     const { label, placeholder, value, onChange, onEnter } = props;
     return (
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: "clamp(24px, 6vw, 32px)" }}>
             <label style={{
                 display: "block",
-                fontSize: 14,
+                fontSize: "clamp(13px, 3vw, 14px)",
                 fontWeight: 500,
                 color: "var(--fg)",
                 marginBottom: 8,
@@ -30,10 +30,10 @@ export function BejiNameInput(props: BejiNameInputProps) {
                 style={{
                     width: "100%",
                     boxSizing: "border-box",
-                    padding: "12px 16px",
+                    padding: "clamp(10px, 2.5vw, 12px) clamp(12px, 3vw, 16px)",
                     border: "1px solid var(--muted)",
                     borderRadius: 8,
-                    fontSize: 16,
+                    fontSize: "clamp(15px, 3.5vw, 16px)",
                     outline: "none",
                     background: "transparent",
                     color: "var(--fg)",
