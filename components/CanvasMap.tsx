@@ -385,6 +385,7 @@ export function CanvasMap() {
                 currentPlayerId={currentPlayerId}
                 setCameraOffset={setCameraOffset}
                 getPhysicsPosition={(bejiId) => physicsPositionsRef.current.get(bejiId)}
+                setBeji={setBeji}
             />
             <canvas
                 ref={canvasRef}

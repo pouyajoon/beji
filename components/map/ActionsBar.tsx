@@ -9,6 +9,7 @@ type ActionsBarProps = {
     currentPlayerId: string;
     setCameraOffset: (offset: { x: number; y: number }) => void;
     getPhysicsPosition: (bejiId: string) => { x: number; y: number } | undefined;
+    setBeji: (beji: Beji[]) => void;
 };
 
 export function ActionsBar({
@@ -17,6 +18,7 @@ export function ActionsBar({
     currentPlayerId,
     setCameraOffset,
     getPhysicsPosition,
+    setBeji,
 }: ActionsBarProps) {
     return (
         <div style={{ 
@@ -39,6 +41,7 @@ export function ActionsBar({
                 currentPlayerId={currentPlayerId}
                 setCameraOffset={setCameraOffset}
                 getPhysicsPosition={getPhysicsPosition}
+                setBeji={setBeji}
             />
             {/* All debug is drawn on canvas */}
         </div>

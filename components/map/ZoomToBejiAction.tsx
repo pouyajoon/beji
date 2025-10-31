@@ -11,9 +11,10 @@ type ZoomToBejiActionProps = {
     currentPlayerId: string;
     setCameraOffset: (offset: { x: number; y: number }) => void;
     getPhysicsPosition: (bejiId: string) => { x: number; y: number } | undefined;
+    setBeji: (beji: Beji[]) => void;
 };
 
-export function ZoomToBejiAction({ currentPlayerId, setCameraOffset, getPhysicsPosition }: ZoomToBejiActionProps) {
+export function ZoomToBejiAction({ currentPlayerId, setCameraOffset, getPhysicsPosition, setBeji }: ZoomToBejiActionProps) {
     const beji = useAtomValue(bejiAtom);
     const players = useAtomValue(playersAtom);
     const setPixelsPerMeter = useSetAtom(zoomPxPerMeterAtom);
@@ -31,17 +32,21 @@ export function ZoomToBejiAction({ currentPlayerId, setCameraOffset, getPhysicsP
         const physicsPos = getPhysicsPosition(playerBeji.id);
         const currentPos = physicsPos ?? { x: playerBeji.position.x, y: playerBeji.position.y };
 
+        // Update beji position to match physics position so camera centers correctly
+        const updated: Beji[] = beji.map((b: Beji) => (
+            b.playerId === currentPlayerId
+                ? { ...b, position: { x: currentPos.x, y: currentPos.y } }
+                : b
+        ));
+        setBeji(updated);
+
         // Use a medium zoom level that focuses on the beji (e.g., 200 px/m)
         const targetZoom = 200;
         setPixelsPerMeter(targetZoom);
 
-        // Reset camera offset to center on the beji's current physics position
-        // The cameraTarget will use beji.position, so we calculate the offset needed
-        // to center on the actual physics position
-        const offsetX = currentPos.x - playerBeji.position.x;
-        const offsetY = currentPos.y - playerBeji.position.y;
-        setCameraOffset({ x: offsetX, y: offsetY });
-    }, [currentPlayerId, beji, setPixelsPerMeter, setCameraOffset, getPhysicsPosition]);
+        // Reset camera offset to center on the beji
+        setCameraOffset({ x: 0, y: 0 });
+    }, [currentPlayerId, beji, setPixelsPerMeter, setCameraOffset, getPhysicsPosition, setBeji]);
 
     // Register keyboard shortcut
     useEffect(() => {
