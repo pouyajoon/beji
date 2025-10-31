@@ -70,10 +70,8 @@ export function StartPage() {
             playerId: playerId,
             emoji: emojiChar,
             name: bejiName.trim(),
-            x: startX,
-            y: startY,
-            targetX: startX,
-            targetY: startY,
+            position: { x: startX, y: startY },
+            target: { x: startX, y: startY },
             walk: true,
         };
 

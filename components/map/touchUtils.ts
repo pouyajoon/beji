@@ -2,10 +2,15 @@
  * Utility functions for touch gesture calculations
  */
 
+type TouchLike = {
+    clientX: number;
+    clientY: number;
+};
+
 /**
  * Calculate the distance between two touch points
  */
-export function getTouchDistance(touch1: Touch, touch2: Touch): number {
+export function getTouchDistance(touch1: TouchLike, touch2: TouchLike): number {
     const dx = touch2.clientX - touch1.clientX;
     const dy = touch2.clientY - touch1.clientY;
     return Math.sqrt(dx * dx + dy * dy);
@@ -14,7 +19,7 @@ export function getTouchDistance(touch1: Touch, touch2: Touch): number {
 /**
  * Get the center point between two touch points
  */
-export function getTouchCenter(touch1: Touch, touch2: Touch): { x: number; y: number } {
+export function getTouchCenter(touch1: TouchLike, touch2: TouchLike): { x: number; y: number } {
     return {
         x: (touch1.clientX + touch2.clientX) / 2,
         y: (touch1.clientY + touch2.clientY) / 2,
