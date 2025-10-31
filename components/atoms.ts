@@ -7,15 +7,18 @@ export type Player = {
     emojiCodepoints: number[];
 };
 
+export interface IPosition {
+    x: number;
+    y: number;
+}
+
 export type Beji = {
     id: string;
     playerId: string;
     emoji: string;
     name: string;
-    x: number;
-    y: number;
-    targetX: number;
-    targetY: number;
+    position: IPosition;
+    target: IPosition;
     walk: boolean;
 };
 
@@ -33,15 +36,12 @@ const gameStorage = createJSONStorage<GameState>(() => {
                 const value = baseStorage.getItem(key);
                 if (value === null) return null;
                 const parsed: any = JSON.parse(value);
-                // Migrate old Beji objects to include walk property
+                // Ensure Beji objects have walk property
                 if (parsed && parsed.beji && Array.isArray(parsed.beji)) {
                     parsed.beji = parsed.beji.map((b: any) => ({
                         ...b,
                         walk: b.walk !== undefined ? b.walk : true,
                     }));
-                    // Write back the migrated data
-                    baseStorage.setItem(key, JSON.stringify(parsed));
-                    return JSON.stringify(parsed);
                 }
                 return value;
             } catch {
@@ -98,7 +98,7 @@ export const selectedBejiEmojiAtom = atomWithStorage<number[] | null>(
 
 export const bejiNameAtom = atomWithStorage<string>(
     "beji:name",
-    "",
+    `no_name-${Math.random().toString(36).substring(2, 15)}`,
     nameStorage
 );
 

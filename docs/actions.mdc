@@ -1,0 +1,258 @@
+---
+title: Creating Standard Actions
+---
+
+# Creating Standard Actions
+
+This guide explains how to create a standard action in the application, including all required elements: the action handler, UI button, keyboard shortcut, and tooltip.
+
+## Overview
+
+A standard action consists of:
+1. **Action Handler Function** - The core logic that performs the action
+2. **UI Button** - A clickable button in the action bar
+3. **Keyboard Shortcut** - Keyboard binding for quick access
+4. **Tooltip** - Helpful text showing the action name and shortcut
+5. **Styling** - Consistent visual design matching existing actions
+
+## Example: Zoom to Beji Action
+
+Here's a complete example from `components/CanvasMap.tsx`:
+
+### 1. Action Handler Function
+
+Create a handler function using `useCallback` to memoize it:
+
+```typescript
+const handleZoomToBeji = useCallback(() => {
+    if (!currentPlayerId) return;
+    const playerBeji = beji.find((b) => b.playerId === currentPlayerId);
+    if (!playerBeji) return;
+    
+    // Use a medium zoom level that focuses on the beji (e.g., 200 px/m)
+    const targetZoom = 200;
+    setPixelsPerMeter(targetZoom);
+    
+    // Reset camera offset to center on the beji
+    setCameraOffset({ x: 0, y: 0 });
+}, [currentPlayerId, beji, setPixelsPerMeter, setCameraOffset]);
+```
+
+**Key Points:**
+- Use `useCallback` to prevent unnecessary re-renders
+- Include all dependencies in the dependency array
+- Add validation checks (e.g., `if (!currentPlayerId) return;`)
+- Keep the logic focused and clear
+
+### 2. Keyboard Shortcut Registration
+
+Register the shortcut in a `useEffect` hook:
+
+```typescript
+useEffect(() => {
+    // Check if key is reserved (arrow keys, etc.)
+    if (RESERVED_KEYS.has("z")) return;
+    
+    registerShortcut({
+        id: "zoom-to-beji",                    // Unique identifier
+        key: "z",                              // Lowercase key name
+        description: "Zoom to beji",           // Human-readable description
+        preventDefault: true,                  // Prevent default browser behavior
+        handler: () => handleZoomToBeji(),     // Action handler
+    });
+    
+    // Cleanup: unregister on unmount
+    return () => unregisterShortcutById("zoom-to-beji");
+}, [handleZoomToBeji]);
+```
+
+**Key Points:**
+- Check `RESERVED_KEYS` to avoid conflicts
+- Use a unique, descriptive `id` (kebab-case)
+- Use lowercase for the `key` (shortcuts system normalizes automatically)
+- Always clean up with `unregisterShortcutById` in the return function
+- Include the handler in dependencies (or ensure it's stable via `useCallback`)
+
+### 3. Import Required Utilities
+
+Ensure you import the shortcut utilities:
+
+```typescript
+import { registerShortcut, unregisterShortcutById, useShortcuts, RESERVED_KEYS } from "../src/lib/shortcuts";
+import { useCallback } from "react"; // if not already imported
+```
+
+Also call `useShortcuts()` once in your component (typically near other shortcuts):
+
+```typescript
+// Global shortcuts
+useShortcuts();
+```
+
+### 4. UI Button Component
+
+Add the button to your action bar:
+
+```typescript
+<Tooltip label="Zoom to beji • Shortcut: Z">
+    <button
+        type="button"
+        aria-label="Zoom to beji"
+        onClick={handleZoomToBeji}
+        style={{
+            fontSize: 18,
+            lineHeight: 1,
+            padding: "6px 8px",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            background: "#ffffff",
+            color: "#0f172a",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            cursor: "pointer",
+        }}
+    >
+        {currentPlayerEmoji}
+    </button>
+</Tooltip>
+```
+
+**Key Points:**
+- Wrap in `Tooltip` component with label format: `"Action Name • Shortcut: KEY"`
+- Use semantic `aria-label` for accessibility
+- Apply consistent styling matching other action buttons
+- Use an appropriate icon/emoji (can be dynamic based on state)
+
+### 5. Styling Standards
+
+Standard action buttons follow this style pattern:
+
+```typescript
+{
+    fontSize: 18,                          // Icon/text size
+    lineHeight: 1,                         // Tight line height
+    padding: "6px 8px",                    // Consistent padding
+    borderRadius: 8,                        // Rounded corners
+    border: "1px solid #d1d5db",          // Light gray border (or conditional color)
+    background: "#ffffff",                 // White background (or conditional color)
+    color: "#0f172a",                      // Dark text
+    boxShadow: "0 1px 2px rgba(0,0,0,0.05)", // Subtle shadow
+    cursor: "pointer",                      // Pointer cursor
+}
+```
+
+**Conditional Styling:**
+- For toggle actions, you can conditionally change border and background:
+  ```typescript
+  border: isActive ? "1px solid #10b981" : "1px solid #d1d5db",
+  background: isActive ? "#ecfdf5" : "#ffffff",
+  ```
+- Use `aria-pressed={isActive}` for toggle buttons
+
+## Checklist
+
+When creating a new standard action, ensure you have:
+
+- [ ] Action handler function wrapped in `useCallback` with proper dependencies
+- [ ] Validation checks (e.g., required state exists)
+- [ ] Keyboard shortcut registered in `useEffect` with cleanup
+- [ ] Shortcut key checked against `RESERVED_KEYS`
+- [ ] Unique shortcut ID (kebab-case)
+- [ ] UI button in the action bar
+- [ ] Tooltip with action name and shortcut key
+- [ ] Consistent styling matching other actions
+- [ ] Proper accessibility attributes (`aria-label`, `aria-pressed` for toggles)
+- [ ] `useShortcuts()` called in the component
+
+## Reserved Keys
+
+The following keys are reserved and should not be used for actions:
+- `arrowup`
+- `arrowdown`
+- `arrowleft`
+- `arrowright`
+
+These are used for movement controls. Check `RESERVED_KEYS` from `src/lib/shortcuts.ts` for the full list.
+
+## Shortcut System Details
+
+### How Shortcuts Work
+
+1. **Registration**: Shortcuts are registered globally via `registerShortcut()`
+2. **Handling**: The `useShortcuts()` hook listens for keydown events
+3. **Context**: Shortcuts are automatically ignored when typing in inputs/textareas
+4. **Prevention**: Use `preventDefault: true` to prevent browser defaults (e.g., browser shortcuts)
+
+### Shortcut Types
+
+```typescript
+type Shortcut = {
+    id: ShortcutActionId;        // Unique identifier
+    key: string;                 // Normalized lowercase key (e.g., 'f', 'z')
+    description?: string;         // Optional description
+    handler: (event: KeyboardEvent) => void;
+    when?: () => boolean;         // Optional guard function
+    preventDefault?: boolean;     // Prevent default browser behavior
+};
+```
+
+### Conditional Shortcuts
+
+You can use the `when` guard to conditionally enable shortcuts:
+
+```typescript
+registerShortcut({
+    id: "my-action",
+    key: "m",
+    when: () => someCondition,  // Only active when condition is true
+    handler: () => { /* ... */ },
+});
+```
+
+## File References
+
+- Shortcut system: `src/lib/shortcuts.ts`
+- Example action implementation: `components/CanvasMap.tsx` (zoom to beji, toggle follow mouse)
+- Tooltip component: `components/Tooltip.tsx`
+
+## Common Patterns
+
+### Toggle Actions
+
+For actions that toggle state:
+
+```typescript
+const [isActive, setIsActive] = useState(false);
+
+const handleToggle = useCallback(() => {
+    setIsActive((v) => !v);
+}, []);
+
+// In button:
+aria-pressed={isActive}
+border: isActive ? "1px solid #10b981" : "1px solid #d1d5db"
+background: isActive ? "#ecfdf5" : "#ffffff"
+```
+
+### Actions with Parameters
+
+If your action needs dynamic data, include it in the callback dependencies:
+
+```typescript
+const handleAction = useCallback((param: SomeType) => {
+    // Use param and state
+}, [state1, state2, setter]);
+```
+
+### Async Actions
+
+For async actions, handle loading/error states appropriately:
+
+```typescript
+const handleAsyncAction = useCallback(async () => {
+    try {
+        await someAsyncOperation();
+    } catch (error) {
+        console.error("Action failed:", error);
+    }
+}, [dependencies]);
+```

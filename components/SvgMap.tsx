@@ -22,12 +22,12 @@ function BejiSprite({
     onHoverEnter?: (e: any) => void;
     onHoverLeave?: () => void;
 }) {
-    const [position, setPosition] = useState({ x: beji.x, y: beji.y });
-    const [target, setTarget] = useState({ x: beji.targetX, y: beji.targetY });
+    const [position, setPosition] = useState({ x: beji.position.x, y: beji.position.y });
+    const [target, setTarget] = useState({ x: beji.target.x, y: beji.target.y });
 
     useEffect(() => {
-        setTarget({ x: beji.targetX, y: beji.targetY });
-    }, [beji.targetX, beji.targetY]);
+        setTarget({ x: beji.target.x, y: beji.target.y });
+    }, [beji.target.x, beji.target.y]);
 
     useEffect(() => {
         // Skip movement if walk is false
@@ -62,8 +62,8 @@ function BejiSprite({
     return (
         <g onMouseEnter={onHoverEnter} onMouseLeave={onHoverLeave}>
             <circle
-                cx={beji.x}
-                cy={beji.y}
+                cx={beji.position.x}
+                cy={beji.position.y}
                 r={CELL_SIZE * 0.2}
                 fill={playerId === beji.playerId ? "#3b82f6" : "#ef4444"}
                 opacity="0.2"
@@ -127,9 +127,9 @@ export function SvgMap() {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => {
             if (b.playerId !== currentPlayerId) return b;
-            const nextTargetX = clamp(b.targetX + dx, 0, MAP_SIZE);
-            const nextTargetY = clamp(b.targetY + dy, 0, MAP_SIZE);
-            return { ...b, targetX: nextTargetX, targetY: nextTargetY };
+            const nextTargetX = clamp(b.target.x + dx, 0, MAP_SIZE);
+            const nextTargetY = clamp(b.target.y + dy, 0, MAP_SIZE);
+            return { ...b, target: { x: nextTargetX, y: nextTargetY } };
         });
         setBeji(updated);
     };
@@ -148,7 +148,7 @@ export function SvgMap() {
 
     const cameraTarget = useMemo(() => {
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
-        return focus ? { x: focus.x, y: focus.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+        return focus ? { x: focus.position.x, y: focus.position.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
     }, [beji, currentPlayerId]);
 
     const aspect = viewport.width / Math.max(1, viewport.height);
@@ -186,7 +186,7 @@ export function SvgMap() {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => (
             b.playerId === currentPlayerId
-                ? { ...b, targetX: clamp(worldX, 0, MAP_SIZE), targetY: clamp(worldY, 0, MAP_SIZE) }
+                ? { ...b, target: { x: clamp(worldX, 0, MAP_SIZE), y: clamp(worldY, 0, MAP_SIZE) } }
                 : b
         ));
         setBeji(updated);

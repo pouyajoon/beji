@@ -2,12 +2,23 @@
 
 import { useAtom, useAtomValue, useSetAtom } from "../lib/jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Tooltip } from "./Tooltip";
 import type { Beji } from "./atoms";
 import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
-import { registerShortcut, unregisterShortcutById, useShortcuts, RESERVED_KEYS } from "../src/lib/shortcuts";
+import { useShortcuts } from "../src/lib/shortcuts";
 import { VirtualJoystick } from "./VirtualJoystick";
+import { ActionsBar } from "./map/ActionsBar";
+import { useTouchHandlers } from "./map/useTouchHandlers";
+import { useMouseHandlers } from "./map/useMouseHandlers";
+import {
+    setupCanvas,
+    drawBackground,
+    drawGrid,
+    drawOriginMarker,
+    drawBeji,
+    drawGuidanceLine,
+    drawDebugOverlay,
+} from "./map/drawing";
 import { MAP_SIZE, BEJI_SPEED_MPS } from "../lib/constants";
 
 export function CanvasMap() {
@@ -49,9 +60,9 @@ export function CanvasMap() {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => {
             if (b.playerId !== currentPlayerId) return b;
-            const nextTargetX = clamp(b.targetX + dx, 0, MAP_SIZE);
-            const nextTargetY = clamp(b.targetY + dy, 0, MAP_SIZE);
-            return { ...b, targetX: nextTargetX, targetY: nextTargetY };
+            const nextTargetX = clamp(b.target.x + dx, 0, MAP_SIZE);
+            const nextTargetY = clamp(b.target.y + dy, 0, MAP_SIZE);
+            return { ...b, target: { x: nextTargetX, y: nextTargetY } };
         });
         setBeji(updated);
     };
@@ -79,22 +90,10 @@ export function CanvasMap() {
 
     // Global shortcuts
     useShortcuts();
-    useEffect(() => {
-        // Avoid using reserved arrow keys
-        if (RESERVED_KEYS.has("f")) return;
-        registerShortcut({
-            id: "toggle-follow-mouse",
-            key: "f",
-            description: "Toggle follow mouse",
-            preventDefault: true,
-            handler: () => setFollowMouse((v) => !v),
-        });
-        return () => unregisterShortcutById("toggle-follow-mouse");
-    }, [setFollowMouse]);
 
     const cameraTarget = useMemo(() => {
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
-        return focus ? { x: focus.x, y: focus.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+        return focus ? { x: focus.position.x, y: focus.position.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
     }, [beji, currentPlayerId]);
 
     // Camera offset allows zooming to mouse position without breaking player-following target
@@ -132,21 +131,11 @@ export function CanvasMap() {
         try {
             window.localStorage.setItem(
                 "beji:lastPosition",
-                JSON.stringify({ x: Math.round(b.targetX), y: Math.round(b.targetY) })
+                JSON.stringify({ x: Math.round(b.target.x), y: Math.round(b.target.y) })
             );
         } catch { }
     }, [beji, currentPlayerId]);
 
-    // Drag-to-pan state
-    const [isDragging, setIsDragging] = useState(false);
-    const dragStartRef = useRef<{
-        clientX: number;
-        clientY: number;
-        offsetX: number;
-        offsetY: number;
-        viewWidth: number;
-        viewHeight: number;
-    } | null>(null);
 
     // no toolbar debug timer; debug rendered on canvas
 
@@ -155,7 +144,7 @@ export function CanvasMap() {
     useEffect(() => {
         for (const b of beji) {
             if (!physicsPositionsRef.current.has(b.id)) {
-                physicsPositionsRef.current.set(b.id, { x: b.x, y: b.y });
+                physicsPositionsRef.current.set(b.id, { x: b.position.x, y: b.position.y });
             }
         }
         // Remove positions for entities that no longer exist
@@ -171,10 +160,10 @@ export function CanvasMap() {
         if (prevFollowMouseRef.current && !followMouse && currentPlayerId) {
             const playerBeji = bejiRef.current.find((b) => b.playerId === currentPlayerId);
             if (playerBeji) {
-                const pos = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
+                const pos = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.position.x, y: playerBeji.position.y };
                 const updated: Beji[] = bejiRef.current.map((b: Beji) => (
                     b.playerId === currentPlayerId
-                        ? { ...b, targetX: pos.x, targetY: pos.y }
+                        ? { ...b, target: { x: pos.x, y: pos.y } }
                         : b
                 ));
                 setBeji(updated);
@@ -185,8 +174,6 @@ export function CanvasMap() {
 
     // Mouse follow + hover pause (hit test against player's beji)
     const bejiHoverRadiusMeters = 0.6; // ~1m sized beji; use 0.6m hover radius
-    const isPlayerBejiHoveredRef = useRef(false);
-    const mouseWorldRef = useRef<{ x: number; y: number } | null>(null);
 
     // Fixed-timestep physics loop (decoupled from rendering)
     useEffect(() => {
@@ -208,12 +195,12 @@ export function CanvasMap() {
                 for (const b of bejiRef.current) {
                     // Skip movement if walk is false
                     if (!b.walk) continue;
-                    const pos = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
-                    const dx = b.targetX - pos.x;
-                    const dy = b.targetY - pos.y;
+                    const pos = physicsPositionsRef.current.get(b.id) ?? { x: b.position.x, y: b.position.y };
+                    const dx = b.target.x - pos.x;
+                    const dy = b.target.y - pos.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < 1e-3) {
-                        physicsPositionsRef.current.set(b.id, { x: b.targetX, y: b.targetY });
+                        physicsPositionsRef.current.set(b.id, { x: b.target.x, y: b.target.y });
                     } else {
                         const stepMeters = Math.min(BEJI_SPEED_MPS * fixedDt, dist);
                         physicsPositionsRef.current.set(b.id, { x: pos.x + (dx / dist) * stepMeters, y: pos.y + (dy / dist) * stepMeters });
@@ -229,115 +216,59 @@ export function CanvasMap() {
         return () => cancelAnimationFrame(raf);
     }, []);
 
-    function clientToWorld(clientX: number, clientY: number) {
-        const canvas = canvasRef.current;
-        if (!canvas) return { x: 0, y: 0 };
-        const rect = canvas.getBoundingClientRect();
-        const px = (clientX - rect.left) / Math.max(1, rect.width);
-        const py = (clientY - rect.top) / Math.max(1, rect.height);
-        const x = renderViewX + px * renderViewWidth;
-        const y = renderViewY + py * renderViewHeight;
-        return { x: clamp(x, 0, MAP_SIZE), y: clamp(y, 0, MAP_SIZE) };
-    }
+    // Initialize touch and mouse handlers
+    const touchHandlers = useTouchHandlers({
+        isTouchPreferred,
+        pixelsPerMeter,
+        cameraTarget,
+        cameraOffset,
+        setCameraOffset,
+        setPixelsPerMeter,
+        viewport,
+        renderViewX,
+        renderViewY,
+        renderViewWidth,
+        renderViewHeight,
+        canvasRef,
+    });
 
-    const setTargetTo = (worldX: number, worldY: number) => {
-        if (!currentPlayerId) return;
-        const updated: Beji[] = beji.map((b: Beji) => (
-            b.playerId === currentPlayerId
-                ? { ...b, targetX: clamp(worldX, 0, MAP_SIZE), targetY: clamp(worldY, 0, MAP_SIZE) }
-                : b
-        ));
-        setBeji(updated);
-    };
-
-    const handleMouseMove = (e: any) => {
-        if (isTouchPreferred) return;
-        lastPointerClientRef.current = { x: e.clientX, y: e.clientY };
-        const { x, y } = clientToWorld(e.clientX, e.clientY);
-        mouseWorldRef.current = { x, y };
-
-        // Handle drag-to-pan (update cameraOffset in world space based on pixel delta)
-        if (isDragging && dragStartRef.current) {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const dxPx = e.clientX - dragStartRef.current.clientX;
-                const dyPx = e.clientY - dragStartRef.current.clientY;
-                const dxWorld = (dxPx / Math.max(1, canvas.width)) * dragStartRef.current.viewWidth;
-                const dyWorld = (dyPx / Math.max(1, canvas.height)) * dragStartRef.current.viewHeight;
-
-                // Dragging right moves map right with cursor (content follows), so offset decreases
-                let nextOffsetX = dragStartRef.current.offsetX - dxWorld;
-                let nextOffsetY = dragStartRef.current.offsetY - dyWorld;
-
-                // Clamp using desired center within bounds at the start's view size
-                const desiredCenterX = cameraTarget.x + nextOffsetX;
-                const desiredCenterY = cameraTarget.y + nextOffsetY;
-                let nextViewX = desiredCenterX - dragStartRef.current.viewWidth / 2;
-                let nextViewY = desiredCenterY - dragStartRef.current.viewHeight / 2;
-                nextViewX = Math.max(0, Math.min(MAP_SIZE - dragStartRef.current.viewWidth, nextViewX));
-                nextViewY = Math.max(0, Math.min(MAP_SIZE - dragStartRef.current.viewHeight, nextViewY));
-                const clampedCenterX = nextViewX + dragStartRef.current.viewWidth / 2;
-                const clampedCenterY = nextViewY + dragStartRef.current.viewHeight / 2;
-                nextOffsetX = clampedCenterX - cameraTarget.x;
-                nextOffsetY = clampedCenterY - cameraTarget.y;
-
-                setCameraOffset({ x: nextOffsetX, y: nextOffsetY });
-            }
-            return; // do not update target while dragging
-        }
-        // hover detection against smoothed position if available, else current beji pos
-        const playerBeji = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : undefined;
-        if (playerBeji) {
-            const pos = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
-            const dx = x - pos.x;
-            const dy = y - pos.y;
-            const isHover = Math.sqrt(dx * dx + dy * dy) <= bejiHoverRadiusMeters;
-            isPlayerBejiHoveredRef.current = isHover;
-        } else {
-            isPlayerBejiHoveredRef.current = false;
-        }
-        if (isPlayerBejiHoveredRef.current) return;
-        if (!followMouseRef.current) return;
-        setTargetTo(x, y);
-    };
+    const mouseHandlers = useMouseHandlers({
+        isTouchPreferred,
+        followMouse,
+        currentPlayerId,
+        beji,
+        setBeji,
+        cameraTarget,
+        cameraOffset,
+        setCameraOffset,
+        pixelsPerMeter,
+        setPixelsPerMeter,
+        viewport,
+        renderViewX,
+        renderViewY,
+        renderViewWidth,
+        renderViewHeight,
+        canvasRef,
+        physicsPositionsRef,
+        bejiHoverRadiusMeters,
+    });
 
     // Keep ETA endpoint in sync when toggling follow via shortcut without moving the mouse
     useEffect(() => {
         // When turning follow ON, recompute mouse world position using last known client pointer
-        if (followMouse && lastPointerClientRef.current) {
-            const p = lastPointerClientRef.current;
-            const { x, y } = clientToWorld(p.x, p.y);
-            mouseWorldRef.current = { x, y };
+        if (followMouse && mouseHandlers.lastPointerClientRef.current) {
+            const p = mouseHandlers.lastPointerClientRef.current;
+            const { x, y } = mouseHandlers.clientToWorld(p.x, p.y);
+            mouseHandlers.mouseWorldRef.current = { x, y };
             // Immediately update target so movement starts without requiring mouse movement
-            setTargetTo(x, y);
+            mouseHandlers.setTargetTo(x, y);
         }
         // When turning follow OFF, hide ETA immediately by clearing endpoint
         if (!followMouse) {
-            mouseWorldRef.current = null;
+            mouseHandlers.mouseWorldRef.current = null;
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [followMouse]);
-
-    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (isTouchPreferred) return;
-        if (e.button !== 0) return; // left button only
-        e.preventDefault();
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        setIsDragging(true);
-        dragStartRef.current = {
-            clientX: e.clientX,
-            clientY: e.clientY,
-            offsetX: cameraOffset.x,
-            offsetY: cameraOffset.y,
-            viewWidth: renderViewWidth,
-            viewHeight: renderViewHeight,
-        };
-    };
-
-    const endDrag = () => {
-        setIsDragging(false);
-        dragStartRef.current = null;
-    };
 
     // Render loop (draw only; no simulation)
     useEffect(() => {
@@ -351,202 +282,92 @@ export function CanvasMap() {
         let lastTs = performance.now();
         function draw(ts: number) {
             lastTs = ts;
-            // Resize canvas to device pixels for sharp rendering
-            const dpr = window.devicePixelRatio || 1;
-            const width = Math.max(1, viewport.width);
-            const height = Math.max(1, viewport.height);
-            if (canvasEl.width !== Math.floor(width * dpr) || canvasEl.height !== Math.floor(height * dpr)) {
-                canvasEl.width = Math.floor(width * dpr);
-                canvasEl.height = Math.floor(height * dpr);
-            }
-            canvasEl.style.width = `${width}px`;
-            canvasEl.style.height = `${height}px`;
 
-            ctx2.setTransform(1, 0, 0, 1, 0, 0);
-            ctx2.clearRect(0, 0, canvasEl.width, canvasEl.height);
-            // world-to-screen scale (pixels per meter)
-            const zoom = canvasEl.width / renderViewWidth; // equals pixelsPerMeter when widths match
-            ctx2.scale(zoom, canvasEl.height / renderViewHeight);
-            ctx2.translate(-renderViewX, -renderViewY);
+            // Setup canvas and transformation
+            setupCanvas({
+                canvas: canvasEl,
+                ctx: ctx2,
+                viewport,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+            });
 
-            // background
-            ctx2.fillStyle = "#ffffff";
-            ctx2.fillRect(renderViewX, renderViewY, renderViewWidth, renderViewHeight);
+            // Draw background
+            drawBackground({
+                ctx: ctx2,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+            });
 
-            // grid lines every 1 meter; darker every 10 meters
-            ctx2.lineWidth = 1 / Math.max(1, (canvasEl.width / renderViewWidth));
-            const gxStart = Math.max(0, Math.floor(renderViewX));
-            const gxEnd = Math.min(MAP_SIZE, Math.ceil(renderViewX + renderViewWidth));
-            for (let x = gxStart; x <= gxEnd; x += 1) {
-                ctx2.beginPath();
-                ctx2.strokeStyle = x % 10 === 0 ? "#d1d5db" : "#eef2f7";
-                ctx2.moveTo(x, renderViewY);
-                ctx2.lineTo(x, renderViewY + renderViewHeight);
-                ctx2.stroke();
-            }
-            const gyStart = Math.max(0, Math.floor(renderViewY));
-            const gyEnd = Math.min(MAP_SIZE, Math.ceil(renderViewY + renderViewHeight));
-            for (let y = gyStart; y <= gyEnd; y += 1) {
-                ctx2.beginPath();
-                ctx2.strokeStyle = y % 10 === 0 ? "#d1d5db" : "#eef2f7";
-                ctx2.moveTo(renderViewX, y);
-                ctx2.lineTo(renderViewX + renderViewWidth, y);
-                ctx2.stroke();
-            }
+            // Draw grid
+            drawGrid({
+                ctx: ctx2,
+                canvas: canvasEl,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+            });
 
-            // draw world origin marker (0,0) with ⭕ in screen space for consistent size
-            {
-                const originScreenX = (0 - renderViewX) * (canvasEl.width / renderViewWidth);
-                const originScreenY = (0 - renderViewY) * (canvasEl.height / renderViewHeight);
-                ctx2.save();
-                ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                const dpr = window.devicePixelRatio || 1;
-                ctx2.font = `${16 * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
-                ctx2.textAlign = "center";
-                ctx2.textBaseline = "middle";
-                ctx2.fillText("⭕", originScreenX, originScreenY);
-                ctx2.restore();
-            }
+            // Draw origin marker
+            drawOriginMarker({
+                ctx: ctx2,
+                canvas: canvasEl,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+            });
 
-            // draw beji from physics positions
-            for (const b of bejiRef.current) {
-                const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
-                // removed background shadow for clear emoji visibility
+            // Draw beji entities
+            drawBeji({
+                ctx: ctx2,
+                canvas: canvasEl,
+                beji: bejiRef.current,
+                physicsPositions: physicsPositionsRef.current,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+                pixelsPerMeter,
+            });
 
-                // draw emoji in screen space so size tracks pixels per meter cleanly
-                const screenX = (p.x - renderViewX) * (canvasEl.width / renderViewWidth);
-                const screenY = (p.y - renderViewY) * (canvasEl.height / renderViewHeight);
-                ctx2.save();
-                ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                const dpr = window.devicePixelRatio || 1;
-                // Ensure beji remains readable when zoomed out by enforcing a minimum on-screen size (in CSS px)
-                const minEmojiCssPx = 24; // minimum visible size on screen
-                const emojiCssPx = Math.max(minEmojiCssPx, 0.7 * pixelsPerMeter);
-                ctx2.font = `${emojiCssPx * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
-                ctx2.textAlign = "center";
-                ctx2.textBaseline = "middle";
-                ctx2.fillText(b.emoji, screenX, screenY);
-                ctx2.restore();
-            }
-
-            // draw guidance line and ETA from current player's beji to mouse
-            if (!isTouchPreferred && currentPlayerId && mouseWorldRef.current && followMouseRef.current) {
+            // Draw guidance line and ETA (if applicable)
+            if (!isTouchPreferred && currentPlayerId && mouseHandlers.mouseWorldRef.current && followMouseRef.current) {
                 const playerBeji = bejiRef.current.find((bb) => bb.playerId === currentPlayerId);
                 if (playerBeji && playerBeji.walk) {
-                    const p = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.x, y: playerBeji.y };
-                    const m = mouseWorldRef.current;
-                    const dx = m.x - p.x;
-                    const dy = m.y - p.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist > 1e-3) {
-                        // world-space line
-                        ctx2.save();
-                        ctx2.globalAlpha = 0.7;
-                        ctx2.strokeStyle = "#3b82f6";
-                        ctx2.lineWidth = 2 / Math.max(1, (canvasEl.width / renderViewWidth));
-                        ctx2.setLineDash([1.5, 1.5]);
-                        ctx2.beginPath();
-                        ctx2.moveTo(p.x, p.y);
-                        ctx2.lineTo(m.x, m.y);
-                        ctx2.stroke();
-                        ctx2.restore();
-
-                        // ETA label in screen space near the mouse position (independent of zoom)
-                        const etaSec = dist / BEJI_SPEED_MPS;
-                        const etaText = `${etaSec.toFixed(1)}s`;
-                        const mouseScreenX = (m.x - renderViewX) * (canvasEl.width / renderViewWidth);
-                        const mouseScreenY = (m.y - renderViewY) * (canvasEl.height / renderViewHeight);
-                        const dpr = window.devicePixelRatio || 1;
-                        const fontPx = 18 * dpr; // larger constant px size regardless of zoom
-                        const padding = 4 * dpr;
-                        const margin = 6 * dpr;
-                        // offset label slightly away from mouse cursor
-                        const normX = dx / dist;
-                        const normY = dy / dist;
-                        // perpendicular offset to avoid overlapping the line; also push forward
-                        const offX = normX * 8 - normY * 8;
-                        const offY = normY * 8 + normX * 8;
-                        let labelX = mouseScreenX + offX;
-                        let labelY = mouseScreenY + offY;
-
-                        ctx2.save();
-                        ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                        ctx2.font = `${fontPx}px system-ui, -apple-system, Segoe UI, Roboto`;
-                        ctx2.textAlign = "center";
-                        ctx2.textBaseline = "bottom";
-                        const metrics = ctx2.measureText(etaText);
-                        const textW = metrics.width;
-                        const textH = fontPx;
-
-                        // clamp inside canvas bounds
-                        const minX = margin + textW / 2 + padding;
-                        const maxX = canvasEl.width - (margin + textW / 2 + padding);
-                        const minY = margin + textH + padding;
-                        const maxY = canvasEl.height - margin;
-                        labelX = Math.max(minX, Math.min(maxX, labelX));
-                        labelY = Math.max(minY, Math.min(maxY, labelY));
-
-                        // backdrop for readability
-                        ctx2.fillStyle = "rgba(255,255,255,0.9)";
-                        ctx2.fillRect(labelX - textW / 2 - padding, labelY - textH - padding, textW + padding * 2, textH + padding);
-                        ctx2.fillStyle = "#111827";
-                        ctx2.fillText(etaText, labelX, labelY - 2);
-                        ctx2.restore();
-                    }
+                    const p = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.position.x, y: playerBeji.position.y };
+                    drawGuidanceLine({
+                        ctx: ctx2,
+                        canvas: canvasEl,
+                        playerBeji: p,
+                        mouseWorld: mouseHandlers.mouseWorldRef.current,
+                        renderViewX,
+                        renderViewY,
+                        renderViewWidth,
+                        renderViewHeight,
+                    });
                 }
             }
 
-            // draw debug overlay at top-left in screen space
-            {
-                const mouse = mouseWorldRef.current;
-                const bejiLines = bejiRef.current.map((b) => {
-                    const p = physicsPositionsRef.current.get(b.id) ?? { x: b.x, y: b.y };
-                    return `${b.emoji}  x:${p.x.toFixed(2)}  y:${p.y.toFixed(2)}  (player:${b.playerId ?? "-"})`;
-                });
-                const lines = [
-                    `zoom: ${Math.round(pixelsPerMeter)} px/m`,
-                    `view: x:${renderViewX.toFixed(2)} y:${renderViewY.toFixed(2)} w:${renderViewWidth.toFixed(2)} h:${renderViewHeight.toFixed(2)}`,
-                    mouse ? `mouse: x:${mouse.x.toFixed(2)} y:${mouse.y.toFixed(2)}` : `mouse: -`,
-                    `follow: ${followMouseRef.current ? "on" : "off"}`,
-                    `beji:`,
-                    ...bejiLines,
-                ];
-
-                ctx2.save();
-                ctx2.setTransform(1, 0, 0, 1, 0, 0);
-                const dpr = window.devicePixelRatio || 1;
-                const fontPx = 11 * dpr;
-                const lineH = 14 * dpr;
-                const padding = 6 * dpr;
-                const margin = 12 * dpr;
-                ctx2.font = `${fontPx}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`;
-                let maxW = 0;
-                for (const line of lines) {
-                    const w = ctx2.measureText(line).width;
-                    if (w > maxW) maxW = w;
-                }
-                const boxW = Math.min(maxW + padding * 2, Math.max(160, maxW + padding * 2));
-                const boxH = padding * 2 + lines.length * lineH;
-                const boxX = margin;
-                const boxY = margin;
-                // background
-                ctx2.fillStyle = "rgba(255,255,255,0.85)";
-                ctx2.strokeStyle = "#e5e7eb";
-                ctx2.lineWidth = 1;
-                ctx2.beginPath();
-                ctx2.rect(boxX, boxY, boxW, boxH);
-                ctx2.fill();
-                ctx2.stroke();
-                // text
-                ctx2.fillStyle = "#000000";
-                ctx2.textAlign = "left";
-                ctx2.textBaseline = "top";
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i] ?? "";
-                    ctx2.fillText(line, boxX + padding, boxY + padding + i * lineH);
-                }
-                ctx2.restore();
-            }
+            // Draw debug overlay
+            drawDebugOverlay({
+                ctx: ctx2,
+                canvas: canvasEl,
+                mouseWorld: mouseHandlers.mouseWorldRef.current,
+                beji: bejiRef.current,
+                physicsPositions: physicsPositionsRef.current,
+                pixelsPerMeter,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+                followMouse: followMouseRef.current,
+            });
 
             raf = requestAnimationFrame(draw);
         }
@@ -555,106 +376,34 @@ export function CanvasMap() {
         return () => cancelAnimationFrame(raf);
     }, [viewport.width, viewport.height, renderViewX, renderViewY, renderViewWidth, renderViewHeight, currentPlayerId]);
 
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-        if (isTouchPreferred) return;
-        e.preventDefault();
-        const factor = e.deltaY > 0 ? 1 / 1.1 : 1.1;
-        const nextPixelsPerMeter = Math.max(2, Math.min(400, pixelsPerMeter * factor));
-
-        // Compute mouse position as fraction of canvas and corresponding world point
-        const canvas = canvasRef.current;
-        if (!canvas) {
-            setPixelsPerMeter(nextPixelsPerMeter);
-            return;
-        }
-        const rect = canvas.getBoundingClientRect();
-        const px = (e.clientX - rect.left) / Math.max(1, rect.width);
-        const py = (e.clientY - rect.top) / Math.max(1, rect.height);
-
-        // World point under cursor before zoom
-        const worldBeforeX = renderViewX + px * renderViewWidth;
-        const worldBeforeY = renderViewY + py * renderViewHeight;
-        // Update ETA endpoint immediately so guidance line stays in sync with zoom
-        mouseWorldRef.current = { x: worldBeforeX, y: worldBeforeY };
-
-        // Desired view size after zoom (clamped to map bounds)
-        const nextViewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, nextPixelsPerMeter));
-        const nextViewHeight = Math.min(MAP_SIZE, viewport.height / Math.max(1, nextPixelsPerMeter));
-
-        // Desired camera center so that the same world point stays under the cursor
-        let desiredCenterX = worldBeforeX + (0.5 - px) * nextViewWidth;
-        let desiredCenterY = worldBeforeY + (0.5 - py) * nextViewHeight;
-
-        // Clamp to map bounds by clamping the future view rect
-        let nextViewX = desiredCenterX - nextViewWidth / 2;
-        let nextViewY = desiredCenterY - nextViewHeight / 2;
-        nextViewX = Math.max(0, Math.min(MAP_SIZE - nextViewWidth, nextViewX));
-        nextViewY = Math.max(0, Math.min(MAP_SIZE - nextViewHeight, nextViewY));
-        desiredCenterX = nextViewX + nextViewWidth / 2;
-        desiredCenterY = nextViewY + nextViewHeight / 2;
-
-        // Update zoom and camera offset relative to player-follow target
-        setPixelsPerMeter(nextPixelsPerMeter);
-
-        // Only update camera offset if we're not clamped to the map bounds
-        // This prevents jumps when zooming out to the minimum where view covers entire map
-        const isClamped = nextViewX <= 0 && nextViewY <= 0 &&
-            nextViewWidth >= MAP_SIZE && nextViewHeight >= MAP_SIZE;
-
-        if (!isClamped) {
-            setCameraOffset({
-                x: desiredCenterX - cameraTarget.x,
-                y: desiredCenterY - cameraTarget.y,
-            });
-        } else {
-            // When fully zoomed out, reset offset to center on player
-            setCameraOffset({ x: 0, y: 0 });
-        }
-    };
-
-    const tooltipLabel = (followMouse ? "Following mouse (click to stop)" : "Not following mouse (click to enable)") + " • Shortcut: F";
 
     return (
-        <div ref={containerRef} onWheel={handleWheel} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
-            {/* Top Action Bar (sibling to canvas) */}
-            <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, padding: "8px 12px", background: "#ffffff", borderBottom: "1px solid #e5e7eb" }}>
-                <Tooltip label={tooltipLabel}>
-                    <button
-                        type="button"
-                        aria-pressed={followMouse}
-                        aria-label={tooltipLabel}
-                        onClick={() => setFollowMouse((v) => !v)}
-                        style={{
-                            fontSize: 18,
-                            lineHeight: 1,
-                            padding: "6px 8px",
-                            borderRadius: 8,
-                            border: followMouse ? "1px solid #10b981" : "1px solid #d1d5db",
-                            background: followMouse ? "#ecfdf5" : "#ffffff",
-                            color: "#0f172a",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                            cursor: "pointer",
-                        }}
-                    >
-                        🦶
-                    </button>
-                </Tooltip>
-                {/* All debug is drawn on canvas */}
-            </div>
+        <div ref={containerRef} onWheel={mouseHandlers.handleWheel} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
+            <ActionsBar
+                followMouse={followMouse}
+                onToggleFollowMouse={setFollowMouse}
+                currentPlayerId={currentPlayerId}
+                setCameraOffset={setCameraOffset}
+                getPhysicsPosition={(bejiId) => physicsPositionsRef.current.get(bejiId)}
+            />
             <canvas
                 ref={canvasRef}
                 style={{
-                    cursor: isDragging ? "grabbing" : "default",
+                    cursor: mouseHandlers.isDragging ? "grabbing" : "default",
                     background: "#ffffff",
                     boxSizing: "border-box",
                     width: "100%",
                     height: `${viewport.height}px`,
                     display: "block",
+                    touchAction: "none", // Prevent default touch behaviors (scrolling, zooming)
                 }}
-                onMouseMove={handleMouseMove}
-                onMouseDown={handleMouseDown}
-                onMouseUp={endDrag}
-                onMouseLeave={endDrag}
+                onMouseMove={mouseHandlers.handleMouseMove}
+                onMouseDown={mouseHandlers.handleMouseDown}
+                onMouseUp={mouseHandlers.endDrag}
+                onMouseLeave={mouseHandlers.endDrag}
+                onTouchStart={touchHandlers.handleTouchStart}
+                onTouchMove={touchHandlers.handleTouchMove}
+                onTouchEnd={touchHandlers.handleTouchEnd}
             />
             {/* (debug now rendered on canvas) */}
             {
