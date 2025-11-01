@@ -1,7 +1,9 @@
 "use client";
 
+import type { Beji } from "../atoms";
 import { ToggleFollowMouseAction } from "./ToggleFollowMouseAction";
 import { ZoomToBejiAction } from "./ZoomToBejiAction";
+import { InventoryDisplay } from "./InventoryDisplay";
 
 type ActionsBarProps = {
     followMouse: boolean;
@@ -43,6 +45,9 @@ export function ActionsBar({
                 getPhysicsPosition={getPhysicsPosition}
                 setBeji={setBeji}
             />
+            <div style={{ marginLeft: "auto" }}>
+                <InventoryDisplay />
+            </div>
             {/* All debug is drawn on canvas */}
         </div>
     );

@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package world.v1;
+
+option go_package = "github.com/pouyajoon/beji/world/v1";
+
+// World service for creating and retrieving worlds
+service WorldService {
+  // CreateWorld creates a new world for a beji with static bejis
+  rpc CreateWorld (CreateWorldRequest) returns (CreateWorldResponse);
+  
+  // GetWorld retrieves a world and all its associated data (beji, static bejis)
+  rpc GetWorld (GetWorldRequest) returns (GetWorldResponse);
+}
+
+// Request to create a new world
+message CreateWorldRequest {
+  string beji_name = 1; // Name for the main beji
+  repeated int32 emoji_codepoints = 2; // Emoji codepoints for the main beji
+}
+
+// Response containing the created world data
+message CreateWorldResponse {
+  WorldData world = 1;
+}
+
+// Request to get a world
+message GetWorldRequest {
+  string world_id = 1;
+}
+
+// Response containing world data
+message GetWorldResponse {
+  WorldData world = 1;
+}
+
+// Complete world data structure
+message WorldData {
+  World world = 1;
+  Player player = 2;
+  Beji beji = 3;
+  repeated StaticBeji static_beji = 4;
+}
+
+// World message
+message World {
+  string id = 1;
+  string main_beji_id = 2;
+  repeated string static_beji_ids = 3;
+  int64 created_at = 4;
+}
+
+// Player message
+message Player {
+  string id = 1;
+  string emoji = 2;
+  repeated int32 emoji_codepoints = 3;
+  repeated string beji_ids = 4;
+  int64 created_at = 5;
+}
+
+// Position message
+message Position {
+  double x = 1;
+  double y = 2;
+}
+
+// Beji message
+message Beji {
+  string id = 1;
+  string player_id = 2;
+  string world_id = 3;
+  string emoji = 4;
+  string name = 5;
+  Position position = 6;
+  Position target = 7;
+  bool walk = 8;
+  int64 created_at = 9;
+}
+
+// StaticBeji message
+message StaticBeji {
+  string id = 1;
+  string world_id = 2;
+  int32 emoji_codepoint = 3;
+  string emoji = 4;
+  Position position = 5;
+  bool harvested = 6;
+}
+
