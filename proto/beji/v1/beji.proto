@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package beji.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/pouyajoon/beji/beji/v1";
+
+// Beji service for managing beji entities
+service BejiService {
+  // GetBeji retrieves a beji by ID
+  rpc GetBeji (GetBejiRequest) returns (GetBejiResponse);
+  
+  // GetBejiForPlayer retrieves all beji for a specific player
+  rpc GetBejiForPlayer (GetBejiForPlayerRequest) returns (GetBejiForPlayerResponse);
+  
+  // GetAllBeji retrieves all beji
+  rpc GetAllBeji (GetAllBejiRequest) returns (GetAllBejiResponse);
+  
+  // CreateBeji creates a new beji
+  rpc CreateBeji (CreateBejiRequest) returns (CreateBejiResponse);
+  
+  // UpdateBeji updates an existing beji
+  rpc UpdateBeji (UpdateBejiRequest) returns (UpdateBejiResponse);
+}
+
+// Request to get a beji by ID
+message GetBejiRequest {
+  string beji_id = 1;
+}
+
+// Response containing a beji
+message GetBejiResponse {
+  Beji beji = 1;
+}
+
+// Request to get beji for a player
+message GetBejiForPlayerRequest {
+  string player_id = 1;
+}
+
+// Response containing beji for a player
+message GetBejiForPlayerResponse {
+  repeated Beji beji = 1;
+}
+
+// Request to get all beji
+message GetAllBejiRequest {}
+
+// Response containing all beji
+message GetAllBejiResponse {
+  repeated Beji beji = 1;
+}
+
+// Request to create a beji
+message CreateBejiRequest {
+  Beji beji = 1;
+}
+
+// Response containing the created beji
+message CreateBejiResponse {
+  Beji beji = 1;
+}
+
+// Request to update a beji
+message UpdateBejiRequest {
+  Beji beji = 1;
+}
+
+// Response containing the updated beji
+message UpdateBejiResponse {
+  Beji beji = 1;
+}
+
+// Beji message
+message Beji {
+  string id = 1;
+  string player_id = 2;
+  string world_id = 3;
+  string emoji = 4;
+  string name = 5;
+  common.v1.Position position = 6;
+  common.v1.Position target = 7;
+  bool walk = 8;
+  int64 created_at = 9;
+}
+

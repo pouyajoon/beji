@@ -37,10 +37,6 @@ export function unregisterShortcutById(id: ShortcutActionId) {
     }
 }
 
-export function getRegisteredShortcuts(): ReadonlyArray<Shortcut> {
-    return Array.from(registeredByKey.values());
-}
-
 export function useShortcuts() {
     const handlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 

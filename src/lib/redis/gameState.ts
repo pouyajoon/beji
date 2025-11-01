@@ -79,16 +79,16 @@ export async function getPlayer(playerId: string): Promise<Player | null> {
 export async function savePlayer(player: Player): Promise<boolean> {
     try {
         const client = getRedisClient();
-        const pipe = client.pipeline();
-        pipe.set(playerKey(player.id), JSON.stringify(player));
-        pipe.sadd(PLAYERS_KEY, player.id);
+        const multi = client.multi();
+        multi.set(playerKey(player.id), JSON.stringify(player));
+        multi.sAdd(PLAYERS_KEY, player.id);
         // Update beji tracking for player
         if (player.bejiIds && player.bejiIds.length > 0) {
             for (const bejiId of player.bejiIds) {
-                pipe.sadd(`beji:player:${player.id}:beji`, bejiId);
+                multi.sAdd(`beji:player:${player.id}:beji`, bejiId);
             }
         }
-        await pipe.exec();
+        await multi.exec();
         return true;
     } catch (error) {
         console.error(`Error saving player ${player.id} to Redis:`, error);
@@ -102,7 +102,7 @@ export async function savePlayer(player: Player): Promise<boolean> {
 export async function getAllPlayers(): Promise<Player[]> {
     try {
         const client = getRedisClient();
-        const playerIds = await client.smembers(PLAYERS_KEY);
+        const playerIds = await client.sMembers(PLAYERS_KEY);
         if (playerIds.length === 0) return [];
 
         const players: Player[] = [];
@@ -138,16 +138,16 @@ export async function getBeji(bejiId: string): Promise<Beji | null> {
 export async function saveBeji(beji: Beji): Promise<boolean> {
     try {
         const client = getRedisClient();
-        const pipe = client.pipeline();
-        pipe.set(bejiKey(beji.id), JSON.stringify(beji));
-        pipe.sadd(BEJI_KEY, beji.id);
+        const multi = client.multi();
+        multi.set(bejiKey(beji.id), JSON.stringify(beji));
+        multi.sAdd(BEJI_KEY, beji.id);
         // Track beji by player
-        pipe.sadd(`beji:player:${beji.playerId}:beji`, beji.id);
+        multi.sAdd(`beji:player:${beji.playerId}:beji`, beji.id);
         // Track beji by world
         if (beji.worldId) {
-            pipe.sadd(`beji:world:${beji.worldId}:beji`, beji.id);
+            multi.sAdd(`beji:world:${beji.worldId}:beji`, beji.id);
         }
-        await pipe.exec();
+        await multi.exec();
         return true;
     } catch (error) {
         console.error(`Error saving beji ${beji.id} to Redis:`, error);
@@ -161,7 +161,7 @@ export async function saveBeji(beji: Beji): Promise<boolean> {
 export async function getAllBeji(): Promise<Beji[]> {
     try {
         const client = getRedisClient();
-        const bejiIds = await client.smembers(BEJI_KEY);
+        const bejiIds = await client.sMembers(BEJI_KEY);
         if (bejiIds.length === 0) return [];
 
         const beji: Beji[] = [];
@@ -182,7 +182,7 @@ export async function getAllBeji(): Promise<Beji[]> {
 export async function getBejiForPlayer(playerId: string): Promise<Beji[]> {
     try {
         const client = getRedisClient();
-        const bejiIds = await client.smembers(`beji:player:${playerId}:beji`);
+        const bejiIds = await client.sMembers(`beji:player:${playerId}:beji`);
         if (bejiIds.length === 0) return [];
 
         const beji: Beji[] = [];
@@ -218,14 +218,14 @@ export async function getStaticBeji(staticBejiId: string): Promise<StaticBeji | 
 export async function saveStaticBeji(staticBeji: StaticBeji): Promise<boolean> {
     try {
         const client = getRedisClient();
-        const pipe = client.pipeline();
-        pipe.set(staticBejiKey(staticBeji.id), JSON.stringify(staticBeji));
-        pipe.sadd(STATIC_BEJI_KEY, staticBeji.id);
+        const multi = client.multi();
+        multi.set(staticBejiKey(staticBeji.id), JSON.stringify(staticBeji));
+        multi.sAdd(STATIC_BEJI_KEY, staticBeji.id);
         // Track static beji by world
         if (staticBeji.worldId) {
-            pipe.sadd(`beji:world:${staticBeji.worldId}:staticBeji`, staticBeji.id);
+            multi.sAdd(`beji:world:${staticBeji.worldId}:staticBeji`, staticBeji.id);
         }
-        await pipe.exec();
+        await multi.exec();
         return true;
     } catch (error) {
         console.error(`Error saving static beji ${staticBeji.id} to Redis:`, error);
@@ -239,7 +239,7 @@ export async function saveStaticBeji(staticBeji: StaticBeji): Promise<boolean> {
 export async function getStaticBejiForWorld(worldId: string): Promise<StaticBeji[]> {
     try {
         const client = getRedisClient();
-        const staticBejiIds = await client.smembers(`beji:world:${worldId}:staticBeji`);
+        const staticBejiIds = await client.sMembers(`beji:world:${worldId}:staticBeji`);
         if (staticBejiIds.length === 0) return [];
 
         const staticBeji: StaticBeji[] = [];
@@ -260,7 +260,7 @@ export async function getStaticBejiForWorld(worldId: string): Promise<StaticBeji
 export async function getAllStaticBeji(): Promise<StaticBeji[]> {
     try {
         const client = getRedisClient();
-        const staticBejiIds = await client.smembers(STATIC_BEJI_KEY);
+        const staticBejiIds = await client.sMembers(STATIC_BEJI_KEY);
         if (staticBejiIds.length === 0) return [];
 
         const staticBeji: StaticBeji[] = [];
@@ -355,16 +355,16 @@ export async function getWorld(worldId: string): Promise<World | null> {
 export async function saveWorld(world: World): Promise<boolean> {
     try {
         const client = getRedisClient();
-        const pipe = client.pipeline();
-        pipe.set(worldKey(world.id), JSON.stringify(world));
-        pipe.sadd(WORLDS_KEY, world.id);
+        const multi = client.multi();
+        multi.set(worldKey(world.id), JSON.stringify(world));
+        multi.sAdd(WORLDS_KEY, world.id);
         // Track static beji for this world
         if (world.staticBejiIds && world.staticBejiIds.length > 0) {
             for (const staticBejiId of world.staticBejiIds) {
-                pipe.sadd(`beji:world:${world.id}:staticBeji`, staticBejiId);
+                multi.sAdd(`beji:world:${world.id}:staticBeji`, staticBejiId);
             }
         }
-        await pipe.exec();
+        await multi.exec();
         return true;
     } catch (error) {
         console.error(`Error saving world ${world.id} to Redis:`, error);
@@ -378,7 +378,7 @@ export async function saveWorld(world: World): Promise<boolean> {
 export async function getAllWorlds(): Promise<World[]> {
     try {
         const client = getRedisClient();
-        const worldIds = await client.smembers(WORLDS_KEY);
+        const worldIds = await client.sMembers(WORLDS_KEY);
         if (worldIds.length === 0) return [];
 
         const worlds: World[] = [];

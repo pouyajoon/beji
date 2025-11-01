@@ -5,7 +5,13 @@ import {
     GetWorldRequest,
     GetWorldResponse,
     WorldData,
-} from "../../../../../src/proto/world/v1/world";
+    World,
+} from "../../../../../src/proto/world/v1/world_pb";
+import { Player } from "../../../../../src/proto/player/v1/player_pb";
+import { Beji } from "../../../../../src/proto/beji/v1/beji_pb";
+import { StaticBeji } from "../../../../../src/proto/staticbeji/v1/staticbeji_pb";
+import { Position } from "../../../../../src/proto/common/v1/common_pb";
+import { protoInt64 } from "@bufbuild/protobuf";
 import { codepointsToEmoji } from "../../../../../components/emoji";
 import {
     savePlayer,
@@ -37,14 +43,14 @@ function convertProtoToApp(data: WorldData): {
             id: data.world.id,
             mainBejiId: data.world.mainBejiId,
             staticBejiIds: data.world.staticBejiIds,
-            createdAt: data.world.createdAt,
+            createdAt: Number(data.world.createdAt.toString()),
         },
         player: {
             id: data.player.id,
             emoji: data.player.emoji,
             emojiCodepoints: data.player.emojiCodepoints,
             bejiIds: data.player.bejiIds,
-            createdAt: data.player.createdAt,
+            createdAt: Number(data.player.createdAt.toString()),
         },
         beji: {
             id: data.beji.id,
@@ -55,7 +61,7 @@ function convertProtoToApp(data: WorldData): {
             position: data.beji.position ? { x: data.beji.position.x, y: data.beji.position.y } : { x: 0, y: 0 },
             target: data.beji.target ? { x: data.beji.target.x, y: data.beji.target.y } : { x: 0, y: 0 },
             walk: data.beji.walk,
-            createdAt: data.beji.createdAt,
+            createdAt: Number(data.beji.createdAt.toString()),
         },
         staticBeji: data.staticBeji.map((sb) => ({
             id: sb.id,
@@ -75,40 +81,42 @@ function convertAppToProto(
     beji: BejiType,
     staticBeji: StaticBejiType[]
 ): WorldData {
-    return {
-        world: {
+    return new WorldData({
+        world: new World({
             id: world.id,
             mainBejiId: world.mainBejiId,
             staticBejiIds: world.staticBejiIds,
-            createdAt: world.createdAt,
-        },
-        player: {
+            createdAt: protoInt64.parse(world.createdAt.toString()),
+        }),
+        player: new Player({
             id: player.id,
             emoji: player.emoji,
             emojiCodepoints: player.emojiCodepoints,
             bejiIds: player.bejiIds,
-            createdAt: player.createdAt,
-        },
-        beji: {
+            createdAt: protoInt64.parse(player.createdAt.toString()),
+        }),
+        beji: new Beji({
             id: beji.id,
             playerId: beji.playerId,
             worldId: beji.worldId,
             emoji: beji.emoji,
             name: beji.name,
-            position: { x: beji.position.x, y: beji.position.y },
-            target: { x: beji.target.x, y: beji.target.y },
+            position: new Position({ x: beji.position.x, y: beji.position.y }),
+            target: new Position({ x: beji.target.x, y: beji.target.y }),
             walk: beji.walk,
-            createdAt: beji.createdAt,
-        },
-        staticBeji: staticBeji.map((sb) => ({
-            id: sb.id,
-            worldId: sb.worldId,
-            emojiCodepoint: sb.emojiCodepoint,
-            emoji: sb.emoji,
-            position: { x: sb.position.x, y: sb.position.y },
-            harvested: sb.harvested,
-        })),
-    };
+            createdAt: protoInt64.parse(beji.createdAt.toString()),
+        }),
+        staticBeji: staticBeji.map((sb) =>
+            new StaticBeji({
+                id: sb.id,
+                worldId: sb.worldId,
+                emojiCodepoint: sb.emojiCodepoint,
+                emoji: sb.emoji,
+                position: new Position({ x: sb.position.x, y: sb.position.y }),
+                harvested: sb.harvested,
+            })
+        ),
+    });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -118,8 +126,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const params = body.params;
 
         if (method === "CreateWorld") {
-            const req = CreateWorldRequest.fromJSON(params);
-            
+            const req = CreateWorldRequest.fromJson(params);
+
             if (!req.bejiName || !req.emojiCodepoints || req.emojiCodepoints.length === 0) {
                 return NextResponse.json(
                     { error: "bejiName and emojiCodepoints are required" },
@@ -205,12 +213,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
             // Convert to proto format and return
             const worldData = convertAppToProto(newWorld, newPlayer, newBeji, staticBejis);
-            const response: CreateWorldResponse = { world: worldData };
+            const response = new CreateWorldResponse({ world: worldData });
 
-            return NextResponse.json(CreateWorldResponse.toJSON(response));
+            return NextResponse.json(response.toJson());
         } else if (method === "GetWorld") {
-            const req = GetWorldRequest.fromJSON(params);
-            
+            const req = GetWorldRequest.fromJson(params);
+
             if (!req.worldId) {
                 return NextResponse.json(
                     { error: "worldId is required" },
@@ -248,9 +256,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
             // Convert to proto format and return
             const worldData = convertAppToProto(world, player, beji, staticBeji);
-            const response: GetWorldResponse = { world: worldData };
+            const response = new GetWorldResponse({ world: worldData });
 
-            return NextResponse.json(GetWorldResponse.toJSON(response));
+            return NextResponse.json(response.toJson());
         } else {
             return NextResponse.json(
                 { error: `Unknown method: ${method}` },

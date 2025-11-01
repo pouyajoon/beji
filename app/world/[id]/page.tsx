@@ -98,7 +98,8 @@ export default function WorldPage() {
         }
 
         loadWorld();
-    }, [worldId, setPlayers, setBeji, setStaticBeji, setWorlds]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [worldId]);
 
     if (loading) {
         return (

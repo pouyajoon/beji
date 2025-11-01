@@ -154,12 +154,6 @@ export const bejiAtom = atom(
     }
 );
 
-export const bejiForPlayerAtom = (playerId: string) =>
-    atom((get) => {
-        const beji = get(bejiAtom);
-        return beji.filter((b) => b.playerId === playerId);
-    });
-
 export const staticBejiAtom = atom(
     (get) => get(gameStateAtom).staticBeji,
     (get, set, update: StaticBeji[]) => {
@@ -173,15 +167,6 @@ export const worldsAtom = atom(
         set(gameStateAtom, { ...get(gameStateAtom), worlds: update });
     }
 );
-
-export const worldForBejiAtom = (bejiId: string) =>
-    atom((get) => {
-        const beji = get(bejiAtom);
-        const worlds = get(worldsAtom);
-        const b = beji.find((b) => b.id === bejiId);
-        if (!b) return null;
-        return worlds.find((w) => w.id === b.worldId) || null;
-    });
 
 export const staticBejiForWorldAtom = (worldId: string) =>
     atom((get) => {

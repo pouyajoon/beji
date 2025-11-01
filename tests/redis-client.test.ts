@@ -1,50 +1,67 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type Redis from 'ioredis';
+import type { RedisClientType } from 'redis';
 
-// Mock ioredis before importing
-vi.mock('ioredis', () => {
-    const mockRedis = {
-        get: vi.fn(),
-        set: vi.fn(),
-        sadd: vi.fn(),
-        smembers: vi.fn(),
-        pipeline: vi.fn(() => ({
-            set: vi.fn().mockReturnThis(),
-            sadd: vi.fn().mockReturnThis(),
-            exec: vi.fn(),
-        })),
-        disconnect: vi.fn(),
-        on: vi.fn(),
-    };
+// Mock redis before importing
+const mockRedisInstance = {
+    get: vi.fn(),
+    set: vi.fn(),
+    sAdd: vi.fn(),
+    sMembers: vi.fn(),
+    multi: vi.fn(() => ({
+        set: vi.fn().mockReturnThis(),
+        sAdd: vi.fn().mockReturnThis(),
+        exec: vi.fn(),
+    })),
+    quit: vi.fn(),
+    connect: vi.fn().mockResolvedValue(undefined),
+    isOpen: false,
+    isReady: false,
+    on: vi.fn(),
+};
 
-    return {
-        default: vi.fn(() => mockRedis),
-    };
-});
+const mockCreateClient = vi.fn(() => mockRedisInstance);
+
+vi.mock('redis', () => ({
+    createClient: mockCreateClient,
+}));
 
 describe('Redis Client', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // Clear module cache to get fresh mocks
-        vi.resetModules();
+        vi.resetModules(); // Reset modules to clear Redis singleton
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
     });
 
-    it('creates Redis client with URL when REDIS_URL is set', async () => {
+    it('creates Redis client with URL when REDIS_URL is set (converts to TLS)', async () => {
         const originalEnv = process.env.REDIS_URL;
         process.env.REDIS_URL = 'redis://localhost:6379';
 
-        const Redis = (await import('ioredis')).default;
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
-        expect(Redis).toHaveBeenCalledWith('redis://localhost:6379', {
-            retryStrategy: expect.any(Function),
-            maxRetriesPerRequest: 3,
+        // Client converts redis:// to rediss:// for TLS
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            url: 'rediss://localhost:6379',
+        });
+
+        process.env.REDIS_URL = originalEnv;
+    });
+
+    it('creates Redis client with rediss:// URL (TLS already)', async () => {
+        const originalEnv = process.env.REDIS_URL;
+        process.env.REDIS_URL = 'rediss://localhost:6379';
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        getRedisClient();
+
+        // rediss:// URLs are passed through as-is
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            url: 'rediss://localhost:6379',
         });
 
         process.env.REDIS_URL = originalEnv;
@@ -62,19 +79,20 @@ describe('Redis Client', () => {
         process.env.REDIS_HOST = 'custom-host';
         process.env.REDIS_PORT = '6380';
 
-        const Redis = (await import('ioredis')).default;
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
-        expect(Redis).toHaveBeenCalledWith({
-            host: 'custom-host',
-            port: 6380,
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            socket: {
+                host: 'custom-host',
+                port: 6380,
+                tls: {
+                    rejectUnauthorized: false,
+                },
+            },
             username: undefined,
             password: undefined,
-            tls: undefined,
-            retryStrategy: expect.any(Function),
-            maxRetriesPerRequest: 3,
         });
 
         process.env.REDIS_URL = originalUrl;
@@ -98,21 +116,21 @@ describe('Redis Client', () => {
         process.env.REDIS_PORT = '12901';
         process.env.REDIS_USERNAME = 'default';
         process.env.REDIS_PASSWORD = 'secure-password';
-        process.env.REDIS_TLS = 'true';
 
-        const Redis = (await import('ioredis')).default;
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
-        expect(Redis).toHaveBeenCalledWith({
-            host: 'redis-cloud.example.com',
-            port: 12901,
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            socket: {
+                host: 'redis-cloud.example.com',
+                port: 12901,
+                tls: {
+                    rejectUnauthorized: false,
+                },
+            },
             username: 'default',
             password: 'secure-password',
-            tls: {},
-            retryStrategy: expect.any(Function),
-            maxRetriesPerRequest: 3,
         });
 
         process.env.REDIS_URL = originalUrl;
@@ -138,19 +156,20 @@ describe('Redis Client', () => {
         delete process.env.REDIS_PASSWORD;
         delete process.env.REDIS_TLS;
 
-        const Redis = (await import('ioredis')).default;
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
-        expect(Redis).toHaveBeenCalledWith({
-            host: 'localhost',
-            port: 6379,
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            socket: {
+                host: 'localhost',
+                port: 6379,
+                tls: {
+                    rejectUnauthorized: false,
+                },
+            },
             username: undefined,
             password: undefined,
-            tls: undefined,
-            retryStrategy: expect.any(Function),
-            maxRetriesPerRequest: 3,
         });
 
         process.env.REDIS_URL = originalUrl;
@@ -171,14 +190,13 @@ describe('Redis Client', () => {
     });
 
     it('closes Redis client connection', async () => {
-        const Redis = (await import('ioredis')).default;
-        const mockInstance = new Redis();
         const { getRedisClient, closeRedisClient } = await import('../src/lib/redis/client');
 
-        getRedisClient();
-        closeRedisClient();
+        const client = getRedisClient();
+        // Set isOpen to true so quit() is called
+        mockRedisInstance.isOpen = true;
+        await closeRedisClient();
 
-        expect(mockInstance.disconnect).toHaveBeenCalled();
+        expect(mockRedisInstance.quit).toHaveBeenCalled();
     });
 });
-

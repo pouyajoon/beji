@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+title: Test Driven Development
+---
+
+# Test Driven Development
+
+## Overview
+
+Test Driven Development (TDD) is a software development process that emphasizes writing tests before writing code. The process is as follows:
+
+1. Write a test
+2. Run the test and see it fail
+3. Write the code to make the test pass
+4. Run the test and see it pass
+5. Refactor the code to make it better
+
+When you have a bug or an error which is provided to you, first write a test that fails, then write the code to make the test pass, then refactor the code to make it better.
+

@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package staticbeji.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/pouyajoon/beji/staticbeji/v1";
+
+// StaticBeji service for managing static beji entities
+service StaticBejiService {
+  // GetStaticBeji retrieves a static beji by ID
+  rpc GetStaticBeji (GetStaticBejiRequest) returns (GetStaticBejiResponse);
+  
+  // GetStaticBejiForWorld retrieves all static beji for a specific world
+  rpc GetStaticBejiForWorld (GetStaticBejiForWorldRequest) returns (GetStaticBejiForWorldResponse);
+  
+  // GetAllStaticBeji retrieves all static beji
+  rpc GetAllStaticBeji (GetAllStaticBejiRequest) returns (GetAllStaticBejiResponse);
+  
+  // CreateStaticBeji creates a new static beji
+  rpc CreateStaticBeji (CreateStaticBejiRequest) returns (CreateStaticBejiResponse);
+}
+
+// Request to get a static beji by ID
+message GetStaticBejiRequest {
+  string static_beji_id = 1;
+}
+
+// Response containing a static beji
+message GetStaticBejiResponse {
+  StaticBeji static_beji = 1;
+}
+
+// Request to get static beji for a world
+message GetStaticBejiForWorldRequest {
+  string world_id = 1;
+}
+
+// Response containing static beji for a world
+message GetStaticBejiForWorldResponse {
+  repeated StaticBeji static_beji = 1;
+}
+
+// Request to get all static beji
+message GetAllStaticBejiRequest {}
+
+// Response containing all static beji
+message GetAllStaticBejiResponse {
+  repeated StaticBeji static_beji = 1;
+}
+
+// Request to create a static beji
+message CreateStaticBejiRequest {
+  StaticBeji static_beji = 1;
+}
+
+// Response containing the created static beji
+message CreateStaticBejiResponse {
+  StaticBeji static_beji = 1;
+}
+
+// StaticBeji message
+message StaticBeji {
+  string id = 1;
+  string world_id = 2;
+  int32 emoji_codepoint = 3;
+  string emoji = 4;
+  common.v1.Position position = 5;
+  bool harvested = 6;
+}
+

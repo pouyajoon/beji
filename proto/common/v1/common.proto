@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/pouyajoon/beji/common/v1";
+
+// Position message
+message Position {
+  double x = 1;
+  double y = 2;
+}
+

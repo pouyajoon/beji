@@ -1,0 +1,129 @@
+---
+alwaysApply: true
+title: Code Pruning & Cleanup
+---
+
+# Code Pruning & Cleanup
+
+## Overview
+
+Regular code pruning is essential to maintain a clean, maintainable codebase. This document outlines how to identify and remove unused code.
+
+## Tools
+
+### ts-prune
+
+We use `ts-prune` to detect unused exports in the codebase.
+
+**Installation:**
+```bash
+pnpm add -D ts-prune
+```
+
+**Usage:**
+```bash
+pnpm prune
+# or directly
+npx ts-prune
+```
+
+## How to Prune
+
+### 1. Run Prune Analysis
+
+```bash
+pnpm prune
+```
+
+This will output a list of potentially unused exports across all TypeScript files.
+
+### 2. Analyze Results
+
+#### False Positives (Safe to Ignore)
+
+These exports are marked unused but should be kept:
+
+- **Next.js default exports**: `app/**/layout.tsx`, `app/**/page.tsx`, `next.config.ts`, `vitest.config.ts`
+  - Next.js automatically imports these files, so they appear unused
+- **"used in module"**: Internal uses only
+- **Generated proto code**: Proto service exports from `src/proto/`
+- **Type definitions**: Interface/type exports that are only used for type checking
+
+#### True Positives (Should Remove)
+
+- Exported functions, constants, or components with no imports
+- Unused utility functions
+- Dead code from refactoring
+
+### 3. Remove Unused Code
+
+For each unused export:
+
+1. **Verify it's truly unused**: Search the codebase for imports
+   ```bash
+   grep -r "exportName" app/ components/ lib/ src/
+   ```
+
+2. **Check if it's a library export**: If exporting for external use, leave it
+
+3. **Remove the export**: Delete or comment out unused code
+
+4. **Delete unused files**: If entire files are unused, delete them
+
+### 4. Re-run Prune
+
+```bash
+pnpm prune
+```
+
+Verify the output is cleaner and matches expectations.
+
+## Recent Pruning Session
+
+### Removed Unused Exports
+
+- ✅ `bejiForPlayerAtom` and `worldForBejiAtom` from `components/atoms.ts`
+- ✅ `DEFAULT_PX_PER_M` from `lib/constants.ts`
+- ✅ `getRegisteredShortcuts` from `src/lib/shortcuts.ts`
+- ✅ Default export from `components/MapGrid.tsx` (kept named export)
+
+### Removed Unused Files
+
+- ✅ `components/SvgMap.tsx` - Not imported anywhere
+- ✅ `src/proxy.ts` - No middleware using it
+
+## Best Practices
+
+1. **Run prune regularly**: After each major refactoring or feature removal
+2. **Before commits**: Check for unused code in your changes
+3. **CI Integration**: Consider adding `pnpm prune` to CI/CD pipeline
+4. **Document decisions**: If keeping unused exports intentionally, add comments explaining why
+
+## Example Workflow
+
+```bash
+# 1. Run prune to see what's unused
+pnpm prune
+
+# 2. Search for a potentially unused export
+grep -r "myFunction" app/ components/ lib/
+
+# 3. If not found, remove it
+# ... edit file to remove export ...
+
+# 4. Re-run prune to verify
+pnpm prune
+
+# 5. Commit your changes
+git add .
+git commit -m "chore: remove unused exports"
+```
+
+## Continuous Improvement
+
+As the project evolves, maintain this pruning discipline:
+
+- **Monthly**: Run prune and review results
+- **After major features**: Clean up when features are removed
+- **Refactoring**: Remove old patterns when migrating to new ones
+- **Before releases**: Final cleanup pass
