@@ -1,0 +1,149 @@
+---
+title: Redis Storage Setup
+---
+
+# Redis Storage Setup
+
+This project uses Redis for persistent game state storage in the MMORPG.
+
+## Configuration
+
+Redis connection is configured via environment variables. Create a `.env.local` file (or set environment variables in your deployment):
+
+### Option 1: Redis URL (Recommended)
+```bash
+REDIS_URL=redis://localhost:6379
+```
+
+### Option 2: Individual Parameters
+```bash
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_USERNAME=default  # Optional, required for Redis Cloud and some providers
+REDIS_PASSWORD=         # Optional, required for Redis Cloud and password-protected instances
+REDIS_TLS=false         # Set to 'true' for Redis Cloud and other TLS-enabled providers
+```
+
+### Example: Redis Cloud Configuration
+```bash
+REDIS_HOST=redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com
+REDIS_PORT=12901
+REDIS_USERNAME=default
+REDIS_PASSWORD=your-password-here
+REDIS_TLS=true
+```
+
+## Redis Providers
+
+For production, consider these managed Redis services:
+
+- **Upstash**: https://upstash.com (serverless Redis, free tier available)
+- **Railway**: https://railway.app (managed Redis)
+- **Redis Cloud**: https://redis.com/cloud (Redis Enterprise)
+
+## Local Development
+
+### Using Docker
+```bash
+docker run -d -p 6379:6379 redis:latest
+```
+
+### Using Homebrew (macOS)
+```bash
+brew install redis
+brew services start redis
+```
+
+## API Routes
+
+The following API routes are available for game state persistence:
+
+### Game State
+- `GET /api/game-state` - Get full game state
+- `POST /api/game-state` - Save full game state
+
+### Players
+- `GET /api/players` - Get all players
+- `POST /api/players` - Create a player
+- `GET /api/players/[playerId]` - Get a specific player
+- `PUT /api/players/[playerId]` - Update a player
+
+### Beji
+- `GET /api/beji` - Get all beji (optionally filter by `?playerId=...`)
+- `POST /api/beji` - Create a beji
+- `GET /api/beji/[bejiId]` - Get a specific beji
+- `PUT /api/beji/[bejiId]` - Update a beji
+
+### Static Beji
+- `GET /api/static-beji` - Get all static beji (optionally filter by `?id=...`)
+- `POST /api/static-beji` - Create a static beji
+
+### Inventory
+- `GET /api/inventory/[playerId]` - Get player inventory
+- `PUT /api/inventory/[playerId]` - Update inventory (can update specific item or entire inventory)
+
+## Client-Side Usage
+
+### Using the Sync Hook
+
+```typescript
+import { useRedisSync } from "@/hooks/useRedisSync";
+
+function GameComponent() {
+    // Automatically syncs game state to Redis with 1s debounce
+    useRedisSync({ enabled: true, debounceMs: 1000 });
+    // ... rest of component
+}
+```
+
+### Manual Sync
+
+```typescript
+import {
+    fetchGameState,
+    saveGameStateToServer,
+    saveBejiToServer,
+    updateBejiOnServer,
+} from "@/src/lib/redis/clientSync";
+
+// Fetch game state from Redis
+const gameState = await fetchGameState();
+
+// Save game state to Redis
+await saveGameStateToServer(gameState);
+
+// Save/update a beji
+await saveBejiToServer(beji);
+await updateBejiOnServer(beji);
+```
+
+## Data Structure in Redis
+
+Redis stores game data using the following key patterns:
+
+- `beji:gameState` - Full game state (JSON)
+- `beji:players` - Set of player IDs
+- `beji:player:{playerId}` - Player data (JSON)
+- `beji:beji` - Set of beji IDs
+- `beji:beji:{bejiId}` - Beji data (JSON)
+- `beji:player:{playerId}:beji` - Set of beji IDs for a player
+- `beji:staticBeji` - Set of static beji IDs
+- `beji:staticBeji:{staticBejiId}` - Static beji data (JSON)
+- `beji:inventory:{playerId}` - Inventory data (JSON)
+
+## Server-Side Usage
+
+Server-side Redis operations are available via:
+
+```typescript
+import {
+    getGameState,
+    saveGameState,
+    getPlayer,
+    savePlayer,
+    getAllPlayers,
+    // ... etc
+} from "@/src/lib/redis/gameState";
+```
+
+These functions are used by the API routes and can be imported in server components or API routes.

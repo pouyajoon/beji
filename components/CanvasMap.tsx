@@ -3,7 +3,14 @@
 import { useAtom, useAtomValue, useSetAtom } from "../lib/jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Beji } from "./atoms";
-import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "./atoms";
+import {
+    bejiAtom,
+    playersAtom,
+    zoomPxPerMeterAtom,
+    staticBejiAtom,
+    inventoryAtom,
+    staticBejiForWorldAtom,
+} from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
 import { useShortcuts } from "../src/lib/shortcuts";
 import { VirtualJoystick } from "./VirtualJoystick";
@@ -16,6 +23,7 @@ import {
     drawGrid,
     drawOriginMarker,
     drawBeji,
+    drawStaticBeji,
     drawGuidanceLine,
     drawDebugOverlay,
 } from "./map/drawing";
@@ -24,8 +32,18 @@ import { MAP_SIZE, BEJI_SPEED_MPS } from "../lib/constants";
 export function CanvasMap() {
     const beji = useAtomValue(bejiAtom);
     const players = useAtomValue(playersAtom);
+    const allStaticBeji = useAtomValue(staticBejiAtom);
     const setBeji = useSetAtom(bejiAtom);
+    const setStaticBeji = useSetAtom(staticBejiAtom);
+    const setInventory = useSetAtom(inventoryAtom);
     const currentPlayerId = players[0]?.id ?? "";
+    
+    // Get current player's beji and its world's static beji
+    const currentBeji = beji.find((b) => b.playerId === currentPlayerId);
+    const staticBejiForWorld = useAtomValue(
+        currentBeji?.worldId ? staticBejiForWorldAtom(currentBeji.worldId) : staticBejiAtom
+    );
+    const staticBeji = currentBeji?.worldId ? staticBejiForWorld : [];
 
     const [viewport, setViewport] = useState<{ width: number; height: number }>(() => ({
         width: 800,
@@ -60,8 +78,8 @@ export function CanvasMap() {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => {
             if (b.playerId !== currentPlayerId) return b;
-            const nextTargetX = clamp(b.target.x + dx, 0, MAP_SIZE);
-            const nextTargetY = clamp(b.target.y + dy, 0, MAP_SIZE);
+            const nextTargetX = clamp(b.target.x + dx, -MAP_SIZE / 2, MAP_SIZE / 2);
+            const nextTargetY = clamp(b.target.y + dy, -MAP_SIZE / 2, MAP_SIZE / 2);
             return { ...b, target: { x: nextTargetX, y: nextTargetY } };
         });
         setBeji(updated);
@@ -93,7 +111,7 @@ export function CanvasMap() {
 
     const cameraTarget = useMemo(() => {
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
-        return focus ? { x: focus.position.x, y: focus.position.y } : { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+        return focus ? { x: focus.position.x, y: focus.position.y } : { x: 0, y: 0 };
     }, [beji, currentPlayerId]);
 
     // Camera offset allows zooming to mouse position without breaking player-following target
@@ -105,8 +123,8 @@ export function CanvasMap() {
     const viewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, pixelsPerMeter));
     const viewHeight = Math.min(MAP_SIZE, viewport.height / Math.max(1, pixelsPerMeter));
 
-    const viewX = Math.max(0, Math.min(MAP_SIZE - viewWidth, cameraCenterX - viewWidth / 2));
-    const viewY = Math.max(0, Math.min(MAP_SIZE - viewHeight, cameraCenterY - viewHeight / 2));
+    const viewX = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - viewWidth, cameraCenterX - viewWidth / 2));
+    const viewY = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - viewHeight, cameraCenterY - viewHeight / 2));
 
     const [mounted, setMounted] = useState(false);
     useEffect(() => {
@@ -232,12 +250,29 @@ export function CanvasMap() {
         canvasRef,
     });
 
+    const fullInventory = useAtomValue(inventoryAtom);
+    const playerInventory = currentPlayerId ? (fullInventory[currentPlayerId] || {}) : {};
+    
+    const handleHarvestStaticBeji = (codepoint: number) => {
+        const newInv = { ...fullInventory };
+        if (!newInv[currentPlayerId]) {
+            newInv[currentPlayerId] = {};
+        }
+        const playerInv = { ...newInv[currentPlayerId] };
+        playerInv[codepoint] = (playerInv[codepoint] || 0) + 1;
+        newInv[currentPlayerId] = playerInv;
+        setInventory(newInv);
+    };
+
     const mouseHandlers = useMouseHandlers({
         isTouchPreferred,
         followMouse,
         currentPlayerId,
         beji,
         setBeji,
+        staticBeji,
+        setStaticBeji,
+        onHarvestStaticBeji: handleHarvestStaticBeji,
         cameraTarget,
         cameraOffset,
         setCameraOffset,
@@ -321,6 +356,23 @@ export function CanvasMap() {
                 renderViewY,
                 renderViewWidth,
                 renderViewHeight,
+            });
+
+            // Draw static beji entities (before player beji so they appear behind)
+            const playerBeji = bejiRef.current.find((bb) => bb.playerId === currentPlayerId);
+            const playerPos = playerBeji 
+                ? (physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.position.x, y: playerBeji.position.y })
+                : null;
+            drawStaticBeji({
+                ctx: ctx2,
+                canvas: canvasEl,
+                staticBeji: staticBeji,
+                playerPosition: playerPos,
+                renderViewX,
+                renderViewY,
+                renderViewWidth,
+                renderViewHeight,
+                pixelsPerMeter,
             });
 
             // Draw beji entities

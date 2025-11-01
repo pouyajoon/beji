@@ -9,12 +9,28 @@ title: Testing
 - Use Vitest for unit tests and component tests.
 - Mock global features for coverage and isolation.
 
-## Setup (planned)
-- Add `vitest`, `@testing-library/react`, and `jsdom`.
-- Configure `vitest.config.ts` and basic `test` script in `package.json`.
+## Setup
+- ✅ `vitest` is installed and configured via `vitest.config.ts`
+- ✅ Basic `test` script in `package.json` (`pnpm test`)
+- ⏳ `@testing-library/react` and `jsdom` are planned for component testing
 
 ## Guidelines
 - Test public surface of components (props → UI behavior).
-- Mock network/realtime boundaries; don’t hit real routers in unit tests.
+- Mock network/realtime boundaries; don't hit real routers in unit tests.
 - Keep tests fast; avoid global state bleed.
+
+## Test Coverage
+
+### Unit Tests
+- ✅ `tests/static-beji.test.ts` - Static beji creation, harvesting logic, inventory system, and map bounds
+- ✅ `tests/redis-client.test.ts` - Redis client configuration, connection (including username, password, TLS), and singleton pattern
+- ✅ `tests/redis-gameState.test.ts` - Redis game state operations (players, beji, static beji, inventory, worlds)
+- ✅ `tests/redis-api-routes.test.ts` - API routes for game state persistence with mocked Redis
+- ✅ `tests/redis-clientSync.test.ts` - Client-side sync utilities with mocked fetch API
+
+### Integration Tests  
+- ✅ `tests/map-ssr.test.tsx` - Map component SSR
+- ✅ `tests/emoji-ssr.test.tsx` - Emoji page SSR
+- ✅ `tests/locale-ssr.test.ts` - Locale routing SSR
+- ✅ `tests/dev-server.test.ts` - Dev server startup
 

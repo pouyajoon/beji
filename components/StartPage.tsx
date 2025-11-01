@@ -1,10 +1,22 @@
 "use client";
 
 import { useAtom, useSetAtom } from "../lib/jotai";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { useMessages } from "../i18n/DictionaryProvider";
-import { bejiAtom, playersAtom, selectedBejiEmojiAtom, bejiNameAtom, type Player, type Beji } from "./atoms";
+import {
+    bejiAtom,
+    playersAtom,
+    worldsAtom,
+    selectedBejiEmojiAtom,
+    bejiNameAtom,
+    staticBejiAtom,
+    type Player,
+    type Beji,
+    type StaticBeji,
+    type World,
+} from "./atoms";
 import { generateRandomEmojiSet } from "../app/emoji/random";
 import { codepointsToEmoji } from "./emoji";
 import { Header } from "./start/Header";
@@ -12,7 +24,7 @@ import { EmojiPicker } from "./start/EmojiPicker";
 import { BejiNameInput } from "./start/BejiNameInput";
 import { StartAction } from "./start/StartAction";
 import { SelectedPreview } from "./start/SelectedPreview";
-import { MAP_SIZE } from "../lib/constants";
+import { createWorld } from "../src/lib/rpc/worldClient";
 
 // Use shared generateRandomEmojiSet based on Emoji_Presentation allowlist
 
@@ -20,6 +32,7 @@ export function StartPage() {
     const { messages } = useMessages<{ Start: Record<string, string> }>();
     const router = useRouter();
     const [randomGrid, setRandomGrid] = useState<number[][]>([]);
+    const [isCreating, setIsCreating] = useState(false);
     useEffect(() => {
         // Generate on client only to avoid SSR/client mismatch
         setRandomGrid(generateRandomEmojiSet(35));
@@ -29,54 +42,75 @@ export function StartPage() {
 
     const setPlayers = useSetAtom(playersAtom);
     const setBeji = useSetAtom(bejiAtom);
+    const setStaticBeji = useSetAtom(staticBejiAtom);
+    const setWorlds = useSetAtom(worldsAtom);
 
-    const handleStartGame = (emojiOverride?: number[]) => {
+    const handleStartGame = async (emojiOverride?: number[]) => {
         const effectiveEmoji = emojiOverride ?? selectedEmoji;
-        if (!effectiveEmoji || !bejiName.trim()) return;
+        if (!effectiveEmoji || !bejiName.trim() || isCreating) return;
 
-        const emojiChar = codepointsToEmoji(effectiveEmoji);
-        const playerId = `player-${Date.now()}`;
+        setIsCreating(true);
+        try {
+            // Call RPC to create world
+            const response = await createWorld(bejiName.trim(), effectiveEmoji);
 
-        // Create new player
-        const newPlayer: Player = {
-            id: playerId,
-            emoji: emojiChar,
-            emojiCodepoints: effectiveEmoji,
-        };
+            if (!response.world) {
+                throw new Error("Failed to create world: no world data returned");
+            }
 
-        setPlayers([newPlayer]);
+            const worldData = response.world;
 
-        // Load last saved position if available
-        let startX = MAP_SIZE / 2;
-        let startY = MAP_SIZE / 2;
-        if (typeof window !== "undefined") {
-            try {
-                const raw = window.localStorage.getItem("beji:lastPosition");
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
-                        // Clamp to map bounds (0..MAP_SIZE) to be safe
-                        const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-                        startX = clamp(parsed.x, 0, MAP_SIZE);
-                        startY = clamp(parsed.y, 0, MAP_SIZE);
-                    }
-                }
-            } catch { }
+            // Convert proto types to app types and set state
+            const newPlayer: Player = {
+                id: worldData.player!.id,
+                emoji: worldData.player!.emoji,
+                emojiCodepoints: worldData.player!.emojiCodepoints,
+                bejiIds: worldData.player!.bejiIds,
+                createdAt: worldData.player!.createdAt,
+            };
+
+            const newBeji: Beji = {
+                id: worldData.beji!.id,
+                playerId: worldData.beji!.playerId,
+                worldId: worldData.beji!.worldId,
+                emoji: worldData.beji!.emoji,
+                name: worldData.beji!.name,
+                position: worldData.beji!.position ? { x: worldData.beji!.position.x, y: worldData.beji!.position.y } : { x: 0, y: 0 },
+                target: worldData.beji!.target ? { x: worldData.beji!.target.x, y: worldData.beji!.target.y } : { x: 0, y: 0 },
+                walk: worldData.beji!.walk,
+                createdAt: worldData.beji!.createdAt,
+            };
+
+            const newWorld: World = {
+                id: worldData.world!.id,
+                mainBejiId: worldData.world!.mainBejiId,
+                staticBejiIds: worldData.world!.staticBejiIds,
+                createdAt: worldData.world!.createdAt,
+            };
+
+            const staticBejis: StaticBeji[] = worldData.staticBeji.map((sb) => ({
+                id: sb.id,
+                worldId: sb.worldId,
+                emojiCodepoint: sb.emojiCodepoint,
+                emoji: sb.emoji,
+                position: sb.position ? { x: sb.position.x, y: sb.position.y } : { x: 0, y: 0 },
+                harvested: sb.harvested,
+            }));
+
+            // Set all state
+            setPlayers([newPlayer]);
+            setWorlds([newWorld]);
+            setBeji([newBeji]);
+            setStaticBeji(staticBejis);
+
+            // Navigate to world page
+            router.push(`/world/${newWorld.id}` as Route);
+        } catch (error) {
+            console.error("Error creating world:", error);
+            // TODO: Show error to user
+        } finally {
+            setIsCreating(false);
         }
-
-        // Add initial beji for the player
-        const newBeji: Beji = {
-            id: `beji-${Date.now()}`,
-            playerId: playerId,
-            emoji: emojiChar,
-            name: bejiName.trim(),
-            position: { x: startX, y: startY },
-            target: { x: startX, y: startY },
-            walk: true,
-        };
-
-        setBeji([newBeji]);
-        router.push("/emoji");
     };
 
     return (
@@ -141,9 +175,9 @@ export function StartPage() {
                 />
 
                 <StartAction
-                    label={messages.Start?.startButton ?? "Start Adventure! 🚀"}
+                    label={isCreating ? (messages.Start?.creating ?? "Creating...") : (messages.Start?.startButton ?? "Start Adventure! 🚀")}
                     href="/emoji"
-                    disabled={!selectedEmoji || !bejiName.trim()}
+                    disabled={!selectedEmoji || !bejiName.trim() || isCreating}
                     onActivate={handleStartGame}
                 />
 

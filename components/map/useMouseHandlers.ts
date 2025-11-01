@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { Beji } from "../atoms";
+import type { Beji, StaticBeji } from "../atoms";
 import { MAP_SIZE } from "../../lib/constants";
 
 type UseMouseHandlersProps = {
@@ -8,6 +8,9 @@ type UseMouseHandlersProps = {
     currentPlayerId: string;
     beji: Beji[];
     setBeji: (beji: Beji[]) => void;
+    staticBeji: StaticBeji[];
+    setStaticBeji: (staticBeji: StaticBeji[]) => void;
+    onHarvestStaticBeji: (codepoint: number) => void;
     cameraTarget: { x: number; y: number };
     cameraOffset: { x: number; y: number };
     setCameraOffset: (offset: { x: number; y: number }) => void;
@@ -27,12 +30,17 @@ function clamp(value: number, min: number, max: number) {
     return Math.max(min, Math.min(max, value));
 }
 
+const HARVEST_DISTANCE_METERS = 2;
+
 export function useMouseHandlers({
     isTouchPreferred,
     followMouse,
     currentPlayerId,
     beji,
     setBeji,
+    staticBeji,
+    setStaticBeji,
+    onHarvestStaticBeji,
     cameraTarget,
     cameraOffset,
     setCameraOffset,
@@ -73,14 +81,14 @@ export function useMouseHandlers({
         const py = (clientY - rect.top) / Math.max(1, rect.height);
         const x = renderViewX + px * renderViewWidth;
         const y = renderViewY + py * renderViewHeight;
-        return { x: clamp(x, 0, MAP_SIZE), y: clamp(y, 0, MAP_SIZE) };
+        return { x: clamp(x, -MAP_SIZE / 2, MAP_SIZE / 2), y: clamp(y, -MAP_SIZE / 2, MAP_SIZE / 2) };
     };
 
     const setTargetTo = (worldX: number, worldY: number) => {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => (
             b.playerId === currentPlayerId
-                ? { ...b, target: { x: clamp(worldX, 0, MAP_SIZE), y: clamp(worldY, 0, MAP_SIZE) } }
+                ? { ...b, target: { x: clamp(worldX, -MAP_SIZE / 2, MAP_SIZE / 2), y: clamp(worldY, -MAP_SIZE / 2, MAP_SIZE / 2) } }
                 : b
         ));
         setBeji(updated);
@@ -110,8 +118,8 @@ export function useMouseHandlers({
                 const desiredCenterY = cameraTarget.y + nextOffsetY;
                 let nextViewX = desiredCenterX - dragStartRef.current.viewWidth / 2;
                 let nextViewY = desiredCenterY - dragStartRef.current.viewHeight / 2;
-                nextViewX = Math.max(0, Math.min(MAP_SIZE - dragStartRef.current.viewWidth, nextViewX));
-                nextViewY = Math.max(0, Math.min(MAP_SIZE - dragStartRef.current.viewHeight, nextViewY));
+                nextViewX = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - dragStartRef.current.viewWidth, nextViewX));
+                nextViewY = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - dragStartRef.current.viewHeight, nextViewY));
                 const clampedCenterX = nextViewX + dragStartRef.current.viewWidth / 2;
                 const clampedCenterY = nextViewY + dragStartRef.current.viewHeight / 2;
                 nextOffsetX = clampedCenterX - cameraTarget.x;
@@ -143,6 +151,42 @@ export function useMouseHandlers({
         e.preventDefault();
         const canvas = canvasRef.current;
         if (!canvas) return;
+
+        // Check for static beji click first
+        const clickWorld = clientToWorld(e.clientX, e.clientY);
+        const playerBeji = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : undefined;
+        if (playerBeji) {
+            const playerPos = physicsPositionsRef.current.get(playerBeji.id) ?? { x: playerBeji.position.x, y: playerBeji.position.y };
+            
+            // Check each static beji for click within harvest distance
+            for (const sb of staticBeji) {
+                if (sb.harvested) continue;
+                
+                const dx = clickWorld.x - sb.position.x;
+                const dy = clickWorld.y - sb.position.y;
+                const clickDistance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Check if click is on static beji and player is within harvest distance
+                const playerDx = sb.position.x - playerPos.x;
+                const playerDy = sb.position.y - playerPos.y;
+                const playerDistance = Math.sqrt(playerDx * playerDx + playerDy * playerDy);
+                
+                if (clickDistance <= 0.6 && playerDistance <= HARVEST_DISTANCE_METERS) {
+                    // Harvest this static beji
+                    const updatedStaticBeji = staticBeji.map((s) =>
+                        s.id === sb.id ? { ...s, harvested: true } : s
+                    );
+                    setStaticBeji(updatedStaticBeji);
+                    
+                    // Add to inventory
+                    onHarvestStaticBeji(sb.emojiCodepoint);
+                    
+                    // Don't start dragging if we harvested a beji
+                    return;
+                }
+            }
+        }
+
         setIsDragging(true);
         dragStartRef.current = {
             clientX: e.clientX,
@@ -192,8 +236,8 @@ export function useMouseHandlers({
         // Clamp to map bounds by clamping the future view rect
         let nextViewX = desiredCenterX - nextViewWidth / 2;
         let nextViewY = desiredCenterY - nextViewHeight / 2;
-        nextViewX = Math.max(0, Math.min(MAP_SIZE - nextViewWidth, nextViewX));
-        nextViewY = Math.max(0, Math.min(MAP_SIZE - nextViewHeight, nextViewY));
+        nextViewX = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - nextViewWidth, nextViewX));
+        nextViewY = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - nextViewHeight, nextViewY));
         desiredCenterX = nextViewX + nextViewWidth / 2;
         desiredCenterY = nextViewY + nextViewHeight / 2;
 
@@ -202,7 +246,7 @@ export function useMouseHandlers({
 
         // Only update camera offset if we're not clamped to the map bounds
         // This prevents jumps when zooming out to the minimum where view covers entire map
-        const isClamped = nextViewX <= 0 && nextViewY <= 0 &&
+        const isClamped = nextViewX <= -MAP_SIZE / 2 && nextViewY <= -MAP_SIZE / 2 &&
             nextViewWidth >= MAP_SIZE && nextViewHeight >= MAP_SIZE;
 
         if (!isClamped) {
