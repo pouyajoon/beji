@@ -21,8 +21,9 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_USERNAME=default  # Optional, required for Redis Cloud and some providers
 REDIS_PASSWORD=         # Optional, required for Redis Cloud and password-protected instances
-REDIS_TLS=false         # Set to 'true' for Redis Cloud and other TLS-enabled providers
 ```
+
+**Note:** All Redis connections use TLS by default. The client automatically enables TLS for all connections.
 
 ### Example: Redis Cloud Configuration
 ```bash
@@ -30,8 +31,9 @@ REDIS_HOST=redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com
 REDIS_PORT=12901
 REDIS_USERNAME=default
 REDIS_PASSWORD=your-password-here
-REDIS_TLS=true
 ```
+
+**Note:** TLS is automatically enabled for all connections. When using `REDIS_URL`, `redis://` URLs are automatically converted to `rediss://` (TLS).
 
 ## Redis Providers
 
@@ -54,68 +56,26 @@ brew install redis
 brew services start redis
 ```
 
-## API Routes
+## RPC API
 
-The following API routes are available for game state persistence:
+Game state operations use RPC (Remote Procedure Calls) via Protocol Buffers. See [RPC documentation](./rpc.mdc) for details on the proto-based API architecture.
 
-### Game State
-- `GET /api/game-state` - Get full game state
-- `POST /api/game-state` - Save full game state
+### World Service
 
-### Players
-- `GET /api/players` - Get all players
-- `POST /api/players` - Create a player
-- `GET /api/players/[playerId]` - Get a specific player
-- `PUT /api/players/[playerId]` - Update a player
-
-### Beji
-- `GET /api/beji` - Get all beji (optionally filter by `?playerId=...`)
-- `POST /api/beji` - Create a beji
-- `GET /api/beji/[bejiId]` - Get a specific beji
-- `PUT /api/beji/[bejiId]` - Update a beji
-
-### Static Beji
-- `GET /api/static-beji` - Get all static beji (optionally filter by `?id=...`)
-- `POST /api/static-beji` - Create a static beji
-
-### Inventory
-- `GET /api/inventory/[playerId]` - Get player inventory
-- `PUT /api/inventory/[playerId]` - Update inventory (can update specific item or entire inventory)
-
-## Client-Side Usage
-
-### Using the Sync Hook
+The primary service for managing worlds:
 
 ```typescript
-import { useRedisSync } from "@/hooks/useRedisSync";
+import { createWorld, getWorld } from "@/src/lib/rpc/worldClient";
 
-function GameComponent() {
-    // Automatically syncs game state to Redis with 1s debounce
-    useRedisSync({ enabled: true, debounceMs: 1000 });
-    // ... rest of component
-}
+// Create a world (includes player, beji, and static bejis)
+const response = await createWorld("My Beji", [0x1f600]);
+const { world, player, beji, staticBeji } = response.world;
+
+// Get a world
+const worldData = await getWorld(worldId);
 ```
 
-### Manual Sync
-
-```typescript
-import {
-    fetchGameState,
-    saveGameStateToServer,
-    saveBejiToServer,
-    updateBejiOnServer,
-} from "@/src/lib/redis/clientSync";
-
-// Fetch game state from Redis
-const gameState = await fetchGameState();
-
-// Save game state to Redis
-await saveGameStateToServer(gameState);
-
-// Save/update a beji
-await saveBejiToServer(beji);
-await updateBejiOnServer(beji);
-```
+**RPC Endpoint**: `POST /api/rpc/world/v1` with `method: "CreateWorld"` or `method: "GetWorld"`
 
 ## Data Structure in Redis
 
@@ -127,13 +87,43 @@ Redis stores game data using the following key patterns:
 - `beji:beji` - Set of beji IDs
 - `beji:beji:{bejiId}` - Beji data (JSON)
 - `beji:player:{playerId}:beji` - Set of beji IDs for a player
+- `beji:worlds` - Set of world IDs
+- `beji:world:{worldId}` - World data (JSON)
+- `beji:world:{worldId}:staticBeji` - Set of static beji IDs in a world
+- `beji:world:{worldId}:beji` - Set of beji IDs in a world
 - `beji:staticBeji` - Set of static beji IDs
 - `beji:staticBeji:{staticBejiId}` - Static beji data (JSON)
 - `beji:inventory:{playerId}` - Inventory data (JSON)
 
+### World Data Structure
+
+A **World** in Redis is represented by multiple keys:
+
+1. **Main World Record** (`beji:world:{worldId}`): JSON string containing:
+   ```json
+   {
+     "id": "world-1234567890",
+     "mainBejiId": "beji-1234567890",
+     "staticBejiIds": ["static-beji-1", "static-beji-2", ...],
+     "createdAt": 1234567890123
+   }
+   ```
+
+2. **World IDs Set** (`beji:worlds`): Redis SET containing all world IDs
+
+3. **World Static Beji Index** (`beji:world:{worldId}:staticBeji`): Redis SET of static beji IDs in this world
+
+4. **World Beji Index** (`beji:world:{worldId}:beji`): Redis SET of beji IDs in this world
+
+This normalized structure allows:
+- Quick lookup of which static bejis belong to a world
+- Efficient queries for all entities in a world
+- Maintains referential integrity through sets
+- Single source of truth for world configuration
+
 ## Server-Side Usage
 
-Server-side Redis operations are available via:
+Server-side Redis operations are available via `src/lib/redis/gameState.ts`:
 
 ```typescript
 import {
@@ -142,8 +132,16 @@ import {
     getPlayer,
     savePlayer,
     getAllPlayers,
+    saveWorld,
+    getWorld,
+    saveBeji,
+    getBeji,
+    saveStaticBeji,
+    getStaticBejiForWorld,
+    getInventory,
+    saveInventory,
     // ... etc
 } from "@/src/lib/redis/gameState";
 ```
 
-These functions are used by the API routes and can be imported in server components or API routes.
+These functions are used by the RPC routes and can be imported in server components or API routes. The Redis connection is automatically managed via `getRedisClient()`.

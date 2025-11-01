@@ -10,27 +10,77 @@ title: Testing
 - Mock global features for coverage and isolation.
 
 ## Setup
-- ✅ `vitest` is installed and configured via `vitest.config.ts`
+- ✅ `vitest` v4 is installed and configured via `vitest.config.ts`
 - ✅ Basic `test` script in `package.json` (`pnpm test`)
-- ⏳ `@testing-library/react` and `jsdom` are planned for component testing
+- ✅ Coverage configured with `@vitest/coverage-v8` provider
+- ✅ `dotenv` package installed for loading `.env.local` in tests
+- ✅ `jsdom` installed for DOM testing (canvas, ResizeObserver, etc.)
+- ✅ Redis integration tests load `.env.local` directly at the top of test files (to avoid interfering with unit tests)
+- ⏳ `@testing-library/react` is planned for component testing
+
+## Vitest 4 Migration
+- All tests migrated to Vitest 4
+- Mock constructors use function syntax (not arrow functions) per Vitest 4 requirements
+- Constructor mocking pattern: `vi.fn(ConstructorFunction)` instead of `.mockImplementation(() => instance)`
 
 ## Guidelines
 - Test public surface of components (props → UI behavior).
 - Mock network/realtime boundaries; don't hit real routers in unit tests.
 - Keep tests fast; avoid global state bleed.
 
+## Scope
+
+Check all the components and make sure they have associated tests.
+Each react component needs to have SSR rendering tests to ensure they render correctly on the server and clients.
+
+## Running Coverage
+
+Run test coverage reports with:
+- `pnpm test:coverage` - Generate coverage report and exit
+- `pnpm test:coverage:ui` - Interactive coverage UI with watch mode
+
+Coverage reports are generated in:
+- Terminal output (text)
+- `coverage/` directory (HTML, LCOV, JSON)
+
+Configuration in `vitest.config.ts`:
+- Provider: V8
+- Includes: app, components, hooks, lib, src directories
+- Excludes: node_modules, tests, config files, proto files
+
 ## Test Coverage
 
 ### Unit Tests
 - ✅ `tests/static-beji.test.ts` - Static beji creation, harvesting logic, inventory system, and map bounds
-- ✅ `tests/redis-client.test.ts` - Redis client configuration, connection (including username, password, TLS), and singleton pattern
-- ✅ `tests/redis-gameState.test.ts` - Redis game state operations (players, beji, static beji, inventory, worlds)
-- ✅ `tests/redis-api-routes.test.ts` - API routes for game state persistence with mocked Redis
-- ✅ `tests/redis-clientSync.test.ts` - Client-side sync utilities with mocked fetch API
+- ✅ `tests/redis-client.test.ts` - Redis client configuration using `node-redis` (official Redis client), connection (including username, password, TLS), and singleton pattern
+- ✅ `tests/redis-gameState.test.ts` - Redis game state operations (players, beji, static beji, inventory, worlds) using `node-redis` API
+- ✅ `tests/world-rpc.test.ts` - World RPC API (CreateWorld and GetWorld) with mocked Redis
+- ✅ `tests/debugOverlay.test.ts` - Debug overlay drawing function with edge cases (undefined positions, targets, physics positions)
+
+### Component Tests
+- ✅ `tests/canvas-map.test.tsx` - CanvasMap component initialization order tests. Specifically catches "Cannot access X before initialization" errors when refs are accessed in hooks before declaration. Uses SSR rendering to surface initialization issues early.
 
 ### Integration Tests  
 - ✅ `tests/map-ssr.test.tsx` - Map component SSR
 - ✅ `tests/emoji-ssr.test.tsx` - Emoji page SSR
 - ✅ `tests/locale-ssr.test.ts` - Locale routing SSR
+- ✅ `tests/components-ssr.test.tsx` - Component SSR rendering
 - ✅ `tests/dev-server.test.ts` - Dev server startup
+- ✅ `tests/redis-integration.test.ts` - Redis connection verification and basic operations (hashes, lists) using `node-redis` and `.env.local` credentials. Tests are skipped gracefully if Redis is unavailable.
+- ✅ `tests/redis-beji-world.test.ts` - Redis integration tests for creating beji and worlds using same methods as app (`savePlayer`, `saveBeji`, `saveWorld`, `saveStaticBeji`). Tests the complete CreateWorld flow with real Redis storage. Tests are skipped gracefully if Redis is unavailable.
+- ✅ `tests/redis-cloud.test.ts` - Redis Cloud connection test specifically for `redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com:12901`. Verifies TLS connection, basic operations, hash operations, set operations, pipelined operations, and connection persistence. All connections use TLS.
+- ✅ `tests/redis-cloud-diagnostic.test.ts` - Diagnostic test to verify Redis Cloud TLS connection methods. Tests TLS socket option and rediss:// URL connections.
+
+**Note:** Redis integration tests require a properly configured `.env.local` file with Redis connection credentials (`REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, etc.). All connections automatically use TLS. If Redis is not available, these tests will skip gracefully without failing the test suite.
+
+## Redis Client
+
+The project uses `node-redis` (the official Redis client for Node.js) as specified in the [Redis documentation](https://redis.io/docs/latest/develop/clients/nodejs/). All Redis operations use the `node-redis` API:
+
+- Client creation: `createClient({ url })` or `createClient({ socket: { host, port } })`
+- **TLS:** All Redis connections automatically use TLS. `redis://` URLs are converted to `rediss://`, and socket connections always have TLS enabled.
+- Methods use camelCase: `sAdd`, `sMembers`, `hSet`, `hGetAll`, etc.
+- Transactions use `multi()` instead of `pipeline()`
+- Connection status: `isReady` or `isOpen` properties instead of `status`
+- Cleanup: `await client.quit()` instead of `disconnect()`
 

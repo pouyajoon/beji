@@ -5,11 +5,11 @@ import type { GameState, Player, Beji, StaticBeji, World } from '../components/a
 const mockRedis = {
     get: vi.fn(),
     set: vi.fn(),
-    sadd: vi.fn(),
-    smembers: vi.fn(),
-    pipeline: vi.fn(() => ({
+    sAdd: vi.fn(),
+    sMembers: vi.fn(),
+    multi: vi.fn(() => ({
         set: vi.fn().mockReturnThis(),
-        sadd: vi.fn().mockReturnThis(),
+        sAdd: vi.fn().mockReturnThis(),
         exec: vi.fn(),
     })),
 };
@@ -83,21 +83,21 @@ describe('Redis Game State Operations', () => {
                 createdAt: Date.now(),
             };
             
-            const mockPipeline = {
+            const mockMulti = {
                 set: vi.fn().mockReturnThis(),
-                sadd: vi.fn().mockReturnThis(),
+                sAdd: vi.fn().mockReturnThis(),
                 exec: vi.fn().mockResolvedValue([['OK', null], [1, null]]),
             };
-            mockRedis.pipeline.mockReturnValue(mockPipeline);
+            mockRedis.multi.mockReturnValue(mockMulti);
             
             const { savePlayer } = await import('../src/lib/redis/gameState');
             const result = await savePlayer(player);
             
-            expect(mockPipeline.set).toHaveBeenCalledWith(
+            expect(mockMulti.set).toHaveBeenCalledWith(
                 'beji:player:player1',
                 JSON.stringify(player)
             );
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:players', 'player1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:players', 'player1');
             expect(result).toBe(true);
         });
 
@@ -126,7 +126,7 @@ describe('Redis Game State Operations', () => {
                 { id: 'player2', emoji: '😁', emojiCodepoints: [0x1f601], bejiIds: [], createdAt: Date.now() },
             ];
             
-            mockRedis.smembers.mockResolvedValue(playerIds);
+            mockRedis.sMembers.mockResolvedValue(playerIds);
             mockRedis.get
                 .mockResolvedValueOnce(JSON.stringify(players[0]))
                 .mockResolvedValueOnce(JSON.stringify(players[1]));
@@ -134,7 +134,7 @@ describe('Redis Game State Operations', () => {
             const { getAllPlayers } = await import('../src/lib/redis/gameState');
             const result = await getAllPlayers();
             
-            expect(mockRedis.smembers).toHaveBeenCalledWith('beji:players');
+            expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:players');
             expect(result).toEqual(players);
         });
     });
@@ -153,26 +153,26 @@ describe('Redis Game State Operations', () => {
                 createdAt: Date.now(),
             };
             
-            const mockPipeline = {
+            const mockMulti = {
                 set: vi.fn().mockReturnThis(),
-                sadd: vi.fn().mockReturnThis(),
+                sAdd: vi.fn().mockReturnThis(),
                 exec: vi.fn().mockResolvedValue([
                     ['OK', null],
                     [1, null],
                     [1, null],
                 ]),
             };
-            mockRedis.pipeline.mockReturnValue(mockPipeline);
+            mockRedis.multi.mockReturnValue(mockMulti);
             
             const { saveBeji } = await import('../src/lib/redis/gameState');
             const result = await saveBeji(beji);
             
-            expect(mockPipeline.set).toHaveBeenCalledWith(
+            expect(mockMulti.set).toHaveBeenCalledWith(
                 'beji:beji:beji1',
                 JSON.stringify(beji)
             );
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:beji', 'beji1');
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:player:player1:beji', 'beji1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:beji', 'beji1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:player:player1:beji', 'beji1');
             expect(result).toBe(true);
         });
 
@@ -204,7 +204,7 @@ describe('Redis Game State Operations', () => {
                 },
             ];
             
-            mockRedis.smembers.mockResolvedValue(bejiIds);
+            mockRedis.sMembers.mockResolvedValue(bejiIds);
             mockRedis.get
                 .mockResolvedValueOnce(JSON.stringify(beji[0]))
                 .mockResolvedValueOnce(JSON.stringify(beji[1]));
@@ -212,7 +212,7 @@ describe('Redis Game State Operations', () => {
             const { getBejiForPlayer } = await import('../src/lib/redis/gameState');
             const result = await getBejiForPlayer('player1');
             
-            expect(mockRedis.smembers).toHaveBeenCalledWith('beji:player:player1:beji');
+            expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:player:player1:beji');
             expect(result).toEqual(beji);
         });
     });
@@ -289,25 +289,25 @@ describe('Redis Game State Operations', () => {
                 harvested: false,
             };
             
-            const mockPipeline = {
+            const mockMulti = {
                 set: vi.fn().mockReturnThis(),
-                sadd: vi.fn().mockReturnThis(),
+                sAdd: vi.fn().mockReturnThis(),
                 exec: vi.fn().mockResolvedValue([
                     ['OK', null],
                     [1, null],
                 ]),
             };
-            mockRedis.pipeline.mockReturnValue(mockPipeline);
+            mockRedis.multi.mockReturnValue(mockMulti);
             
             const { saveStaticBeji } = await import('../src/lib/redis/gameState');
             const result = await saveStaticBeji(staticBeji);
             
-            expect(mockPipeline.set).toHaveBeenCalledWith(
+            expect(mockMulti.set).toHaveBeenCalledWith(
                 'beji:staticBeji:static1',
                 JSON.stringify(staticBeji)
             );
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:staticBeji', 'static1');
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:world:world1:staticBeji', 'static1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:staticBeji', 'static1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:world:world1:staticBeji', 'static1');
             expect(result).toBe(true);
         });
 
@@ -332,7 +332,7 @@ describe('Redis Game State Operations', () => {
                 },
             ];
 
-            mockRedis.smembers.mockResolvedValue(staticBejiIds);
+            mockRedis.sMembers.mockResolvedValue(staticBejiIds);
             mockRedis.get
                 .mockResolvedValueOnce(JSON.stringify(staticBeji[0]))
                 .mockResolvedValueOnce(JSON.stringify(staticBeji[1]));
@@ -340,7 +340,7 @@ describe('Redis Game State Operations', () => {
             const { getStaticBejiForWorld } = await import('../src/lib/redis/gameState');
             const result = await getStaticBejiForWorld('world1');
 
-            expect(mockRedis.smembers).toHaveBeenCalledWith('beji:world:world1:staticBeji');
+            expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:world:world1:staticBeji');
             expect(result).toEqual(staticBeji);
         });
     });
@@ -354,9 +354,9 @@ describe('Redis Game State Operations', () => {
                 createdAt: Date.now(),
             };
 
-            const mockPipeline = {
+            const mockMulti = {
                 set: vi.fn().mockReturnThis(),
-                sadd: vi.fn().mockReturnThis(),
+                sAdd: vi.fn().mockReturnThis(),
                 exec: vi.fn().mockResolvedValue([
                     ['OK', null],
                     [1, null],
@@ -364,18 +364,18 @@ describe('Redis Game State Operations', () => {
                     [1, null],
                 ]),
             };
-            mockRedis.pipeline.mockReturnValue(mockPipeline);
-
+            mockRedis.multi.mockReturnValue(mockMulti);
+            
             const { saveWorld } = await import('../src/lib/redis/gameState');
             const result = await saveWorld(world);
-
-            expect(mockPipeline.set).toHaveBeenCalledWith(
+            
+            expect(mockMulti.set).toHaveBeenCalledWith(
                 'beji:world:world1',
                 JSON.stringify(world)
             );
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:worlds', 'world1');
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:world:world1:staticBeji', 'static1');
-            expect(mockPipeline.sadd).toHaveBeenCalledWith('beji:world:world1:staticBeji', 'static2');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:worlds', 'world1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:world:world1:staticBeji', 'static1');
+            expect(mockMulti.sAdd).toHaveBeenCalledWith('beji:world:world1:staticBeji', 'static2');
             expect(result).toBe(true);
         });
 
@@ -414,7 +414,7 @@ describe('Redis Game State Operations', () => {
                 },
             ];
 
-            mockRedis.smembers.mockResolvedValue(worldIds);
+            mockRedis.sMembers.mockResolvedValue(worldIds);
             mockRedis.get
                 .mockResolvedValueOnce(JSON.stringify(worlds[0]))
                 .mockResolvedValueOnce(JSON.stringify(worlds[1]));
@@ -422,7 +422,7 @@ describe('Redis Game State Operations', () => {
             const { getAllWorlds } = await import('../src/lib/redis/gameState');
             const result = await getAllWorlds();
 
-            expect(mockRedis.smembers).toHaveBeenCalledWith('beji:worlds');
+            expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:worlds');
             expect(result).toEqual(worlds);
         });
 

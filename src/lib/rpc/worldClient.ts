@@ -1,10 +1,3 @@
-import {
-    CreateWorldRequest,
-    CreateWorldResponse,
-    GetWorldRequest,
-    GetWorldResponse,
-} from "../../proto/world/v1/world";
-
 const RPC_BASE_URL = "/api/rpc/world/v1";
 
 async function callRPC<TRequest, TResponse>(
@@ -34,30 +27,31 @@ async function callRPC<TRequest, TResponse>(
 export async function createWorld(
     bejiName: string,
     emojiCodepoints: number[]
-): Promise<CreateWorldResponse> {
-    const request: CreateWorldRequest = {
+): Promise<any> {
+    const request = {
         bejiName,
         emojiCodepoints,
     };
-    
-    const response = await callRPC<CreateWorldRequest, CreateWorldResponse>(
+
+    const response = await callRPC<any, any>(
         "CreateWorld",
         request
     );
-    
-    return CreateWorldResponse.fromJSON(response);
+
+    return response;
 }
 
-export async function getWorld(worldId: string): Promise<GetWorldResponse> {
-    const request: GetWorldRequest = {
+export async function getWorld(worldId: string): Promise<any> {
+    const request = {
         worldId,
     };
-    
-    const response = await callRPC<GetWorldRequest, GetWorldResponse>(
+
+    const response = await callRPC<any, any>(
         "GetWorld",
         request
     );
-    
-    return GetWorldResponse.fromJSON(response);
+
+    console.log("response", response);
+    return response;
 }
 

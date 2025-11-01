@@ -35,8 +35,12 @@ export function drawDebugOverlay({
     followMouse,
 }: DebugOverlayParams) {
     const bejiLines = beji.map((b) => {
-        const p = physicsPositions.get(b.id) ?? { x: b.position.x, y: b.position.y };
-        return `${b.emoji}  pos:(${p.x.toFixed(2)},${p.y.toFixed(2)})  target:(${b.target.x.toFixed(2)},${b.target.y.toFixed(2)})  (player:${b.playerId ?? "-"})`;
+        const p = physicsPositions.get(b.id) ?? { x: b.position?.x ?? 0, y: b.position?.y ?? 0 };
+        const posX = typeof p.x === 'number' ? p.x.toFixed(2) : '?';
+        const posY = typeof p.y === 'number' ? p.y.toFixed(2) : '?';
+        const targetX = typeof b.target?.x === 'number' ? b.target.x.toFixed(2) : '?';
+        const targetY = typeof b.target?.y === 'number' ? b.target.y.toFixed(2) : '?';
+        return `${b.emoji}  pos:(${posX},${posY})  target:(${targetX},${targetY})  (player:${b.playerId ?? "-"})`;
     });
     const lines = [
         `zoom: ${Math.round(pixelsPerMeter)} px/m`,

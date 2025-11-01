@@ -1,8 +1,8 @@
-import Redis from "ioredis";
+import { createClient, type RedisClientType } from "redis";
 
-let redis: Redis | null = null;
+let redis: RedisClientType | null = null;
 
-export function getRedisClient(): Redis {
+export function getRedisClient(): RedisClientType {
     if (redis) {
         return redis;
     }
@@ -12,28 +12,27 @@ export function getRedisClient(): Redis {
     const redisPort = parseInt(process.env.REDIS_PORT || "6379", 10);
     const redisUsername = process.env.REDIS_USERNAME;
     const redisPassword = process.env.REDIS_PASSWORD;
-    const redisTls = process.env.REDIS_TLS === "true";
 
     if (redisUrl) {
-        redis = new Redis(redisUrl, {
-            retryStrategy: (times) => {
-                const delay = Math.min(times * 50, 2000);
-                return delay;
-            },
-            maxRetriesPerRequest: 3,
+        // If URL uses rediss://, TLS is automatically enabled
+        // If URL uses redis://, we need to force TLS
+        const url = redisUrl.startsWith('rediss://') 
+            ? redisUrl 
+            : redisUrl.replace('redis://', 'rediss://');
+        redis = createClient({
+            url: url,
         });
     } else {
-        redis = new Redis({
-            host: redisHost,
-            port: redisPort,
+        redis = createClient({
+            socket: {
+                host: redisHost,
+                port: redisPort,
+                tls: {
+                    rejectUnauthorized: false, // For Redis Cloud TLS
+                },
+            },
             username: redisUsername,
             password: redisPassword,
-            tls: redisTls ? {} : undefined,
-            retryStrategy: (times) => {
-                const delay = Math.min(times * 50, 2000);
-                return delay;
-            },
-            maxRetriesPerRequest: 3,
         });
     }
 
@@ -45,13 +44,27 @@ export function getRedisClient(): Redis {
         console.log("Redis Client Connected");
     });
 
+    // Connect to Redis (lazy connection, will connect on first command if not already connected)
+    if (!redis.isOpen) {
+        redis.connect().catch((err) => {
+            console.error("Failed to connect to Redis:", err);
+        });
+    }
+
     return redis;
 }
 
-export function closeRedisClient(): void {
+export async function closeRedisClient(): Promise<void> {
     if (redis) {
-        redis.disconnect();
-        redis = null;
+        try {
+            if (redis.isOpen) {
+                await redis.quit();
+            }
+        } catch (error) {
+            // Ignore errors if client is already closed
+            console.warn('Error closing Redis client:', error);
+        } finally {
+            redis = null;
+        }
     }
 }
-

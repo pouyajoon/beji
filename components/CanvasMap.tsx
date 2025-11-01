@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtom, useAtomValue, useSetAtom } from "../lib/jotai";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { Beji } from "./atoms";
 import {
     bejiAtom,
@@ -40,9 +40,11 @@ export function CanvasMap() {
     
     // Get current player's beji and its world's static beji
     const currentBeji = beji.find((b) => b.playerId === currentPlayerId);
-    const staticBejiForWorld = useAtomValue(
-        currentBeji?.worldId ? staticBejiForWorldAtom(currentBeji.worldId) : staticBejiAtom
+    const worldIdAtom = useMemo(
+        () => (currentBeji?.worldId ? staticBejiForWorldAtom(currentBeji.worldId) : staticBejiAtom),
+        [currentBeji?.worldId]
     );
+    const staticBejiForWorld = useAtomValue(worldIdAtom);
     const staticBeji = currentBeji?.worldId ? staticBejiForWorld : [];
 
     const [viewport, setViewport] = useState<{ width: number; height: number }>(() => ({
@@ -74,7 +76,7 @@ export function CanvasMap() {
         return Math.max(min, Math.min(max, value));
     }
 
-    const stepBy = (dx: number, dy: number) => {
+    const stepBy = useCallback((dx: number, dy: number) => {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => {
             if (b.playerId !== currentPlayerId) return b;
@@ -83,10 +85,10 @@ export function CanvasMap() {
             return { ...b, target: { x: nextTargetX, y: nextTargetY } };
         });
         setBeji(updated);
-    };
+    }, [beji, currentPlayerId, setBeji]);
 
     // Keyboard moves in meters per key repeat
-    useKeyboardMovement((dx, dy) => stepBy(dx, dy), { enabled: true, stepSize: 1 });
+    useKeyboardMovement(stepBy, { enabled: true, stepSize: 1 });
 
     const [isTouchPreferred, setIsTouchPreferred] = useState(false);
     const [pixelsPerMeter, setPixelsPerMeter] = useAtom(zoomPxPerMeterAtom);
@@ -109,9 +111,27 @@ export function CanvasMap() {
     // Global shortcuts
     useShortcuts();
 
+    // Physics positions (authoritative for render) live outside React to avoid re-renders
+    // Must be declared before cameraTarget useMemo that may reference it
+    const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+
+    // Camera target should track physics position, not atom position
+    const cameraTargetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const cameraTarget = useMemo(() => {
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
-        return focus ? { x: focus.position.x, y: focus.position.y } : { x: 0, y: 0 };
+        if (focus) {
+            // Use physics position if available, fallback to atom position
+            // Note: Physics positions are updated in render loop, so this is just initial/default
+            const physicsPos = physicsPositionsRef.current.get(focus.id);
+            if (physicsPos) {
+                cameraTargetRef.current = { x: physicsPos.x, y: physicsPos.y };
+            } else {
+                cameraTargetRef.current = { x: focus.position.x, y: focus.position.y };
+            }
+        } else {
+            cameraTargetRef.current = { x: 0, y: 0 };
+        }
+        return cameraTargetRef.current;
     }, [beji, currentPlayerId]);
 
     // Camera offset allows zooming to mouse position without breaking player-following target
@@ -154,11 +174,7 @@ export function CanvasMap() {
         } catch { }
     }, [beji, currentPlayerId]);
 
-
-    // no toolbar debug timer; debug rendered on canvas
-
-    // Physics positions (authoritative for render) live outside React to avoid re-renders
-    const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+    // Initialize physics positions from beji atom
     useEffect(() => {
         for (const b of beji) {
             if (!physicsPositionsRef.current.has(b.id)) {
@@ -318,44 +334,67 @@ export function CanvasMap() {
         function draw(ts: number) {
             lastTs = ts;
 
+            // Update camera target from physics position (for smooth following)
+            const focus = currentPlayerId ? bejiRef.current.find((b) => b.playerId === currentPlayerId) : bejiRef.current[0];
+            if (focus) {
+                const physicsPos = physicsPositionsRef.current.get(focus.id);
+                if (physicsPos) {
+                    cameraTargetRef.current = { x: physicsPos.x, y: physicsPos.y };
+                } else {
+                    cameraTargetRef.current = { x: focus.position.x, y: focus.position.y };
+                }
+            }
+
+            // Recalculate viewport based on updated camera target
+            const currentCameraCenterX = cameraTargetRef.current.x + cameraOffset.x;
+            const currentCameraCenterY = cameraTargetRef.current.y + cameraOffset.y;
+            const currentViewWidth = Math.min(MAP_SIZE, viewport.width / Math.max(1, pixelsPerMeter));
+            const currentViewHeight = Math.min(MAP_SIZE, viewport.height / Math.max(1, pixelsPerMeter));
+            const currentViewX = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - currentViewWidth, currentCameraCenterX - currentViewWidth / 2));
+            const currentViewY = Math.max(-MAP_SIZE / 2, Math.min(MAP_SIZE / 2 - currentViewHeight, currentCameraCenterY - currentViewHeight / 2));
+            const currentRenderViewX = mounted ? currentViewX : 0;
+            const currentRenderViewY = mounted ? currentViewY : 0;
+            const currentRenderViewWidth = mounted ? currentViewWidth : MAP_SIZE;
+            const currentRenderViewHeight = mounted ? currentViewHeight : MAP_SIZE;
+
             // Setup canvas and transformation
             setupCanvas({
                 canvas: canvasEl,
                 ctx: ctx2,
                 viewport,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
             });
 
             // Draw background
             drawBackground({
                 ctx: ctx2,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
             });
 
             // Draw grid
             drawGrid({
                 ctx: ctx2,
                 canvas: canvasEl,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
             });
 
             // Draw origin marker
             drawOriginMarker({
                 ctx: ctx2,
                 canvas: canvasEl,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
             });
 
             // Draw static beji entities (before player beji so they appear behind)
@@ -368,10 +407,10 @@ export function CanvasMap() {
                 canvas: canvasEl,
                 staticBeji: staticBeji,
                 playerPosition: playerPos,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
                 pixelsPerMeter,
             });
 
@@ -381,10 +420,10 @@ export function CanvasMap() {
                 canvas: canvasEl,
                 beji: bejiRef.current,
                 physicsPositions: physicsPositionsRef.current,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
                 pixelsPerMeter,
             });
 
@@ -398,10 +437,10 @@ export function CanvasMap() {
                         canvas: canvasEl,
                         playerBeji: p,
                         mouseWorld: mouseHandlers.mouseWorldRef.current,
-                        renderViewX,
-                        renderViewY,
-                        renderViewWidth,
-                        renderViewHeight,
+                        renderViewX: currentRenderViewX,
+                        renderViewY: currentRenderViewY,
+                        renderViewWidth: currentRenderViewWidth,
+                        renderViewHeight: currentRenderViewHeight,
                     });
                 }
             }
@@ -414,10 +453,10 @@ export function CanvasMap() {
                 beji: bejiRef.current,
                 physicsPositions: physicsPositionsRef.current,
                 pixelsPerMeter,
-                renderViewX,
-                renderViewY,
-                renderViewWidth,
-                renderViewHeight,
+                renderViewX: currentRenderViewX,
+                renderViewY: currentRenderViewY,
+                renderViewWidth: currentRenderViewWidth,
+                renderViewHeight: currentRenderViewHeight,
                 followMouse: followMouseRef.current,
             });
 
@@ -426,7 +465,7 @@ export function CanvasMap() {
 
         raf = requestAnimationFrame(draw);
         return () => cancelAnimationFrame(raf);
-    }, [viewport.width, viewport.height, renderViewX, renderViewY, renderViewWidth, renderViewHeight, currentPlayerId]);
+    }, [viewport.width, viewport.height, pixelsPerMeter, cameraOffset, mounted, currentPlayerId, staticBeji]);
 
 
     return (

@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package player.v1;
+
+option go_package = "github.com/pouyajoon/beji/player/v1";
+
+// Player service for managing player entities
+service PlayerService {
+  // GetPlayer retrieves a player by ID
+  rpc GetPlayer (GetPlayerRequest) returns (GetPlayerResponse);
+  
+  // GetAllPlayers retrieves all players
+  rpc GetAllPlayers (GetAllPlayersRequest) returns (GetAllPlayersResponse);
+  
+  // CreatePlayer creates a new player
+  rpc CreatePlayer (CreatePlayerRequest) returns (CreatePlayerResponse);
+  
+  // UpdatePlayer updates an existing player
+  rpc UpdatePlayer (UpdatePlayerRequest) returns (UpdatePlayerResponse);
+}
+
+// Request to get a player by ID
+message GetPlayerRequest {
+  string player_id = 1;
+}
+
+// Response containing a player
+message GetPlayerResponse {
+  Player player = 1;
+}
+
+// Request to get all players
+message GetAllPlayersRequest {}
+
+// Response containing all players
+message GetAllPlayersResponse {
+  repeated Player player = 1;
+}
+
+// Request to create a player
+message CreatePlayerRequest {
+  Player player = 1;
+}
+
+// Response containing the created player
+message CreatePlayerResponse {
+  Player player = 1;
+}
+
+// Request to update a player
+message UpdatePlayerRequest {
+  Player player = 1;
+}
+
+// Response containing the updated player
+message UpdatePlayerResponse {
+  Player player = 1;
+}
+
+// Player message
+message Player {
+  string id = 1;
+  string emoji = 2;
+  repeated int32 emoji_codepoints = 3;
+  repeated string beji_ids = 4;
+  int64 created_at = 5;
+}
+

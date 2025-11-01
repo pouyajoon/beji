@@ -39,6 +39,3 @@ export function MapGrid({ mapSize, cellSize }: MapGridProps) {
     );
 }
 
-export default MapGrid;
-
-
