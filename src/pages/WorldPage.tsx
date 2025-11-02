@@ -15,7 +15,6 @@ import {
   type World,
 } from '../../components/atoms';
 import type { StaticBeji as ProtoStaticBeji } from '../proto/staticbeji/v1/staticbeji_pb';
-import type { PlainMessage } from '@bufbuild/protobuf';
 
 function WorldPageContent() {
   const params = useParams<{ id: string }>();
@@ -90,7 +89,7 @@ function WorldPageContent() {
         };
 
         const staticBeji: StaticBeji[] = worldData.staticBeji.map(
-          (sb: PlainMessage<ProtoStaticBeji>) => ({
+          (sb: ProtoStaticBeji) => ({
             id: sb.id,
             worldId: sb.worldId,
             emojiCodepoint: sb.emojiCodepoint,

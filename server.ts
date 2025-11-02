@@ -6,6 +6,7 @@ import fastifyCors from '@fastify/cors';
 import fastifyMiddie from '@fastify/middie';
 import { WebSocket } from 'ws';
 import type { JsonValue } from '@bufbuild/protobuf';
+import { create, fromJson, toJson, protoInt64 } from '@bufbuild/protobuf';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { verifyJWT, signJWT, type JWTPayload } from './src/lib/auth/jwt';
@@ -24,7 +25,7 @@ import {
   saveWorld,
 } from './src/lib/redis/gameState';
 import type { Beji as BejiType, Player as PlayerType, StaticBeji as StaticBejiType, World as WorldType } from './components/atoms';
-import {
+import type {
   CreateWorldRequest,
   CreateWorldResponse,
   GetWorldRequest,
@@ -32,21 +33,42 @@ import {
   WorldData,
   World,
 } from './src/proto/world/v1/world_pb';
-import { Player } from './src/proto/player/v1/player_pb';
-import { Beji } from './src/proto/beji/v1/beji_pb';
-import { StaticBeji } from './src/proto/staticbeji/v1/staticbeji_pb';
-import { Position } from './src/proto/common/v1/common_pb';
-import { protoInt64 } from '@bufbuild/protobuf';
-import { codepointsToEmoji } from './components/emoji';
 import {
+  CreateWorldRequestSchema,
+  CreateWorldResponseSchema,
+  GetWorldRequestSchema,
+  GetWorldResponseSchema,
+  WorldDataSchema,
+  WorldSchema,
+} from './src/proto/world/v1/world_pb';
+import type { Player } from './src/proto/player/v1/player_pb';
+import { PlayerSchema } from './src/proto/player/v1/player_pb';
+import type { Beji } from './src/proto/beji/v1/beji_pb';
+import { BejiSchema } from './src/proto/beji/v1/beji_pb';
+import type { StaticBeji } from './src/proto/staticbeji/v1/staticbeji_pb';
+import { StaticBejiSchema } from './src/proto/staticbeji/v1/staticbeji_pb';
+import type { Position } from './src/proto/common/v1/common_pb';
+import { PositionSchema } from './src/proto/common/v1/common_pb';
+import { codepointsToEmoji } from './components/emoji';
+import type {
   GetPublicConfigRequest,
   GetPublicConfigResponse,
 } from './src/proto/config/v1/config_pb';
 import {
+  GetPublicConfigRequestSchema,
+  GetPublicConfigResponseSchema,
+} from './src/proto/config/v1/config_pb';
+import type {
   GetUserBejisRequest,
   GetUserBejisResponse,
   WorldSummary,
   BejiWithWorld,
+} from './src/proto/player/v1/player_pb';
+import {
+  GetUserBejisRequestSchema,
+  GetUserBejisResponseSchema,
+  WorldSummarySchema,
+  BejiWithWorldSchema,
 } from './src/proto/player/v1/player_pb';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -150,38 +172,38 @@ function convertAppToProto(
   beji: BejiType,
   staticBeji: StaticBejiType[]
 ): WorldData {
-  return new WorldData({
-    world: new World({
+  return create(WorldDataSchema, {
+    world: create(WorldSchema, {
       id: world.id,
       mainBejiId: world.mainBejiId,
       staticBejiIds: world.staticBejiIds,
       createdAt: protoInt64.parse(world.createdAt.toString()),
     }),
-    player: new Player({
+    player: create(PlayerSchema, {
       id: player.id,
       emoji: player.emoji,
       emojiCodepoints: player.emojiCodepoints,
       bejiIds: player.bejiIds,
       createdAt: protoInt64.parse(player.createdAt.toString()),
     }),
-    beji: new Beji({
+    beji: create(BejiSchema, {
       id: beji.id,
       playerId: beji.playerId,
       worldId: beji.worldId,
       emoji: beji.emoji,
       name: beji.name,
-      position: new Position({ x: beji.position.x, y: beji.position.y }),
-      target: beji.target ? new Position({ x: beji.target.x, y: beji.target.y }) : undefined,
+      position: create(PositionSchema, { x: beji.position.x, y: beji.position.y }),
+      target: beji.target ? create(PositionSchema, { x: beji.target.x, y: beji.target.y }) : undefined,
       walk: beji.walk,
       createdAt: protoInt64.parse(beji.createdAt.toString()),
     }),
     staticBeji: staticBeji.map((sb) =>
-      new StaticBeji({
+      create(StaticBejiSchema, {
         id: sb.id,
         worldId: sb.worldId,
         emojiCodepoint: sb.emojiCodepoint,
         emoji: sb.emoji,
-        position: new Position({ x: sb.position.x, y: sb.position.y }),
+        position: create(PositionSchema, { x: sb.position.x, y: sb.position.y }),
         harvested: sb.harvested,
       })
     ),
@@ -189,14 +211,14 @@ function convertAppToProto(
 }
 
 function convertBejiToProto(beji: BejiType): Beji {
-  return new Beji({
+  return create(BejiSchema, {
     id: beji.id,
     playerId: beji.playerId,
     worldId: beji.worldId,
     emoji: beji.emoji,
     name: beji.name,
-    position: new Position({ x: beji.position.x, y: beji.position.y }),
-    target: beji.target ? new Position({ x: beji.target.x, y: beji.target.y }) : undefined,
+    position: create(PositionSchema, { x: beji.position.x, y: beji.position.y }),
+    target: beji.target ? create(PositionSchema, { x: beji.target.x, y: beji.target.y }) : undefined,
     walk: beji.walk,
     createdAt: protoInt64.parse(beji.createdAt.toString()),
   });
@@ -204,7 +226,7 @@ function convertBejiToProto(beji: BejiType): Beji {
 
 function convertWorldToSummary(world: WorldType | null): WorldSummary | null {
   if (!world) return null;
-  return new WorldSummary({
+  return create(WorldSummarySchema, {
     id: world.id,
     mainBejiId: world.mainBejiId,
     createdAt: protoInt64.parse(world.createdAt.toString()),
@@ -342,15 +364,15 @@ fastify.post('/api/rpc/config/v1', async (request, reply) => {
     const { method, params } = body;
 
     if (method === 'GetPublicConfig') {
-      const req = GetPublicConfigRequest.fromJson(params as JsonValue);
+      const req = fromJson(GetPublicConfigRequestSchema, params as JsonValue);
 
       const googleClientId = getEnvVar('GOOGLE_CLIENT_ID');
       if (!googleClientId) {
         return reply.status(500).send({ error: 'Google Client ID not configured' });
       }
 
-      const response = new GetPublicConfigResponse({ googleClientId });
-      return response.toJson();
+      const response = create(GetPublicConfigResponseSchema, { googleClientId });
+      return toJson(GetPublicConfigResponseSchema, response);
     }
 
     return reply.status(400).send({ error: `Unknown method: ${method}` });
@@ -368,7 +390,7 @@ fastify.post('/api/rpc/world/v1', async (request, reply) => {
     const { method, params } = body;
 
     if (method === 'CreateWorld') {
-      const req = CreateWorldRequest.fromJson(params as JsonValue);
+      const req = fromJson(CreateWorldRequestSchema, params as JsonValue);
 
       if (!req.bejiName || !req.emojiCodepoints || req.emojiCodepoints.length === 0) {
         return reply.status(400).send({ error: 'bejiName and emojiCodepoints are required' });
@@ -444,11 +466,11 @@ fastify.post('/api/rpc/world/v1', async (request, reply) => {
       ]);
 
       const worldData = convertAppToProto(newWorld, newPlayer, newBeji, staticBejis);
-      const response = new CreateWorldResponse({ world: worldData });
+      const response = create(CreateWorldResponseSchema, { world: worldData });
 
-      return response.toJson();
+      return toJson(CreateWorldResponseSchema, response);
     } else if (method === 'GetWorld') {
-      const req = GetWorldRequest.fromJson(params as JsonValue);
+      const req = fromJson(GetWorldRequestSchema, params as JsonValue);
 
       if (!req.worldId) {
         return reply.status(400).send({ error: 'worldId is required' });
@@ -471,9 +493,9 @@ fastify.post('/api/rpc/world/v1', async (request, reply) => {
 
       const staticBeji = await getStaticBejiForWorld(world.id);
       const worldData = convertAppToProto(world, player, beji, staticBeji);
-      const response = new GetWorldResponse({ world: worldData });
+      const response = create(GetWorldResponseSchema, { world: worldData });
 
-      return response.toJson();
+      return toJson(GetWorldResponseSchema, response);
     }
 
     return reply.status(400).send({ error: `Unknown method: ${method}` });
@@ -496,7 +518,7 @@ fastify.post('/api/rpc/player/v1', async (request, reply) => {
     const { method, params } = body;
 
     if (method === 'GetUserBejis') {
-      const req = GetUserBejisRequest.fromJson(params as JsonValue);
+      const req = fromJson(GetUserBejisRequestSchema, params as JsonValue);
 
       if (req.userId !== payload.userId) {
         return reply.status(403).send({ error: 'Forbidden' });
@@ -504,23 +526,23 @@ fastify.post('/api/rpc/player/v1', async (request, reply) => {
 
       const playerId = await getPlayerIdForUser(req.userId);
       if (!playerId) {
-        const response = new GetUserBejisResponse({ bejis: [] });
-        return response.toJson();
+        const response = create(GetUserBejisResponseSchema, { bejis: [] });
+        return toJson(GetUserBejisResponseSchema, response);
       }
 
       const bejis = await getBejiForPlayerRedis(playerId);
       const bejisWithWorlds = await Promise.all(
         bejis.map(async (beji) => {
           const world = beji.worldId ? await getWorldFromRedis(beji.worldId) : null;
-          return new BejiWithWorld({
+          return create(BejiWithWorldSchema, {
             beji: convertBejiToProto(beji),
             world: convertWorldToSummary(world) || undefined,
           });
         })
       );
 
-      const response = new GetUserBejisResponse({ bejis: bejisWithWorlds });
-      return response.toJson();
+      const response = create(GetUserBejisResponseSchema, { bejis: bejisWithWorlds });
+      return toJson(GetUserBejisResponseSchema, response);
     }
 
     return reply.status(400).send({ error: `Unknown method: ${method}` });
