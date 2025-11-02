@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
     GetPublicConfigRequest,
     GetPublicConfigResponse,
-} from "../../../../src/proto/config/v1/config_pb";
+} from "../../../../../src/proto/config/v1/config_pb";
 
 export const dynamic = "force-dynamic";
 

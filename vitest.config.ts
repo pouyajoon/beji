@@ -32,11 +32,6 @@ export default defineConfig({
       ],
     },
   },
-  resolve: {
-    extensionAlias: {
-      '.js': ['.ts', '.tsx', '.js'],
-    },
-  },
 });
 
 

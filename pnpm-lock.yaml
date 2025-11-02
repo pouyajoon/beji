@@ -14,6 +14,9 @@ importers:
       '@connectrpc/connect-next':
         specifier: ^1.7.0
         version: 1.7.0(@bufbuild/protobuf@1.10.1)(@connectrpc/connect-node@1.7.0(@bufbuild/protobuf@1.10.1)(@connectrpc/connect@1.7.0(@bufbuild/protobuf@1.10.1)))(@connectrpc/connect@1.7.0(@bufbuild/protobuf@1.10.1))(next@16.0.1(@babel/core@7.28.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))
+      '@connectrpc/connect-web':
+        specifier: 1.7.0
+        version: 1.7.0(@bufbuild/protobuf@1.10.1)(@connectrpc/connect@1.7.0(@bufbuild/protobuf@1.10.1))
       '@connectrpc/protoc-gen-connect-es':
         specifier: ^1.7.0
         version: 1.7.0(@bufbuild/protoc-gen-es@1.10.1(@bufbuild/protobuf@1.10.1))(@connectrpc/connect@1.7.0(@bufbuild/protobuf@1.10.1))
@@ -323,6 +326,12 @@ packages:
   '@connectrpc/connect-node@1.7.0':
     resolution: {integrity: sha512-6vaPIkG/NyhxlYgytLoR9KYbPhczEboFB2OYWkA9qvUz1K7efXfeGrlRxoLtpa+r8VxyIOw73w5ktNe743nD+A==}
     engines: {node: '>=16.0.0'}
+    peerDependencies:
+      '@bufbuild/protobuf': ^1.10.0
+      '@connectrpc/connect': 1.7.0
+
+  '@connectrpc/connect-web@1.7.0':
+    resolution: {integrity: sha512-qyP0YOnUPRWwCc/VfsoydMJvkb7EyUPr2q9sHgBuJzbADjiqck1gKH5V5ZPzPhTLBvmz5UvG+wiZ5sMRQHU1MQ==}
     peerDependencies:
       '@bufbuild/protobuf': ^1.10.0
       '@connectrpc/connect': 1.7.0
@@ -3552,6 +3561,11 @@ snapshots:
       '@bufbuild/protobuf': 1.10.1
       '@connectrpc/connect': 1.7.0(@bufbuild/protobuf@1.10.1)
       undici: 5.29.0
+
+  '@connectrpc/connect-web@1.7.0(@bufbuild/protobuf@1.10.1)(@connectrpc/connect@1.7.0(@bufbuild/protobuf@1.10.1))':
+    dependencies:
+      '@bufbuild/protobuf': 1.10.1
+      '@connectrpc/connect': 1.7.0(@bufbuild/protobuf@1.10.1)
 
   '@connectrpc/connect@1.7.0(@bufbuild/protobuf@1.10.1)':
     dependencies:

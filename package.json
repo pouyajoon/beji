@@ -21,6 +21,7 @@
   "dependencies": {
     "@connectrpc/connect": "^1.7.0",
     "@connectrpc/connect-next": "^1.7.0",
+    "@connectrpc/connect-web": "1.7.0",
     "@connectrpc/protoc-gen-connect-es": "^1.7.0",
     "@floating-ui/react": "^0.27.16",
     "@formatjs/intl-localematcher": "^0.6.2",

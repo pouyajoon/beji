@@ -19,8 +19,8 @@ class BejiSyncClientImpl implements BejiSyncClient {
     private updateCallbacks: Array<(update: { position: IPosition; target?: IPosition; walk: boolean }) => void> = [];
     private bejiId: string | null = null;
     private isConnected: boolean = false;
+    private updateQueue: BejiPositionUpdate[] = [];
     private streamIterator: AsyncIterable<BejiPositionUpdate> | null = null;
-    private streamWriter: { write: (update: BejiPositionUpdate) => Promise<void> } | null = null;
 
     constructor() {
         const transport = createConnectTransport({
@@ -42,26 +42,39 @@ class BejiSyncClientImpl implements BejiSyncClient {
         this.streamController = new AbortController();
 
         try {
-            // Create initial update with beji ID to establish connection
-            const initialUpdate = new BejiPositionUpdate({
-                bejiId,
-            });
+            const self = this;
+            // Create an async generator that yields updates from the queue
+            async function* createUpdateStream(
+                initialBejiId: string
+            ): AsyncGenerator<BejiPositionUpdate> {
+                // Send initial connection message
+                yield new BejiPositionUpdate({ bejiId: initialBejiId });
 
-            // Start bidirectional stream using Connect RPC
-            // Note: Connect handles bidirectional streaming via async iterables
-            const stream = this.client.syncBejiPosition(initialUpdate, {
+                // Keep the stream alive and yield updates from queue
+                while (self.isConnected && self.streamController) {
+                    if (self.updateQueue.length > 0) {
+                        const update = self.updateQueue.shift();
+                        if (update) {
+                            yield update;
+                        }
+                    } else {
+                        // Small delay to prevent tight loop
+                        await new Promise((resolve) => setTimeout(resolve, 10));
+                    }
+                }
+            }
+
+            // Start bidirectional stream
+            const requestStream = createUpdateStream(bejiId);
+            const responseStream = this.client.syncBejiPosition(requestStream, {
                 signal: this.streamController.signal,
             });
 
-            this.streamIterator = stream;
+            this.streamIterator = responseStream;
             this.isConnected = true;
 
             // Start reading from stream in background
-            this.readStream(stream);
-
-            // For sending updates, we'll need to create new streams or use a different approach
-            // Connect bidirectional streaming works by the client sending messages through the request stream
-            // and receiving through the response stream. We need to handle this properly.
+            this.readStream(responseStream);
         } catch (error) {
             if (error instanceof Error && error.name !== "AbortError") {
                 console.error("Beji sync connection error:", error);
@@ -109,7 +122,7 @@ class BejiSyncClientImpl implements BejiSyncClient {
         this.bejiId = null;
         this.isConnected = false;
         this.streamIterator = null;
-        this.streamWriter = null;
+        this.updateQueue = [];
     }
 
     async sendUpdate(position: IPosition, target?: IPosition, walk?: boolean): Promise<void> {
@@ -121,64 +134,24 @@ class BejiSyncClientImpl implements BejiSyncClient {
             return;
         }
 
-        try {
-            // Create update message
-            const update = new BejiPositionUpdate({
-                bejiId: this.bejiId,
-                position: new Position({
-                    x: position.x,
-                    y: position.y,
-                }),
-                target: target
-                    ? new Position({
-                          x: target.x,
-                          y: target.y,
-                      })
-                    : undefined,
-                walk: walk !== undefined ? walk : true,
-            });
+        // Create update message and queue it
+        // The update stream generator will pick it up and send it
+        const update = new BejiPositionUpdate({
+            bejiId: this.bejiId,
+            position: new Position({
+                x: position.x,
+                y: position.y,
+            }),
+            target: target
+                ? new Position({
+                      x: target.x,
+                      y: target.y,
+                  })
+                : undefined,
+            walk: walk !== undefined ? walk : true,
+        });
 
-            // For Connect bidirectional streaming, we need to send through a new stream
-            // Since we can't write to an existing stream, we'll create a new one for each update
-            // This is a limitation - ideally we'd maintain a persistent bidirectional stream
-            // For now, we'll use a simple approach: create a new stream for sending updates
-            const streamController = new AbortController();
-            const stream = this.client.syncBejiPosition(update, {
-                signal: streamController.signal,
-            });
-
-            // Read the response but don't block
-            (async () => {
-                try {
-                    for await (const response of stream) {
-                        // Response is handled by the main stream reader
-                        if (response.position) {
-                            const pos: IPosition = {
-                                x: response.position.x,
-                                y: response.position.y,
-                            };
-                            const tgt = response.target
-                                ? { x: response.target.x, y: response.target.y }
-                                : undefined;
-
-                            this.notifyCallbacks({
-                                position: pos,
-                                target: tgt,
-                                walk: response.walk ?? true,
-                            });
-                        }
-                    }
-                } catch (error) {
-                    if (error instanceof Error && error.name !== "AbortError") {
-                        console.error("Error in update stream:", error);
-                    }
-                } finally {
-                    streamController.abort();
-                }
-            })();
-        } catch (error) {
-            console.error("Error sending beji update:", error);
-        }
+        this.updateQueue.push(update);
     }
 
     onUpdate(callback: (update: { position: IPosition; target?: IPosition; walk: boolean }) => void): void {
