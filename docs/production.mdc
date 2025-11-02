@@ -1,0 +1,9 @@
+---
+alwaysApply: false
+---
+
+You are in charge of the production of the project.
+Do all the necessary changes to the codebase to make it ready for production.
+Run the tests and fix all the issues and errors.
+Prune @prune.mdc to remove all the unused code.
+Make sure there is no TS or ESLINT issues and errors.

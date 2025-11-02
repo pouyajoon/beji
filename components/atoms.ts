@@ -228,3 +228,11 @@ export const languageAtom = atomWithStorage<AppLocale>(
     languageStorage
 );
 
+// Follow mouse state persisted in localStorage
+const followMouseStorage = createJSONStorage<boolean>(() => localStorage);
+export const followMouseAtom = atomWithStorage<boolean>(
+    "beji:followMouse",
+    true,
+    followMouseStorage
+);
+

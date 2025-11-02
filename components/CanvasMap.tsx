@@ -10,6 +10,7 @@ import {
     staticBejiAtom,
     inventoryAtom,
     staticBejiForWorldAtom,
+    followMouseAtom,
 } from "./atoms";
 import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
 import { useShortcuts } from "../src/lib/shortcuts";
@@ -100,7 +101,7 @@ export function CanvasMap() {
 
     const [isTouchPreferred, setIsTouchPreferred] = useState(false);
     const [pixelsPerMeter, setPixelsPerMeter] = useAtom(zoomPxPerMeterAtom);
-    const [followMouse, setFollowMouse] = useState(true);
+    const [followMouse, setFollowMouse] = useAtom(followMouseAtom);
     const followMouseRef = useRef<boolean>(true);
     const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
     const prevFollowMouseRef = useRef<boolean>(true);

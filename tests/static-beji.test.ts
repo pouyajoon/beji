@@ -14,6 +14,7 @@ describe('Static Beji', () => {
                 
                 staticBejis.push({
                     id: `static-beji-${offset}`,
+                    worldId: "test-world",
                     emojiCodepoint: staticUnicode,
                     emoji: staticEmoji,
                     position: { x: 0, y: 0 },
@@ -22,9 +23,9 @@ describe('Static Beji', () => {
             }
             
             expect(staticBejis).toHaveLength(11); // -5 to +5 inclusive = 11 bejis
-            expect(staticBejis[0].emojiCodepoint).toBe(baseUnicode - 5);
-            expect(staticBejis[5].emojiCodepoint).toBe(baseUnicode); // middle one
-            expect(staticBejis[10].emojiCodepoint).toBe(baseUnicode + 5);
+            expect(staticBejis[0]?.emojiCodepoint).toBe(baseUnicode - 5);
+            expect(staticBejis[5]?.emojiCodepoint).toBe(baseUnicode); // middle one
+            expect(staticBejis[10]?.emojiCodepoint).toBe(baseUnicode + 5);
         });
 
         it('generates positions within 150 meters of 0,0', () => {
@@ -39,6 +40,7 @@ describe('Static Beji', () => {
                 
                 staticBejis.push({
                     id: `static-beji-${i}`,
+                    worldId: "test-world",
                     emojiCodepoint: 0x1f600,
                     emoji: '😀',
                     position: { x, y },
@@ -57,6 +59,7 @@ describe('Static Beji', () => {
         it('allows negative positions', () => {
             const beji: StaticBeji = {
                 id: 'test',
+                worldId: "test-world",
                 emojiCodepoint: 0x1f600,
                 emoji: '😀',
                 position: { x: -50, y: -75 },

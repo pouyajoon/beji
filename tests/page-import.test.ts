@@ -3,7 +3,7 @@ import { expect, test } from 'vitest';
 test('importing app/page.tsx should not throw (catches regressions)', async () => {
   let threw = false;
   try {
-    await import('../app/page.tsx');
+    await import('../app/page');
   } catch (err) {
     threw = true;
   }
