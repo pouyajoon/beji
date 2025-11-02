@@ -478,3 +478,60 @@ export class Beji extends Message<Beji> {
   }
 }
 
+/**
+ * BejiPositionUpdate message for real-time sync
+ *
+ * @generated from message beji.v1.BejiPositionUpdate
+ */
+export class BejiPositionUpdate extends Message<BejiPositionUpdate> {
+  /**
+   * @generated from field: string beji_id = 1;
+   */
+  bejiId = "";
+
+  /**
+   * @generated from field: common.v1.Position position = 2;
+   */
+  position?: Position;
+
+  /**
+   * @generated from field: common.v1.Position target = 3;
+   */
+  target?: Position;
+
+  /**
+   * @generated from field: bool walk = 4;
+   */
+  walk = false;
+
+  constructor(data?: PartialMessage<BejiPositionUpdate>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "beji.v1.BejiPositionUpdate";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "beji_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "position", kind: "message", T: Position },
+    { no: 3, name: "target", kind: "message", T: Position },
+    { no: 4, name: "walk", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BejiPositionUpdate {
+    return new BejiPositionUpdate().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BejiPositionUpdate {
+    return new BejiPositionUpdate().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BejiPositionUpdate {
+    return new BejiPositionUpdate().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BejiPositionUpdate | PlainMessage<BejiPositionUpdate> | undefined, b: BejiPositionUpdate | PlainMessage<BejiPositionUpdate> | undefined): boolean {
+    return proto3.util.equals(BejiPositionUpdate, a, b);
+  }
+}
+

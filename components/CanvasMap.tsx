@@ -17,6 +17,7 @@ import { VirtualJoystick } from "./VirtualJoystick";
 import { ActionsBar } from "./map/ActionsBar";
 import { useTouchHandlers } from "./map/useTouchHandlers";
 import { useMouseHandlers } from "./map/useMouseHandlers";
+import { useBejiSync } from "../hooks/useBejiSync";
 import {
     setupCanvas,
     drawBackground,
@@ -46,6 +47,11 @@ export function CanvasMap() {
     );
     const staticBejiForWorld = useAtomValue(worldIdAtom);
     const staticBeji = currentBeji?.worldId ? staticBejiForWorld : [];
+
+    // Setup beji position sync
+    const { sendUpdate } = useBejiSync({
+        bejiId: currentBeji?.id ?? null,
+    });
 
     const [viewport, setViewport] = useState<{ width: number; height: number }>(() => ({
         width: 800,
@@ -194,6 +200,40 @@ export function CanvasMap() {
             if (!ids.has(id)) physicsPositionsRef.current.delete(id);
         }
     }, [beji]);
+
+    // Sync beji position and target to Redis when target changes
+    useEffect(() => {
+        if (!currentBeji) return;
+
+        // Sync when beji target changes
+        const target = currentBeji.target ?? currentBeji.position;
+        
+        // Get current physics position
+        const physicsPos = physicsPositionsRef.current.get(currentBeji.id);
+        const currentPosition = physicsPos ?? currentBeji.position;
+
+        // Send update to server (syncs position and target)
+        sendUpdate(currentPosition, target, currentBeji.walk).catch((error) => {
+            console.error("Failed to sync beji position:", error);
+        });
+    }, [currentBeji?.target?.x, currentBeji?.target?.y, currentBeji?.walk, currentBeji?.id, sendUpdate]);
+
+    // Periodically sync position from physics simulation
+    useEffect(() => {
+        if (!currentBeji) return;
+
+        const interval = setInterval(() => {
+            const physicsPos = physicsPositionsRef.current.get(currentBeji.id);
+            if (physicsPos && currentBeji) {
+                const target = currentBeji.target ?? currentBeji.position;
+                sendUpdate(physicsPos, target, currentBeji.walk).catch((error) => {
+                    console.error("Failed to sync beji position:", error);
+                });
+            }
+        }, 1000); // Sync every second
+
+        return () => clearInterval(interval);
+    }, [currentBeji?.id, sendUpdate, currentBeji?.target, currentBeji?.walk]);
 
     // When follow is turned off, stop the beji by setting target to current position
     useEffect(() => {

@@ -328,3 +328,44 @@ export declare class Beji extends Message<Beji> {
   static equals(a: Beji | PlainMessage<Beji> | undefined, b: Beji | PlainMessage<Beji> | undefined): boolean;
 }
 
+/**
+ * BejiPositionUpdate message for real-time sync
+ *
+ * @generated from message beji.v1.BejiPositionUpdate
+ */
+export declare class BejiPositionUpdate extends Message<BejiPositionUpdate> {
+  /**
+   * @generated from field: string beji_id = 1;
+   */
+  bejiId: string;
+
+  /**
+   * @generated from field: common.v1.Position position = 2;
+   */
+  position?: Position;
+
+  /**
+   * @generated from field: common.v1.Position target = 3;
+   */
+  target?: Position;
+
+  /**
+   * @generated from field: bool walk = 4;
+   */
+  walk: boolean;
+
+  constructor(data?: PartialMessage<BejiPositionUpdate>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "beji.v1.BejiPositionUpdate";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BejiPositionUpdate;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BejiPositionUpdate;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BejiPositionUpdate;
+
+  static equals(a: BejiPositionUpdate | PlainMessage<BejiPositionUpdate> | undefined, b: BejiPositionUpdate | PlainMessage<BejiPositionUpdate> | undefined): boolean;
+}
+
