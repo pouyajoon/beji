@@ -7,6 +7,7 @@ import type {
   GetWorldResponse,
 } from '../../../proto/world/v1/world_pb';
 import { create, protoInt64 } from '@bufbuild/protobuf';
+import { registerService } from './typeHelpers';
 import {
   CreateWorldRequestSchema,
   CreateWorldResponseSchema,
@@ -84,9 +85,8 @@ function convertAppToProto(
 }
 
 export function registerWorldService(router: ConnectRouter) {
-  router.service(WorldService as any, {
-    // @ts-expect-error - Service type compatibility
-    async createWorld(req: CreateWorldRequest) {
+  registerService(router, WorldService, {
+    async createWorld(req: CreateWorldRequest): Promise<CreateWorldResponse> {
       if (!req.bejiName || !req.emojiCodepoints || req.emojiCodepoints.length === 0) {
         throw new Error('bejiName and emojiCodepoints are required');
       }
@@ -166,8 +166,7 @@ export function registerWorldService(router: ConnectRouter) {
       return create(CreateWorldResponseSchema, { world: worldData });
     },
 
-    // @ts-expect-error - Service type compatibility
-    async getWorld(req: GetWorldRequest) {
+    async getWorld(req: GetWorldRequest): Promise<GetWorldResponse> {
       if (!req.worldId) {
         throw new Error('worldId is required');
       }

@@ -1,5 +1,6 @@
 import type { ConnectRouter, HandlerContext } from '@connectrpc/connect';
 import { createContextKey } from '@connectrpc/connect';
+import { registerService } from './typeHelpers';
 import { PlayerService } from '../../../proto/player/v1/player_connect';
 import type {
     GetUserBejisRequest,
