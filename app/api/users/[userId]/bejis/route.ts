@@ -5,9 +5,11 @@ import { getPlayerIdForUser, getBejiForPlayer, getWorld } from "../../../../../s
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { userId: string } }
+    { params }: { params: Promise<{ userId: string }> }
 ): Promise<NextResponse> {
     try {
+        const { userId } = await params;
+        
         // Verify authentication
         const cookieStore = await cookies();
         const token = cookieStore.get("auth_token");
@@ -19,12 +21,12 @@ export async function GET(
         const payload = await verifyJWT(token.value);
         
         // Verify user is requesting their own data
-        if (payload.userId !== params.userId) {
+        if (payload.userId !== userId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         // Get player ID for this user
-        const playerId = await getPlayerIdForUser(params.userId);
+        const playerId = await getPlayerIdForUser(userId);
         
         if (!playerId) {
             // User has no player yet, return empty array

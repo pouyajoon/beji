@@ -80,8 +80,10 @@ export function CanvasMap() {
         if (!currentPlayerId) return;
         const updated: Beji[] = beji.map((b: Beji) => {
             if (b.playerId !== currentPlayerId) return b;
-            const nextTargetX = clamp(b.target.x + dx, -MAP_SIZE / 2, MAP_SIZE / 2);
-            const nextTargetY = clamp(b.target.y + dy, -MAP_SIZE / 2, MAP_SIZE / 2);
+            const targetX = b.target?.x ?? b.position.x;
+            const targetY = b.target?.y ?? b.position.y;
+            const nextTargetX = clamp(targetX + dx, -MAP_SIZE / 2, MAP_SIZE / 2);
+            const nextTargetY = clamp(targetY + dy, -MAP_SIZE / 2, MAP_SIZE / 2);
             return { ...b, target: { x: nextTargetX, y: nextTargetY } };
         });
         setBeji(updated);
@@ -116,23 +118,26 @@ export function CanvasMap() {
     const physicsPositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
     // Camera target should track physics position, not atom position
+    // Initialize camera target only once - actual updates happen in render loop
     const cameraTargetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-    const cameraTarget = useMemo(() => {
+    const currentBejiIdRef = useRef<string | null>(null);
+    useEffect(() => {
+        // Initialize camera target only when currentPlayerId changes or when beji is first created
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
-        if (focus) {
-            // Use physics position if available, fallback to atom position
-            // Note: Physics positions are updated in render loop, so this is just initial/default
+        const currentFocusId = focus?.id ?? null;
+        // Only update if the beji ID changed (new beji) or currentPlayerId changed
+        if (focus && currentFocusId !== currentBejiIdRef.current) {
+            currentBejiIdRef.current = currentFocusId;
             const physicsPos = physicsPositionsRef.current.get(focus.id);
             if (physicsPos) {
                 cameraTargetRef.current = { x: physicsPos.x, y: physicsPos.y };
             } else {
                 cameraTargetRef.current = { x: focus.position.x, y: focus.position.y };
             }
-        } else {
-            cameraTargetRef.current = { x: 0, y: 0 };
         }
-        return cameraTargetRef.current;
-    }, [beji, currentPlayerId]);
+    }, [beji, currentPlayerId]); // Depend on beji array but only update when beji ID changes
+    // Return a stable reference that doesn't trigger re-renders on target changes
+    const cameraTarget = cameraTargetRef.current;
 
     // Camera offset allows zooming to mouse position without breaking player-following target
     const [cameraOffset, setCameraOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -167,9 +172,11 @@ export function CanvasMap() {
         const b = currentPlayerId ? beji.find((v) => v.playerId === currentPlayerId) : undefined;
         if (!b) return;
         try {
+            const targetX = b.target?.x ?? b.position.x;
+            const targetY = b.target?.y ?? b.position.y;
             window.localStorage.setItem(
                 "beji:lastPosition",
-                JSON.stringify({ x: Math.round(b.target.x), y: Math.round(b.target.y) })
+                JSON.stringify({ x: Math.round(targetX), y: Math.round(targetY) })
             );
         } catch { }
     }, [beji, currentPlayerId]);
@@ -230,11 +237,13 @@ export function CanvasMap() {
                     // Skip movement if walk is false
                     if (!b.walk) continue;
                     const pos = physicsPositionsRef.current.get(b.id) ?? { x: b.position.x, y: b.position.y };
-                    const dx = b.target.x - pos.x;
-                    const dy = b.target.y - pos.y;
+                    const targetX = b.target?.x ?? b.position.x;
+                    const targetY = b.target?.y ?? b.position.y;
+                    const dx = targetX - pos.x;
+                    const dy = targetY - pos.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     if (dist < 1e-3) {
-                        physicsPositionsRef.current.set(b.id, { x: b.target.x, y: b.target.y });
+                        physicsPositionsRef.current.set(b.id, { x: targetX, y: targetY });
                     } else {
                         const stepMeters = Math.min(BEJI_SPEED_MPS * fixedDt, dist);
                         physicsPositionsRef.current.set(b.id, { x: pos.x + (dx / dist) * stepMeters, y: pos.y + (dy / dist) * stepMeters });

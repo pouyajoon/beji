@@ -5,12 +5,17 @@ const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-k
 export interface JWTPayload {
     userId: string;
     email: string;
+    picture?: string;
     iat?: number;
     exp?: number;
 }
 
 export async function signJWT(payload: Omit<JWTPayload, "iat" | "exp">): Promise<string> {
-    return new SignJWT({ userId: payload.userId, email: payload.email })
+    const jwtPayload: any = { userId: payload.userId, email: payload.email };
+    if (payload.picture) {
+        jwtPayload.picture = payload.picture;
+    }
+    return new SignJWT(jwtPayload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime("30d")

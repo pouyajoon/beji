@@ -102,7 +102,7 @@ function convertAppToProto(
             emoji: beji.emoji,
             name: beji.name,
             position: new Position({ x: beji.position.x, y: beji.position.y }),
-            target: new Position({ x: beji.target.x, y: beji.target.y }),
+            target: beji.target ? new Position({ x: beji.target.x, y: beji.target.y }) : undefined,
             walk: beji.walk,
             createdAt: protoInt64.parse(beji.createdAt.toString()),
         }),
