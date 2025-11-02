@@ -70,6 +70,9 @@ export function useMouseHandlers({
         viewWidth: number;
         viewHeight: number;
     } | null>(null);
+    // Track if we actually dragged (vs just clicked) to prevent target updates after dragging
+    const hasDraggedRef = useRef(false);
+    const dragEndPositionRef = useRef<{ clientX: number; clientY: number } | null>(null);
 
     followMouseRef.current = followMouse;
 
@@ -106,8 +109,15 @@ export function useMouseHandlers({
             if (canvas) {
                 const dxPx = e.clientX - dragStartRef.current.clientX;
                 const dyPx = e.clientY - dragStartRef.current.clientY;
+                
+                // Track if we've actually moved (more than a few pixels) - this distinguishes drag from click
+                const dragDistance = Math.sqrt(dxPx * dxPx + dyPx * dyPx);
+                if (dragDistance > 3) { // threshold of 3 pixels to consider it a drag
+                    hasDraggedRef.current = true;
+                }
+                
                 const dxWorld = (dxPx / Math.max(1, canvas.width)) * dragStartRef.current.viewWidth;
-                const dyWorld = (dyPx / Math.max(1, canvas.height)) * dragStartRef.current.viewHeight;
+                const dyWorld = (dxPx / Math.max(1, canvas.height)) * dragStartRef.current.viewHeight;
 
                 // Dragging right moves map right with cursor (content follows), so offset decreases
                 let nextOffsetX = dragStartRef.current.offsetX - dxWorld;
@@ -128,6 +138,21 @@ export function useMouseHandlers({
                 setCameraOffset({ x: nextOffsetX, y: nextOffsetY });
             }
             return; // do not update target while dragging
+        }
+        
+        // After dragging ends, prevent target updates if we actually dragged
+        // Only allow target updates if mouse moved significantly from where drag ended
+        if (hasDraggedRef.current && dragEndPositionRef.current) {
+            const dx = e.clientX - dragEndPositionRef.current.clientX;
+            const dy = e.clientY - dragEndPositionRef.current.clientY;
+            const distanceFromDragEnd = Math.sqrt(dx * dx + dy * dy);
+            // Require at least 5 pixels of movement from drag end position before allowing target updates
+            if (distanceFromDragEnd < 5) {
+                return; // Don't update target if still near where drag ended
+            }
+            // Mouse has moved away, clear the drag state
+            hasDraggedRef.current = false;
+            dragEndPositionRef.current = null;
         }
         // hover detection against smoothed position if available, else current beji pos
         const playerBeji = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : undefined;
@@ -188,6 +213,7 @@ export function useMouseHandlers({
         }
 
         setIsDragging(true);
+        hasDraggedRef.current = false; // Reset drag tracking for new drag
         dragStartRef.current = {
             clientX: e.clientX,
             clientY: e.clientY,
@@ -200,6 +226,17 @@ export function useMouseHandlers({
 
     const endDrag = () => {
         setIsDragging(false);
+        // If we actually dragged (not just clicked), store the end position
+        if (hasDraggedRef.current && lastPointerClientRef.current) {
+            dragEndPositionRef.current = {
+                clientX: lastPointerClientRef.current.x,
+                clientY: lastPointerClientRef.current.y,
+            };
+        } else {
+            // If it was just a click (no drag), clear the flag so target can update normally
+            hasDraggedRef.current = false;
+            dragEndPositionRef.current = null;
+        }
         dragStartRef.current = null;
     };
 
