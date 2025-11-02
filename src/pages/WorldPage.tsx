@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { AuthenticatedPage } from '../../components/AuthenticatedPage';
 import { Map } from '../../components/Map';
 import { getWorld } from '../lib/rpc/worldClient';
 import { useSetAtom } from '../../lib/jotai';
@@ -16,7 +17,7 @@ import {
 import type { StaticBeji as ProtoStaticBeji } from '../proto/staticbeji/v1/staticbeji_pb';
 import type { PlainMessage } from '@bufbuild/protobuf';
 
-export default function WorldPage() {
+function WorldPageContent() {
   const params = useParams<{ id: string }>();
   const worldId = params.id;
   const [loading, setLoading] = useState(true);
@@ -168,6 +169,14 @@ export default function WorldPage() {
     >
       <Map />
     </div>
+  );
+}
+
+export default function WorldPage() {
+  return (
+    <AuthenticatedPage>
+      <WorldPageContent />
+    </AuthenticatedPage>
   );
 }
 
