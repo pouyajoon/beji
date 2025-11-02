@@ -17,5 +17,12 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+  server: {
+    // Exclude API and authentication routes from Vite's SPA handling
+    // These should be handled by Fastify
+    fs: {
+      strict: false,
+    },
+  },
 });
 
