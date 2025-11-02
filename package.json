@@ -24,6 +24,7 @@
     "@connectrpc/protoc-gen-connect-es": "^1.7.0",
     "@floating-ui/react": "^0.27.16",
     "@formatjs/intl-localematcher": "^0.6.2",
+    "jose": "^6.1.0",
     "jotai": "^2.15.0",
     "negotiator": "^1.0.0",
     "next": "^16.0.0",

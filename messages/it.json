@@ -5,6 +5,11 @@
     "nameLabel": "Dai un nome al tuo Beji",
     "namePlaceholder": "es. Beji il Coraggioso",
     "startButton": "Inizia l'avventura! 🚀"
+  },
+  "Login": {
+    "title": "Benvenuto su Beji 🎮",
+    "subtitle": "Collegati con il tuo account Google per iniziare a giocare",
+    "signInButton": "Accedi con Google"
   }
 }
 

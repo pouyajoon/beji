@@ -23,7 +23,7 @@ describe('Redis Cloud TLS Diagnostic Test', () => {
                 port: redisPort,
                 tls: {
                     rejectUnauthorized: false,
-                },
+                } as any,
             },
             username: redisUsername,
             password: redisPassword,

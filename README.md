@@ -9,6 +9,24 @@ pnpm install
 pnpm dev
 ```
 
+## Authentication Setup
+
+The app uses Google OAuth with JWT tokens. To set up:
+
+1. Create a Google OAuth client ID in the [Google Cloud Console](https://console.cloud.google.com/)
+2. Add the following environment variables to your `.env.local`:
+   ```
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+   JWT_SECRET=your_jwt_secret_key
+   ```
+3. Configure the authorized redirect URIs in Google Console:
+   - `http://localhost:3000/authentication/oauth/google` (development)
+   - `https://beji.origamix.fr/authentication/oauth/google` (production)
+
+Users must sign in with Google before accessing the game. JWT tokens are stored securely in httpOnly, secure, sameSite strict cookies.
+
 ## Development rules
 
 - **Code style**: Prettier enforced; format on commit via lint-staged

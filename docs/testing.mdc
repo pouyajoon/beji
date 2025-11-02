@@ -56,6 +56,8 @@ Configuration in `vitest.config.ts`:
 - ✅ `tests/redis-gameState.test.ts` - Redis game state operations (players, beji, static beji, inventory, worlds) using `node-redis` API
 - ✅ `tests/world-rpc.test.ts` - World RPC API (CreateWorld and GetWorld) with mocked Redis
 - ✅ `tests/debugOverlay.test.ts` - Debug overlay drawing function with edge cases (undefined positions, targets, physics positions)
+- ✅ `tests/auth-jwt.test.ts` - JWT authentication functions (signJWT, verifyJWT) with validation, tampering, and edge case tests
+- ✅ `tests/auth-oauth.test.ts` - Google OAuth authentication flow (OAuth callback route, get-token route) with error handling, token exchange, user info fetching, cookie management, and all edge cases
 
 ### Component Tests
 - ✅ `tests/canvas-map.test.tsx` - CanvasMap component initialization order tests. Specifically catches "Cannot access X before initialization" errors when refs are accessed in hooks before declaration. Uses SSR rendering to surface initialization issues early.

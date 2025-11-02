@@ -15,6 +15,8 @@ import {
     type StaticBeji,
     type World,
 } from "../../../components/atoms";
+import type { StaticBeji as ProtoStaticBeji } from "../../../src/proto/staticbeji/v1/staticbeji_pb";
+import type { PlainMessage } from "@bufbuild/protobuf";
 
 export default function WorldPage() {
     const params = useParams();
@@ -49,7 +51,7 @@ export default function WorldPage() {
                     emoji: worldData.player!.emoji,
                     emojiCodepoints: worldData.player!.emojiCodepoints,
                     bejiIds: worldData.player!.bejiIds,
-                    createdAt: worldData.player!.createdAt,
+                    createdAt: Number(worldData.player!.createdAt),
                 };
 
                 const beji: Beji = {
@@ -65,17 +67,17 @@ export default function WorldPage() {
                         ? { x: worldData.beji!.target.x, y: worldData.beji!.target.y }
                         : { x: 0, y: 0 },
                     walk: worldData.beji!.walk,
-                    createdAt: worldData.beji!.createdAt,
+                    createdAt: Number(worldData.beji!.createdAt),
                 };
 
                 const world: World = {
                     id: worldData.world!.id,
                     mainBejiId: worldData.world!.mainBejiId,
                     staticBejiIds: worldData.world!.staticBejiIds,
-                    createdAt: worldData.world!.createdAt,
+                    createdAt: Number(worldData.world!.createdAt),
                 };
 
-                const staticBeji: StaticBeji[] = worldData.staticBeji.map((sb) => ({
+                const staticBeji: StaticBeji[] = worldData.staticBeji.map((sb: PlainMessage<ProtoStaticBeji>) => ({
                     id: sb.id,
                     worldId: sb.worldId,
                     emojiCodepoint: sb.emojiCodepoint,
