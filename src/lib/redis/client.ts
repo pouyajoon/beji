@@ -29,7 +29,7 @@ export function getRedisClient(): RedisClientType {
                 port: redisPort,
                 tls: {
                     rejectUnauthorized: false, // For Redis Cloud TLS
-                },
+                } as any,
             },
             username: redisUsername,
             password: redisPassword,

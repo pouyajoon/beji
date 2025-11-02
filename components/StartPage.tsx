@@ -25,6 +25,8 @@ import { BejiNameInput } from "./start/BejiNameInput";
 import { StartAction } from "./start/StartAction";
 import { SelectedPreview } from "./start/SelectedPreview";
 import { createWorld } from "../src/lib/rpc/worldClient";
+import type { StaticBeji as ProtoStaticBeji } from "../src/proto/staticbeji/v1/staticbeji_pb";
+import type { PlainMessage } from "@bufbuild/protobuf";
 
 // Use shared generateRandomEmojiSet based on Emoji_Presentation allowlist
 
@@ -66,7 +68,7 @@ export function StartPage() {
                 emoji: worldData.player!.emoji,
                 emojiCodepoints: worldData.player!.emojiCodepoints,
                 bejiIds: worldData.player!.bejiIds,
-                createdAt: worldData.player!.createdAt,
+                createdAt: Number(worldData.player!.createdAt),
             };
 
             const newBeji: Beji = {
@@ -78,17 +80,17 @@ export function StartPage() {
                 position: worldData.beji!.position ? { x: worldData.beji!.position.x, y: worldData.beji!.position.y } : { x: 0, y: 0 },
                 target: worldData.beji!.target ? { x: worldData.beji!.target.x, y: worldData.beji!.target.y } : { x: 0, y: 0 },
                 walk: worldData.beji!.walk,
-                createdAt: worldData.beji!.createdAt,
+                createdAt: Number(worldData.beji!.createdAt),
             };
 
             const newWorld: World = {
                 id: worldData.world!.id,
                 mainBejiId: worldData.world!.mainBejiId,
                 staticBejiIds: worldData.world!.staticBejiIds,
-                createdAt: worldData.world!.createdAt,
+                createdAt: Number(worldData.world!.createdAt),
             };
 
-            const staticBejis: StaticBeji[] = worldData.staticBeji.map((sb) => ({
+            const staticBejis: StaticBeji[] = worldData.staticBeji.map((sb: PlainMessage<ProtoStaticBeji>) => ({
                 id: sb.id,
                 worldId: sb.worldId,
                 emojiCodepoint: sb.emojiCodepoint,

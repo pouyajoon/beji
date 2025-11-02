@@ -6,7 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { Map } from '../components/Map';
 import { MapGrid } from '../components/MapGrid';
 import { StartPage } from '../components/StartPage';
-import { LocaleSwitcher } from '../components/LocaleSwitcher';
+import LocaleSwitcher from '../components/LocaleSwitcher';
 import { Tooltip } from '../components/Tooltip';
 import { VirtualJoystick } from '../components/VirtualJoystick';
 import { Header } from '../components/start/Header';
@@ -20,6 +20,7 @@ import { ZoomToBejiAction } from '../components/map/ZoomToBejiAction';
 import { ActionsBar } from '../components/map/ActionsBar';
 import { DictionaryProvider } from '../i18n/DictionaryProvider';
 import { Provider } from '../lib/jotai';
+import JotaiProvider from '../components/JotaiProvider';
 
 // Mock messages
 const mockMessages = {
@@ -246,6 +247,19 @@ describe('Components SSR', () => {
         // It's acceptable if this fails due to Next.js navigation hooks
         expect(error).toBeDefined();
       }
+    });
+  });
+
+  describe('JotaiProvider', () => {
+    it('renders to an HTML string without throwing', () => {
+      const html = renderToString(
+        <JotaiProvider>
+          <div>Test Content</div>
+        </JotaiProvider>
+      );
+      expect(typeof html).toBe('string');
+      expect(html.length).toBeGreaterThan(0);
+      expect(html).toContain('Test Content');
     });
   });
 });

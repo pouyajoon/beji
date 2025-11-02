@@ -203,6 +203,13 @@ export const bejiNameAtom = atomWithStorage<string>(
     nameStorage
 );
 
+// Auth state
+export const userSubAtom = atomWithStorage<string | null>(
+    "beji:userSub",
+    null,
+    createJSONStorage<string | null>(() => localStorage)
+);
+
 // Zoom state (Canvas/SVG) persisted in localStorage
 const zoomStorage = createJSONStorage<number>(() => localStorage);
 export const zoomPxPerMeterAtom = atomWithStorage<number>(
