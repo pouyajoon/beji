@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import { useSetAtom } from "../lib/jotai";
 import { userSubAtom } from "./atoms";
 import { useMessages } from "../i18n/DictionaryProvider";
@@ -18,7 +16,7 @@ export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const menuRef = useRef<HTMLDivElement>(null);
-    const router = useRouter();
+    const navigate = useNavigate();
     const setUserSub = useSetAtom(userSubAtom);
     const { messages } = useMessages<{ UserMenu: { userMenuLabel: string; disconnect: string } }>();
     const userMenuMessages = messages.UserMenu;
@@ -72,7 +70,7 @@ export default function UserMenu() {
             setUserSub(null);
             setUserInfo(null);
             // Redirect to login
-            router.push("/login");
+            navigate("/login");
         }
     };
 
@@ -115,7 +113,7 @@ export default function UserMenu() {
 
             {isOpen && (
                 <>
-                    <style jsx>{`
+                    <style>{`
                         .user-menu-dropdown {
                             position: absolute;
                             top: calc(100% + 8px);

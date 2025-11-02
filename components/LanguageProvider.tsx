@@ -1,5 +1,3 @@
-"use client";
-
 import { useAtom } from "../lib/jotai";
 import { languageAtom } from "./atoms";
 import { useEffect, useState } from "react";

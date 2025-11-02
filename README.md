@@ -1,6 +1,6 @@
 # Beji
 
-TypeScript + Next.js + Tailwind starter with strict dev rules (pnpm, ESLint, Prettier, Commitlint).
+TypeScript + Vite + React + Fastify starter with strict dev rules (pnpm, ESLint, Prettier, Commitlint).
 
 ## Quick start
 
@@ -8,6 +8,18 @@ TypeScript + Next.js + Tailwind starter with strict dev rules (pnpm, ESLint, Pre
 pnpm install
 pnpm dev
 ```
+
+This will start:
+- Vite dev server on `http://localhost:5173` (frontend)
+- Fastify server on `http://localhost:3000` (backend API)
+
+## Architecture
+
+- **Frontend**: Vite + React + React Router
+- **Backend**: Fastify with WebSocket support
+- **RPC**: Protocol Buffers via Connect RPC
+- **State Management**: Jotai
+- **Styling**: Tailwind CSS
 
 ## Authentication Setup
 
@@ -22,14 +34,14 @@ The app uses Google OAuth with JWT tokens. To set up:
    ```
 3. Configure the authorized redirect URIs in Google Console:
    - `http://localhost:3000/authentication/oauth/google` (development)
-   - `https://beji.origamix.fr/authentication/oauth/google` (production)
+   - `https://your-domain.com/authentication/oauth/google` (production)
 
 Users must sign in with Google before accessing the game. JWT tokens are stored securely in httpOnly, secure, sameSite strict cookies. The Google Client ID is served to clients via a public RPC endpoint, eliminating the need for NEXT_PUBLIC_ environment variables.
 
 ## Development rules
 
 - **Code style**: Prettier enforced; format on commit via lint-staged
-- **Linting**: ESLint (Next.js, TypeScript, import order, unused imports)
+- **Linting**: ESLint (TypeScript, import order, unused imports)
 - **Types**: strict TypeScript; `pnpm typecheck` must pass before merging
 - **Commits**: Conventional Commits enforced by Commitlint
 - **CI baseline**: run `pnpm lint`, `pnpm typecheck`, and `pnpm build`
@@ -37,27 +49,36 @@ Users must sign in with Google before accessing the game. JWT tokens are stored 
 - **No any**: avoid unless isolated and justified; prefer precise types
 - **Console**: `console.log` discouraged; allow only `console.error/warn`
 
-## Responsive design
-
-- Mobile-first viewport set in `app/layout.tsx`
-- Tailwind configured; use `container` and responsive breakpoints
-
 ## Scripts
 
-- `pnpm dev` — start dev server
-- `pnpm build` — production build
-- `pnpm start` — run production server
-- `pnpm lint` — run ESLint
-- `pnpm typecheck` — run TypeScript checks
-- `pnpm format` — run Prettier write
+- `pnpm dev` — start both Vite and Fastify dev servers
+- `pnpm dev:client` — start Vite dev server only
+- `pnpm dev:server` — start Fastify dev server only
+- `pnpm build` — build for production
+- `pnpm build:client` — build frontend only
+- `pnpm start` — start production server
+- `pnpm preview` — preview production build
 
-## RPC via Proto files
+## Production Deployment
 
-- Define APIs only in `proto/**.proto`. Example: `proto/echo/v1/echo.proto`.
-- Generate TypeScript types/services (requires `protoc` installed):
+### Option 1: Self-hosted (Fastify server)
 
-```bash
-pnpm proto:gen
-```
+1. Build the frontend: `pnpm build:client`
+2. The built files are in `dist/`
+3. The Fastify server serves static files from `dist/` in production
+4. Start the server: `NODE_ENV=production pnpm start`
 
-Generated files go to `src/proto/`.
+### Option 2: Netlify (Serverless Functions)
+
+See [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md) for detailed instructions.
+
+**Note:** WebSockets are not supported on Netlify Functions. You'll need a separate WebSocket server for real-time features.
+
+## Project Structure
+
+- `src/` - Source files (pages, components, lib)
+- `components/` - React components
+- `server.ts` - Fastify server with API routes
+- `vite.config.ts` - Vite configuration
+- `proto/` - Protocol Buffer definitions
+- `src/proto/` - Generated TypeScript from `.proto`

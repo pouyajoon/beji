@@ -1,4 +1,5 @@
-const RPC_BASE_URL = "/api/rpc/config/v1";
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const RPC_BASE_URL = `${API_BASE_URL}/api/rpc/config/v1`;
 
 async function callRPC<TRequest, TResponse>(
     method: string,
@@ -9,6 +10,7 @@ async function callRPC<TRequest, TResponse>(
         headers: {
             "Content-Type": "application/json",
         },
+        credentials: 'include',
         body: JSON.stringify({
             method,
             params: request,
@@ -44,4 +46,3 @@ export async function getPublicConfig(): Promise<PublicConfig> {
 
     return response;
 }
-

@@ -1,9 +1,6 @@
-"use client";
-
 import { useAtom, useSetAtom } from "../lib/jotai";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { Route } from "next";
+import { useNavigate } from "react-router-dom";
 import { useMessages } from "../i18n/DictionaryProvider";
 import {
     bejiAtom,
@@ -31,7 +28,7 @@ import type { PlainMessage } from "@bufbuild/protobuf";
 
 export function StartPage() {
     const { messages } = useMessages<{ Start: Record<string, string> }>();
-    const router = useRouter();
+    const navigate = useNavigate();
     const [randomGrid, setRandomGrid] = useState<number[][]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [existingBejis, setExistingBejis] = useState<Array<Beji & { world?: World | null }>>([]);
@@ -116,7 +113,7 @@ export function StartPage() {
             setBejiName("");
 
             // Navigate to world page
-            router.push(`/world/${newWorld.id}` as Route);
+            navigate(`/world/${newWorld.id}`);
         } catch (error) {
             console.error("Error creating world:", error);
             // TODO: Show error to user
