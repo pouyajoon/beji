@@ -4,6 +4,7 @@ import type { Beji } from "../atoms";
 import { ToggleFollowMouseAction } from "./ToggleFollowMouseAction";
 import { ZoomToBejiAction } from "./ZoomToBejiAction";
 import { InventoryDisplay } from "./InventoryDisplay";
+import UserMenu from "../UserMenu";
 
 type ActionsBarProps = {
     followMouse: boolean;
@@ -45,8 +46,9 @@ export function ActionsBar({
                 getPhysicsPosition={getPhysicsPosition}
                 setBeji={setBeji}
             />
-            <div style={{ marginLeft: "auto" }}>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "12px" }}>
                 <InventoryDisplay />
+                <UserMenu />
             </div>
             {/* All debug is drawn on canvas */}
         </div>
