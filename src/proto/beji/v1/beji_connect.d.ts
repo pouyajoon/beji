@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateBejiRequest, CreateBejiResponse, GetAllBejiRequest, GetAllBejiResponse, GetBejiForPlayerRequest, GetBejiForPlayerResponse, GetBejiRequest, GetBejiResponse, UpdateBejiRequest, UpdateBejiResponse } from "./beji_pb";
+import { BejiPositionUpdate, CreateBejiRequest, CreateBejiResponse, GetAllBejiRequest, GetAllBejiResponse, GetBejiForPlayerRequest, GetBejiForPlayerResponse, GetBejiRequest, GetBejiResponse, UpdateBejiRequest, UpdateBejiResponse } from "./beji_pb";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -68,6 +68,28 @@ export declare const BejiService: {
       readonly I: typeof UpdateBejiRequest,
       readonly O: typeof UpdateBejiResponse,
       readonly kind: MethodKind.Unary,
+    },
+  }
+};
+
+/**
+ * BejiSync service for real-time position and target synchronization
+ *
+ * @generated from service beji.v1.BejiSyncService
+ */
+export declare const BejiSyncService: {
+  readonly typeName: "beji.v1.BejiSyncService",
+  readonly methods: {
+    /**
+     * SyncBejiPosition streams beji position and target updates
+     *
+     * @generated from rpc beji.v1.BejiSyncService.SyncBejiPosition
+     */
+    readonly syncBejiPosition: {
+      readonly name: "SyncBejiPosition",
+      readonly I: typeof BejiPositionUpdate,
+      readonly O: typeof BejiPositionUpdate,
+      readonly kind: MethodKind.BiDiStreaming,
     },
   }
 };

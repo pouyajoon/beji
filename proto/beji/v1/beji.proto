@@ -24,6 +24,12 @@ service BejiService {
   rpc UpdateBeji (UpdateBejiRequest) returns (UpdateBejiResponse);
 }
 
+// BejiSync service for real-time position and target synchronization
+service BejiSyncService {
+  // SyncBejiPosition streams beji position and target updates
+  rpc SyncBejiPosition (stream BejiPositionUpdate) returns (stream BejiPositionUpdate);
+}
+
 // Request to get a beji by ID
 message GetBejiRequest {
   string beji_id = 1;
@@ -83,5 +89,13 @@ message Beji {
   common.v1.Position target = 7;
   bool walk = 8;
   int64 created_at = 9;
+}
+
+// BejiPositionUpdate message for real-time sync
+message BejiPositionUpdate {
+  string beji_id = 1;
+  common.v1.Position position = 2;
+  common.v1.Position target = 3;
+  bool walk = 4;
 }
 

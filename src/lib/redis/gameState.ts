@@ -156,6 +156,36 @@ export async function saveBeji(beji: Beji): Promise<boolean> {
 }
 
 /**
+ * Update beji position and target in Redis
+ */
+export async function updateBejiPosition(
+    bejiId: string,
+    position: { x: number; y: number },
+    target?: { x: number; y: number },
+    walk?: boolean
+): Promise<boolean> {
+    try {
+        const beji = await getBeji(bejiId);
+        if (!beji) {
+            console.error(`Beji ${bejiId} not found for position update`);
+            return false;
+        }
+
+        const updated: Beji = {
+            ...beji,
+            position,
+            target: target ?? beji.target,
+            walk: walk !== undefined ? walk : beji.walk,
+        };
+
+        return await saveBeji(updated);
+    } catch (error) {
+        console.error(`Error updating beji position ${bejiId} in Redis:`, error);
+        return false;
+    }
+}
+
+/**
  * Get all beji from Redis
  */
 export async function getAllBeji(): Promise<Beji[]> {
