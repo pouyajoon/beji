@@ -2,25 +2,33 @@
 alwaysApply: true
 ---
 
-rest api are exclusively in RPC proto files
-use websocket protocol for real time features.
+## Development Guidelines
 
-as a developer create testing of the project using vitest.
-global features needs to haved mocked tests to ensure coverage.
+### API & Real-time
+- REST APIs are exclusively in RPC proto files
+- Use WebSocket protocol for real-time features
+- API routes are defined in `server.ts` with Fastify
 
-never keep DEPRECATED code in the project.
+### Testing
+- Create tests using vitest
+- Global features need mocked tests to ensure coverage
 
+### Code Quality
+- Never keep DEPRECATED code in the project
+- Use independent files for TS code and components
+- Keep pages small and focused on page-level logic
+- Don't cast to `any` without a good reason and without approval, prefer to use the specific type
 
-in nextjs, use indepdenant files for ts code and components and sub components, keep page.tsx small and focused on the page global logic
+### Styling
+- Keep the app minimalist style with black and white colors using browser or system preferences (dark or light mode)
+- Use React Router to update navigation between pages, prefer using `<a>` over button with onclick js routing
 
-keep the app minimalyst style with black and white colors using browser or system preferences (dark or light mode).
-use react router to update the navigation between pages, prefer using <a> over button with onclick js routing
+### Development Server
+- To check TS issues and application, run `pnpm dev` (unified server on port 3000)
+- Watch mode shows issues and errors in the console
+- Faster than running `pnpm build`
 
-to check the ts issues and application run use `pnpm dev` it's in watch mode so you can see the issues and errors in the console. it's really faster than doing `pnpm build` 
-
-don't cast to `any` without a good reason and withouy my approval, prefer to use the specific type.
-
-create tooltip for all actions and buttons in the app
-
-Don't rexport functions and components in the index.ts file, it's not a good practice and it's not necessary.
-Don't export a type or function if it's not used in another file.
+### Best Practices
+- Create tooltips for all actions and buttons in the app
+- Don't re-export functions and components in index.ts files (not a good practice and not necessary)
+- Don't export a type or function if it's not used in another file

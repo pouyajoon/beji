@@ -52,9 +52,9 @@ Users must sign in with Google before accessing the game. JWT tokens are stored 
 
 ## Scripts
 
-- `pnpm dev` — start both Vite and Fastify dev servers
-- `pnpm dev:client` — start Vite dev server only
-- `pnpm dev:server` — start Fastify dev server only
+- `pnpm dev` — start unified dev server (Vite + Fastify on port 3000)
+- `pnpm dev:client` — start Vite dev server only (legacy, use `pnpm dev` instead)
+- `pnpm dev:server` — start unified dev server (alias for `pnpm dev`)
 - `pnpm build` — build for production
 - `pnpm build:client` — build frontend only
 - `pnpm start` — start production server
