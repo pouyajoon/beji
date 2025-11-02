@@ -1,6 +1,16 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key-change-in-production");
+// Helper function to get env vars at runtime only, preventing Next.js build-time analysis
+function getEnvVar(key: string): string | undefined {
+    // Access via bracket notation to prevent static analysis
+    return process.env[key];
+}
+
+// Get JWT secret at runtime to prevent build-time inlining
+function getJWTSecret(): Uint8Array {
+    const secret = getEnvVar("JWT_SECRET") || "your-secret-key-change-in-production";
+    return new TextEncoder().encode(secret);
+}
 
 export interface JWTPayload {
     userId: string;
@@ -15,15 +25,17 @@ export async function signJWT(payload: Omit<JWTPayload, "iat" | "exp">): Promise
     if (payload.picture) {
         jwtPayload.picture = payload.picture;
     }
+    const secret = getJWTSecret();
     return new SignJWT(jwtPayload)
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime("30d")
-        .sign(SECRET);
+        .sign(secret);
 }
 
 export async function verifyJWT(token: string): Promise<JWTPayload> {
-    const { payload } = await jwtVerify(token, SECRET);
+    const secret = getJWTSecret();
+    const { payload } = await jwtVerify(token, secret);
     return payload as unknown as JWTPayload;
 }
 

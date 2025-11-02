@@ -5,6 +5,12 @@ import { signJWT } from "../../../../../src/lib/auth/jwt";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 
+// Helper function to get env vars at runtime only, preventing Next.js build-time analysis
+function getEnvVar(key: string): string | undefined {
+    // Access via bracket notation to prevent static analysis
+    return process.env[key];
+}
+
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get("code");
@@ -31,8 +37,8 @@ export async function GET(request: NextRequest) {
             },
             body: new URLSearchParams({
                 code,
-                client_id: process.env.GOOGLE_CLIENT_ID!,
-                client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+                client_id: getEnvVar("GOOGLE_CLIENT_ID")!,
+                client_secret: getEnvVar("GOOGLE_CLIENT_SECRET")!,
                 redirect_uri: `${request.nextUrl.origin}/authentication/oauth/google`,
                 grant_type: "authorization_code",
             }),
@@ -76,7 +82,7 @@ export async function GET(request: NextRequest) {
         const cookieStore = await cookies();
         cookieStore.set("auth_token", jwt, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: getEnvVar("NODE_ENV") === "production",
             sameSite: "strict",
             maxAge: 60 * 60 * 24 * 30, // 30 days
         });

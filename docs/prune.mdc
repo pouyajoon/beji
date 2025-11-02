@@ -127,3 +127,8 @@ As the project evolves, maintain this pruning discipline:
 - **After major features**: Clean up when features are removed
 - **Refactoring**: Remove old patterns when migrating to new ones
 - **Before releases**: Final cleanup pass
+
+
+
+Make sure not used methods and functions are removed from the codebase.
+Don't export a type or function if it's not used in another file.
