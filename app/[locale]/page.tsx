@@ -1,4 +1,4 @@
-import UserMenu from '../../components/UserMenu';
+import { AuthSwitcher } from '../AuthSwitcher';
 import { StartPage } from '../../components/StartPage';
 
 export default function HomeLocalePage() {
@@ -13,7 +13,7 @@ export default function HomeLocalePage() {
         gap: '12px',
         alignItems: 'center',
       }}>
-        <UserMenu />
+        <AuthSwitcher />
       </div>
       <StartPage />
     </div>
