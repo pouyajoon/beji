@@ -31,7 +31,9 @@ describe("JWT Authentication", () => {
     test("verifyJWT fails for tampered token", async () => {
         const payload = { userId: "test-user-123", email: "test@example.com" };
         const token = await signJWT(payload);
-        const tamperedToken = token.slice(0, -1) + "X";
+        // Tamper with the signature part (last segment)
+        const parts = token.split('.');
+        const tamperedToken = parts.slice(0, 2).join('.') + '.XXXXX';
 
         await expect(verifyJWT(tamperedToken)).rejects.toThrow();
     });
