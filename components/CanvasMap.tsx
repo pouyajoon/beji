@@ -19,16 +19,14 @@ import { ActionsBar } from "./map/ActionsBar";
 import { useTouchHandlers } from "./map/useTouchHandlers";
 import { useMouseHandlers } from "./map/useMouseHandlers";
 import { useBejiSync } from "../hooks/useBejiSync";
-import {
-    setupCanvas,
-    drawBackground,
-    drawGrid,
-    drawOriginMarker,
-    drawBeji,
-    drawStaticBeji,
-    drawGuidanceLine,
-    drawDebugOverlay,
-} from "./map/drawing";
+import { setupCanvas } from "./map/drawing/canvasSetup";
+import { drawBackground } from "./map/drawing/background";
+import { drawGrid } from "./map/drawing/grid";
+import { drawOriginMarker } from "./map/drawing/originMarker";
+import { drawBeji } from "./map/drawing/beji";
+import { drawStaticBeji } from "./map/drawing/staticBeji";
+import { drawGuidanceLine } from "./map/drawing/guidanceLine";
+import { drawDebugOverlay } from "./map/drawing/debugOverlay";
 import { MAP_SIZE, BEJI_SPEED_MPS } from "../lib/constants";
 
 export function CanvasMap() {

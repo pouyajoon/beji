@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { Beji, World } from "../atoms";
 import { getUserBejis } from "../../src/lib/rpc/playerClient";
 
-export type BejisLoaderProps = {
+type BejisLoaderProps = {
     setUserSub: (userId: string | null) => void;
     setUserId: (userId: string | null) => void;
     setExistingBejis: (bejis: Array<Beji & { world?: World | null }>) => void;

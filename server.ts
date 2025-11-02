@@ -1,5 +1,4 @@
 import { createServer } from "http";
-import { parse } from "url";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { verifyJWT, type JWTPayload } from "./src/lib/auth/jwt";
@@ -18,7 +17,17 @@ app.prepare().then(() => {
     // Create HTTP server
     const server = createServer(async (req, res) => {
         try {
-            const parsedUrl = parse(req.url || "", true);
+            // Use WHATWG URL API instead of deprecated url.parse()
+            const host = req.headers.host || `${hostname}:${port}`;
+            const url = new URL(req.url || "/", `http://${host}`);
+            
+            // Convert to format expected by Next.js handle function
+            const parsedUrl = {
+                pathname: url.pathname,
+                query: Object.fromEntries(url.searchParams),
+                href: url.href,
+            };
+            
             await handle(req, res, parsedUrl);
         } catch (err) {
             console.error("Error occurred handling", req.url, err);

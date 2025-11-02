@@ -3,7 +3,7 @@ import { BejiNameInput } from "./BejiNameInput";
 import { StartAction } from "./StartAction";
 import { SelectedPreview } from "./SelectedPreview";
 
-export type CreateBejiFormProps = {
+type CreateBejiFormProps = {
     emojiGrid: number[][];
     selectedEmoji: number[] | null;
     bejiName: string;

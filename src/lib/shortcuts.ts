@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-export type ShortcutActionId = string;
+type ShortcutActionId = string;
 
-export type Shortcut = {
+type Shortcut = {
     id: ShortcutActionId;
     key: string; // e.key normalized lowercase (e.g., 'f', 'z')
     description?: string;
