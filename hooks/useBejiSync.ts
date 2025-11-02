@@ -37,22 +37,43 @@ export function useBejiSync({ bejiId, onUpdate }: UseBejiSyncOptions) {
     // Connect/disconnect when bejiId changes
     useEffect(() => {
         const client = clientRef.current;
-        if (!client || !bejiId) {
+        if (!client) {
             return;
         }
 
+        const previousBejiId = bejiIdRef.current;
+        
+        // If bejiId is null/undefined, disconnect if we had a previous connection
+        if (!bejiId) {
+            if (previousBejiId) {
+                client.disconnect();
+            }
+            return;
+        }
+
+        // Set up update callback
         const handleUpdate = (update: { position: IPosition; target?: IPosition; walk: boolean }) => {
             if (onUpdateRef.current) {
                 onUpdateRef.current(update);
             }
         };
 
+        // Register callback
         client.onUpdate(handleUpdate);
-        client.connect(bejiId);
+
+        // Connect if bejiId changed (connect() method handles reconnection logic internally)
+        if (previousBejiId !== bejiId) {
+            client.connect(bejiId).catch((error) => {
+                console.error("Failed to connect beji sync:", error);
+            });
+        }
 
         return () => {
+            // Cleanup: remove callback and disconnect if bejiId is null or component unmounting
             client.offUpdate(handleUpdate);
-            client.disconnect();
+            // Note: We don't disconnect here if bejiId is still valid, as the next effect run
+            // will handle the connection. Only disconnect if component is truly unmounting.
+            // The client's connect() method will handle disconnecting old connections.
         };
     }, [bejiId]);
 

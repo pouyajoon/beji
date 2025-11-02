@@ -11,25 +11,16 @@ export const dynamic = "force-dynamic";
 // For production, consider using a custom Next.js server or a separate WebSocket server
 export async function GET(request: NextRequest): Promise<Response> {
     // Check for WebSocket upgrade request
+    // If this is a WebSocket upgrade, the custom server should handle it
+    // Don't interfere - return a simple response that won't block the upgrade
     const upgradeHeader = request.headers.get("upgrade");
     const connectionHeader = request.headers.get("connection");
 
     if (upgradeHeader?.toLowerCase() === "websocket" && connectionHeader?.toLowerCase().includes("upgrade")) {
-        // Next.js App Router doesn't support WebSocket upgrades directly
-        // Return a 426 Upgrade Required response
-        return new Response(
-            JSON.stringify({
-                error: "WebSocket upgrade not supported in Next.js App Router route handlers",
-                message: "Use a custom Next.js server or separate WebSocket server for WebSocket support",
-            }),
-            {
-                status: 426,
-                headers: {
-                    "Content-Type": "application/json",
-                    "Upgrade": "websocket",
-                },
-            }
-        );
+        // WebSocket upgrades are handled by the custom server in server.ts
+        // This route handler should not interfere - return 404 to let the server handle it
+        // Note: In practice, the custom server should intercept WebSocket upgrades before Next.js routing
+        return new Response(null, { status: 404 });
     }
 
     // For HTTP GET requests, return connection info
