@@ -12,18 +12,17 @@ import {
     selectedBejiEmojiAtom,
     bejiNameAtom,
     staticBejiAtom,
+    userSubAtom,
     type Player,
     type Beji,
     type StaticBeji,
     type World,
 } from "./atoms";
 import { generateRandomEmojiSet } from "../app/emoji/random";
-import { codepointsToEmoji } from "./emoji";
 import { Header } from "./start/Header";
-import { EmojiPicker } from "./start/EmojiPicker";
-import { BejiNameInput } from "./start/BejiNameInput";
-import { StartAction } from "./start/StartAction";
-import { SelectedPreview } from "./start/SelectedPreview";
+import { ExistingBejisList } from "./start/ExistingBejisList";
+import { CreateBejiForm } from "./start/CreateBejiForm";
+import { BejisLoader } from "./start/BejisLoader";
 import { createWorld } from "../src/lib/rpc/worldClient";
 import type { StaticBeji as ProtoStaticBeji } from "../src/proto/staticbeji/v1/staticbeji_pb";
 import type { PlainMessage } from "@bufbuild/protobuf";
@@ -35,10 +34,17 @@ export function StartPage() {
     const router = useRouter();
     const [randomGrid, setRandomGrid] = useState<number[][]>([]);
     const [isCreating, setIsCreating] = useState(false);
+    const [existingBejis, setExistingBejis] = useState<Array<Beji & { world?: World | null }>>([]);
+    const [isLoadingBejis, setIsLoadingBejis] = useState(true);
+    const [userId, setUserId] = useState<string | null>(null);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const setUserSub = useSetAtom(userSubAtom);
+
     useEffect(() => {
         // Generate on client only to avoid SSR/client mismatch
         setRandomGrid(generateRandomEmojiSet(35));
     }, []);
+
     const [selectedEmoji, setSelectedEmoji] = useAtom(selectedBejiEmojiAtom);
     const [bejiName, setBejiName] = useAtom(bejiNameAtom);
 
@@ -105,6 +111,10 @@ export function StartPage() {
             setBeji([newBeji]);
             setStaticBeji(staticBejis);
 
+            // Clear creation form state (no longer needed, data is in DB now)
+            setSelectedEmoji(null);
+            setBejiName("");
+
             // Navigate to world page
             router.push(`/world/${newWorld.id}` as Route);
         } catch (error) {
@@ -147,43 +157,53 @@ export function StartPage() {
                 WebkitTransform: "translateZ(0)",
                 transform: "translateZ(0)",
             }}>
+                <BejisLoader
+                    setUserSub={setUserSub}
+                    setUserId={setUserId}
+                    setExistingBejis={setExistingBejis}
+                    setIsLoadingBejis={setIsLoadingBejis}
+                />
+
                 <Header
                     title={"Beji  🎮"}
                     subtitle={messages.Start?.subtitle ?? "Choose your emoji and give it a name to start your adventure!"}
                 />
 
-                <EmojiPicker
-                    label={messages.Start?.chooseEmojiLabel ?? "Choose Your Emoji"}
-                    emojiGrid={randomGrid}
-                    selectedEmoji={selectedEmoji}
-                    onSelect={(cps) => {
-                        setSelectedEmoji(cps);
-                        if (bejiName.trim()) {
-                            handleStartGame(cps);
-                        }
-                    }}
-                />
+                {isLoadingBejis && (
+                    <div style={{ marginBottom: "16px", fontSize: "14px", color: "var(--text-color, #000000)", opacity: 0.7 }}>
+                        {messages.Start?.loadingBejisLabel ?? "Loading your bejis..."}
+                    </div>
+                )}
 
-                <BejiNameInput
-                    label={messages.Start?.nameLabel ?? "Give Your Beji a Name"}
-                    placeholder={messages.Start?.namePlaceholder ?? "e.g. Beji the Brave"}
-                    value={bejiName}
-                    onChange={setBejiName}
-                    onEnter={() => {
-                        if (bejiName.trim() && selectedEmoji) {
-                            handleStartGame();
-                        }
-                    }}
-                />
+                {!isLoadingBejis && existingBejis.length > 0 && (
+                    <ExistingBejisList
+                        bejis={existingBejis}
+                        onCreateNew={() => setShowCreateForm(true)}
+                    />
+                )}
 
-                <StartAction
-                    label={isCreating ? (messages.Start?.creating ?? "Creating...") : (messages.Start?.startButton ?? "Start Adventure! 🚀")}
-                    href="/emoji"
-                    disabled={!selectedEmoji || !bejiName.trim() || isCreating}
-                    onActivate={handleStartGame}
-                />
+                {!isLoadingBejis && existingBejis.length === 0 && userId && (
+                    <div style={{ marginBottom: "16px", fontSize: "14px", color: "var(--text-color, #000000)", opacity: 0.7 }}>
+                        {messages.Start?.noBejisLabel ?? "You don't have any bejis yet. Create your first one below!"}
+                    </div>
+                )}
 
-                <SelectedPreview emoji={selectedEmoji} name={bejiName} />
+                {(!isLoadingBejis && (existingBejis.length === 0 || showCreateForm)) && (
+                    <CreateBejiForm
+                        emojiGrid={randomGrid}
+                        selectedEmoji={selectedEmoji}
+                        bejiName={bejiName}
+                        isCreating={isCreating}
+                        messages={messages.Start ?? {}}
+                        onSelectEmoji={setSelectedEmoji}
+                        onNameChange={setBejiName}
+                        onCreate={() => {
+                            if (bejiName.trim() && selectedEmoji) {
+                                handleStartGame();
+                            }
+                        }}
+                    />
+                )}
             </div>
         </div >
     );

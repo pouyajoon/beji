@@ -4,7 +4,13 @@
     "chooseEmojiLabel": "Scegli la tua emoji",
     "nameLabel": "Dai un nome al tuo Beji",
     "namePlaceholder": "es. Beji il Coraggioso",
-    "startButton": "Inizia l'avventura! 🚀"
+    "startButton": "Inizia l'avventura! 🚀",
+    "creating": "Creazione in corso...",
+    "existingBejisLabel": "I tuoi Beji",
+    "joinWorldLabel": "Unisciti al mondo",
+    "createNewBejiLabel": "Crea un nuovo Beji",
+    "loadingBejisLabel": "Caricamento dei tuoi Beji...",
+    "noBejisLabel": "Non hai ancora Beji. Crea il tuo primo Beji qui sotto!"
   },
   "Login": {
     "title": "Benvenuto su Beji 🎮",

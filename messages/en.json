@@ -4,7 +4,13 @@
     "chooseEmojiLabel": "Choose Your Emoji",
     "nameLabel": "Give Your Beji a Name",
     "namePlaceholder": "e.g. Beji the Brave",
-    "startButton": "Start Adventure! 🚀"
+    "startButton": "Start Adventure! 🚀",
+    "creating": "Creating...",
+    "existingBejisLabel": "Your Bejis",
+    "joinWorldLabel": "Join world",
+    "createNewBejiLabel": "Create a new beji",
+    "loadingBejisLabel": "Loading your bejis...",
+    "noBejisLabel": "You don't have any bejis yet. Create your first one below!"
   },
   "Login": {
     "title": "Welcome to Beji 🎮",
