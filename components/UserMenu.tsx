@@ -32,7 +32,7 @@ export default function UserMenu() {
                     setUserInfo(data);
                     setUserSub(data.userId);
                 } else {
-                    // Not authenticated, redirect will happen via middleware
+                    // Not authenticated, redirect will happen via proxy
                     setUserInfo(null);
                 }
             } catch (error) {

@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT } from "./src/lib/auth/jwt";
 
 /**
- * Authentication middleware that protects all routes except:
+ * Authentication proxy that protects all routes except:
  * - /login
  * - /authentication/* (all authentication routes, including OAuth)
  * - Static assets (_next/*, favicon.ico, etc.)
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Allow access to login page
@@ -50,8 +50,8 @@ export async function middleware(request: NextRequest) {
 }
 
 /**
- * Configure which routes this middleware should run on
- * Matches all routes - the middleware function handles exclusions
+ * Configure which routes this proxy should run on
+ * Matches all routes - the proxy function handles exclusions
  */
 export const config = {
     matcher: [
@@ -60,7 +60,7 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * Note: We match API routes too, and handle exclusions in the middleware function
+         * Note: We match API routes too, and handle exclusions in the proxy function
          */
         "/((?!_next/static|_next/image|favicon.ico).*)",
     ],

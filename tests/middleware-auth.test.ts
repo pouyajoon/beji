@@ -7,19 +7,19 @@ vi.mock("../src/lib/auth/jwt", () => ({
     verifyJWT: (...args: any[]) => mockVerifyJWT(...args),
 }));
 
-// Import middleware after mocking
-let middleware: (request: NextRequest) => Promise<NextResponse | Response>;
+// Import proxy after mocking
+let proxy: (request: NextRequest) => Promise<NextResponse | Response>;
 
-describe("Authentication Middleware", () => {
+describe("Authentication Proxy", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // Dynamically import middleware to ensure mocks are applied
+        // Dynamically import proxy to ensure mocks are applied
         vi.resetModules();
     });
 
     test("allows access when valid JWT token exists in cookie", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const mockPayload = {
             userId: "test-user-123",
@@ -34,7 +34,7 @@ describe("Authentication Middleware", () => {
             },
         });
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response).toBeInstanceOf(NextResponse);
         expect(mockVerifyJWT).toHaveBeenCalledWith("valid-jwt-token");
@@ -43,12 +43,12 @@ describe("Authentication Middleware", () => {
     });
 
     test("redirects to login when no auth token cookie exists", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const request = new NextRequest("http://localhost:3000/");
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response).toBeInstanceOf(NextResponse);
         expect(response.status).toBe(307);
@@ -58,8 +58,8 @@ describe("Authentication Middleware", () => {
     });
 
     test("redirects to login when JWT token is invalid", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         mockVerifyJWT.mockRejectedValueOnce(new Error("Invalid token"));
 
@@ -69,7 +69,7 @@ describe("Authentication Middleware", () => {
             },
         });
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response).toBeInstanceOf(NextResponse);
         expect(response.status).toBe(307);
@@ -79,12 +79,12 @@ describe("Authentication Middleware", () => {
     });
 
     test("allows access to login page without authentication", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const request = new NextRequest("http://localhost:3000/login");
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response).toBeInstanceOf(NextResponse);
         // Should allow access (not redirect)
@@ -93,12 +93,12 @@ describe("Authentication Middleware", () => {
     });
 
     test("allows access to authentication routes without authentication", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const request = new NextRequest("http://localhost:3000/authentication/oauth/get-token");
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response).toBeInstanceOf(NextResponse);
         // Should allow access (not redirect)
@@ -107,12 +107,12 @@ describe("Authentication Middleware", () => {
     });
 
     test("allows access to OAuth callback route without authentication", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const request = new NextRequest("http://localhost:3000/authentication/oauth/google?code=test");
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response).toBeInstanceOf(NextResponse);
         // Should allow access (not redirect)
@@ -121,8 +121,8 @@ describe("Authentication Middleware", () => {
     });
 
     test("allows access to static assets without authentication", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const staticPaths = [
             "/_next/static/css/app.css",
@@ -133,7 +133,7 @@ describe("Authentication Middleware", () => {
 
         for (const path of staticPaths) {
             const request = new NextRequest(`http://localhost:3000${path}`);
-            const response = await middleware(request);
+            const response = await proxy(request);
 
             expect(response).toBeInstanceOf(NextResponse);
             expect(response.status).not.toBe(307);
@@ -143,8 +143,8 @@ describe("Authentication Middleware", () => {
     });
 
     test("requires authentication for protected routes", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const protectedRoutes = [
             "/",
@@ -155,7 +155,7 @@ describe("Authentication Middleware", () => {
         for (const route of protectedRoutes) {
             mockVerifyJWT.mockClear();
             const request = new NextRequest(`http://localhost:3000${route}`);
-            const response = await middleware(request);
+            const response = await proxy(request);
 
             expect(response.status).toBe(307);
             const location = response.headers.get("location");
@@ -164,12 +164,12 @@ describe("Authentication Middleware", () => {
     });
 
     test("preserves query parameters when redirecting to login", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         const request = new NextRequest("http://localhost:3000/world/123?foo=bar&baz=qux");
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response.status).toBe(307);
         const location = response.headers.get("location");
@@ -177,8 +177,8 @@ describe("Authentication Middleware", () => {
     });
 
     test("allows access when token is valid but expired", async () => {
-        const { middleware: middlewareFn } = await import("../middleware");
-        middleware = middlewareFn;
+        const { proxy: proxyFn } = await import("../proxy");
+        proxy = proxyFn;
 
         mockVerifyJWT.mockRejectedValueOnce(new Error("Token expired"));
 
@@ -188,7 +188,7 @@ describe("Authentication Middleware", () => {
             },
         });
 
-        const response = await middleware(request);
+        const response = await proxy(request);
 
         expect(response.status).toBe(307);
         const location = response.headers.get("location");
