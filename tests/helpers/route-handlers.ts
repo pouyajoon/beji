@@ -1,7 +1,11 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import '@fastify/cookie';
-import type { JsonValue } from '@bufbuild/protobuf';
-import { create, fromJson, toJson } from '@bufbuild/protobuf';
+import type { JsonValue, Message } from '@bufbuild/protobuf';
+
+// Helper function to create proto messages (compatible with v1 API)
+function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
+  return new MessageClass(data);
+}
 import { verifyJWT, signJWT, type JWTPayload } from '../../src/lib/auth/jwt';
 import {
   getPlayerIdForUser,
@@ -17,19 +21,19 @@ import {
 } from '../../src/lib/redis/gameState';
 import type { Beji as BejiType, Player as PlayerType, StaticBeji as StaticBejiType, World as WorldType } from '../../components/atoms';
 import {
-  CreateWorldRequestSchema,
-  CreateWorldResponseSchema,
-  GetWorldRequestSchema,
-  GetWorldResponseSchema,
+  CreateWorldRequest,
+  CreateWorldResponse,
+  GetWorldRequest,
+  GetWorldResponse,
 } from '../../src/proto/world/v1/world_pb';
 import {
-  GetPublicConfigRequestSchema,
-  GetPublicConfigResponseSchema,
+  GetPublicConfigRequest,
+  GetPublicConfigResponse,
 } from '../../src/proto/config/v1/config_pb';
 import {
-  GetUserBejisRequestSchema,
-  GetUserBejisResponseSchema,
-  BejiWithWorldSchema,
+  GetUserBejisRequest,
+  GetUserBejisResponse,
+  BejiWithWorld,
 } from '../../src/proto/player/v1/player_pb';
 import { codepointsToEmoji } from '../../components/emoji';
 import { convertAppToProto, convertBejiToProto, convertWorldToSummary } from './proto-helpers';
@@ -159,15 +163,15 @@ export async function handleConfigRpc(request: FastifyRequest, reply: FastifyRep
     const { method, params } = body;
 
     if (method === 'GetPublicConfig') {
-      const req = fromJson(GetPublicConfigRequestSchema, params as JsonValue);
+      const req = GetPublicConfigRequest.fromJson(params as JsonValue);
 
       const googleClientId = getEnvVar('GOOGLE_CLIENT_ID');
       if (!googleClientId) {
         return reply.status(500).send({ error: 'Google Client ID not configured' });
       }
 
-      const response = create(GetPublicConfigResponseSchema, { googleClientId });
-      return toJson(GetPublicConfigResponseSchema, response);
+      const response = create(GetPublicConfigResponse, { googleClientId });
+      return response.toJson();
     }
 
     return reply.status(400).send({ error: `Unknown method: ${method}` });
@@ -184,7 +188,7 @@ export async function handleWorldRpc(request: FastifyRequest, reply: FastifyRepl
     const { method, params } = body;
 
     if (method === 'CreateWorld') {
-      const req = fromJson(CreateWorldRequestSchema, params as JsonValue);
+      const req = CreateWorldRequest.fromJson(params as JsonValue);
 
       if (!req.bejiName || !req.emojiCodepoints || req.emojiCodepoints.length === 0) {
         return reply.status(400).send({ error: 'bejiName and emojiCodepoints are required' });
@@ -260,11 +264,11 @@ export async function handleWorldRpc(request: FastifyRequest, reply: FastifyRepl
       ]);
 
       const worldData = convertAppToProto(newWorld, newPlayer, newBeji, staticBejis);
-      const response = create(CreateWorldResponseSchema, { world: worldData });
+      const response = create(CreateWorldResponse, { world: worldData });
 
-      return toJson(CreateWorldResponseSchema, response);
+      return response.toJson();
     } else if (method === 'GetWorld') {
-      const req = fromJson(GetWorldRequestSchema, params as JsonValue);
+      const req = GetWorldRequest.fromJson(params as JsonValue);
 
       if (!req.worldId) {
         return reply.status(400).send({ error: 'worldId is required' });
@@ -288,9 +292,9 @@ export async function handleWorldRpc(request: FastifyRequest, reply: FastifyRepl
       const staticBeji = await getStaticBejiForWorld(world.id);
 
       const worldData = convertAppToProto(world, player, beji, staticBeji);
-      const response = create(GetWorldResponseSchema, { world: worldData });
+      const response = create(GetWorldResponse, { world: worldData });
 
-      return toJson(GetWorldResponseSchema, response);
+      return response.toJson();
     } else {
       return reply.status(400).send({ error: `Unknown method: ${method}` });
     }
@@ -312,7 +316,7 @@ export async function handlePlayerRpc(request: FastifyRequest, reply: FastifyRep
   const { method, params } = body;
 
   if (method === 'GetUserBejis') {
-    const req = fromJson(GetUserBejisRequestSchema, params as JsonValue);
+    const req = GetUserBejisRequest.fromJson(params as JsonValue);
 
     if (req.userId !== userId) {
       return reply.status(403).send({ error: 'Forbidden' });
@@ -321,8 +325,8 @@ export async function handlePlayerRpc(request: FastifyRequest, reply: FastifyRep
     const playerId = await getPlayerIdForUser(req.userId);
 
     if (!playerId) {
-      const response = create(GetUserBejisResponseSchema, { bejis: [] });
-      return toJson(GetUserBejisResponseSchema, response);
+      const response = create(GetUserBejisResponse, { bejis: [] });
+      return response.toJson();
     }
 
     const bejis = await getBejiForPlayerRedis(playerId);
@@ -330,18 +334,18 @@ export async function handlePlayerRpc(request: FastifyRequest, reply: FastifyRep
     const bejisWithWorlds = await Promise.all(
       bejis.map(async (beji) => {
         const world = beji.worldId ? await getWorldFromRedis(beji.worldId) : null;
-        return create(BejiWithWorldSchema, {
+        return create(BejiWithWorld, {
           beji: convertBejiToProto(beji),
           world: convertWorldToSummary(world) || undefined,
         });
       })
     );
 
-    const response = create(GetUserBejisResponseSchema, {
+    const response = create(GetUserBejisResponse, {
       bejis: bejisWithWorlds,
     });
 
-    return toJson(GetUserBejisResponseSchema, response);
+    return response.toJson();
   } else {
     return reply.status(400).send({ error: `Unknown method: ${method}` });
   }

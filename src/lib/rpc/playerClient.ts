@@ -1,19 +1,18 @@
+import { createClient } from '@connectrpc/connect';
+import type { DescService } from '@bufbuild/protobuf';
 import { PlayerService } from '../../proto/player/v1/player_connect';
-import type {
+import {
     GetUserBejisRequest,
     GetUserBejisResponse,
 } from '../../proto/player/v1/player_pb';
-import { create } from '@bufbuild/protobuf';
-import { GetUserBejisRequestSchema } from '../../proto/player/v1/player_pb';
 import { transport } from './transport';
-import { createServiceClient } from './clientHelpers';
 
-const client = createServiceClient(PlayerService, transport);
+const client = createClient(PlayerService as unknown as DescService, transport);
 
 export async function getUserBejis(
     userId: string
 ): Promise<GetUserBejisResponse> {
-    const request = create(GetUserBejisRequestSchema, {
+    const request = new GetUserBejisRequest({
         userId,
     });
 

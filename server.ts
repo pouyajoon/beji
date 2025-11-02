@@ -1,3 +1,6 @@
+// Load environment variables from .env.local (before other imports)
+import 'dotenv/config';
+
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
@@ -115,23 +118,29 @@ await fastify.register(fastifyMiddie);
 await fastify.register(fastifyCookie);
 
 // Authentication interceptor for Connect RPC
+// Only applies to authenticated routes (PlayerService)
 // Access cookies from request headers (cookies are sent in Cookie header)
 const authInterceptor: Interceptor = (next) => async (req) => {
-  // Get cookie header from Connect request
-  const cookieHeader = req.header.get('cookie');
+  // Only require auth for PlayerService
+  const isPlayerService = req.service.typeName.includes('PlayerService');
+  
+  if (isPlayerService) {
+    // Get cookie header from Connect request
+    const cookieHeader = req.header.get('cookie');
 
-  if (cookieHeader) {
-    const cookies = parseCookies(cookieHeader);
-    const token = cookies.auth_token;
+    if (cookieHeader) {
+      const cookies = parseCookies(cookieHeader);
+      const token = cookies.auth_token;
 
-    if (token) {
-      try {
-        const payload = await verifyJWT(token);
-        // Store auth payload in context for use by services
-        // The context is available on the request as contextValues
-        req.contextValues.set(AUTH_CONTEXT_KEY, payload);
-      } catch {
-        // Auth failed, but don't throw here - let services decide
+      if (token) {
+        try {
+          const payload = await verifyJWT(token);
+          // Store auth payload in context for use by services
+          // The context is available on the request as contextValues
+          req.contextValues.set(AUTH_CONTEXT_KEY, payload);
+        } catch {
+          // Auth failed, but don't throw here - let services decide
+        }
       }
     }
   }
@@ -142,15 +151,15 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 // Register Connect RPC plugin
 await fastify.register(fastifyConnectPlugin, {
   routes: (router) => {
-    // Register public routes (Config, World) without auth
+    // Register all routes on the same router
+    // Public routes (Config, World) - no auth required
     registerPublicRoutes(router);
-
-    // Register authenticated routes (Player) with auth interceptor
-    const routerWithAuth = createConnectRouter({
-      interceptors: [authInterceptor],
-    });
-    registerAuthenticatedRoutes(routerWithAuth);
+    
+    // Authenticated routes (Player) - auth handled by interceptor
+    registerAuthenticatedRoutes(router);
   },
+  // Apply auth interceptor to all routes, but it only processes PlayerService
+  interceptors: [authInterceptor],
 });
 
 // Authentication routes

@@ -14,9 +14,9 @@ protoc \
   --plugin=protoc-gen-es=$(pwd)/node_modules/.bin/protoc-gen-es \
   --plugin=protoc-gen-connect-es=$(pwd)/node_modules/.bin/protoc-gen-connect-es \
   --es_out="$OUT_DIR" \
-  --es_opt=target=ts+dts \
+  --es_opt=target=ts \
   --connect-es_out="$OUT_DIR" \
-  --connect-es_opt=target=ts+dts \
+  --connect-es_opt=target=ts \
   --proto_path="$PROTO_DIR" \
   $(find "$PROTO_DIR" -name "*.proto")
 

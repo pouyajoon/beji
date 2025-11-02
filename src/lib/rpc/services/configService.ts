@@ -1,24 +1,36 @@
-import type { ConnectRouter } from '@connectrpc/connect';
+import type { ConnectRouter, ServiceImpl } from '@connectrpc/connect';
+import type { DescService, Message } from '@bufbuild/protobuf';
+
+// Helper function to create proto messages (compatible with v1 API)
+function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
+  return new MessageClass(data);
+}
 import { ConfigService } from '../../../proto/config/v1/config_connect';
-import type { GetPublicConfigRequest, GetPublicConfigResponse } from '../../../proto/config/v1/config_pb';
-import { create } from '@bufbuild/protobuf';
-import { GetPublicConfigResponseSchema } from '../../../proto/config/v1/config_pb';
-import { registerService } from './typeHelpers';
+import { GetPublicConfigResponse } from '../../../proto/config/v1/config_pb';
 
 function getEnvVar(key: string): string | undefined {
   return process.env[key];
 }
 
 export function registerConfigService(router: ConnectRouter) {
-  registerService(router, ConfigService, {
-    async getPublicConfig(_req: GetPublicConfigRequest): Promise<GetPublicConfigResponse> {
-      const googleClientId = getEnvVar('GOOGLE_CLIENT_ID');
-      if (!googleClientId) {
-        throw new Error('Google Client ID not configured');
-      }
+  router.service(
+    ConfigService as unknown as DescService,
+    {
+      async getPublicConfig(_req): Promise<GetPublicConfigResponse> {
+        try {
+          const googleClientId = getEnvVar('GOOGLE_CLIENT_ID');
+          if (!googleClientId) {
+            console.error('[ConfigService.getPublicConfig] Google Client ID not configured');
+            throw new Error('Google Client ID not configured');
+          }
 
-      return create(GetPublicConfigResponseSchema, { googleClientId });
-    },
-  });
+          return create(GetPublicConfigResponse, { googleClientId });
+        } catch (error) {
+          console.error('[ConfigService.getPublicConfig] Error:', error);
+          throw error;
+        }
+      },
+    } as unknown as Partial<ServiceImpl<DescService>>
+  );
 }
 
