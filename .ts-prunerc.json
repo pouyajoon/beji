@@ -1,5 +1,5 @@
 {
-  "skip": "tests/.*|.*\\.test\\.ts$|.*\\.test\\.tsx$|src/proto/.*|\\.next/.*|.*\\.config\\.ts$",
+  "skip": "tests/.*|.*\\.test\\.ts$|.*\\.test\\.tsx$|src/proto/.*|\\.next/.*|.*\\.config\\.ts$|.*page\\.tsx$",
   "project": "tsconfig.json"
 }
 

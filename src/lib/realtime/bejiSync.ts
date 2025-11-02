@@ -24,23 +24,37 @@ class BejiSyncClientImpl implements BejiSyncClient {
     }
 
     async connect(bejiId: string): Promise<void> {
+        // If already connected to the same bejiId with an open connection, no-op
         if (this.isConnected && this.bejiId === bejiId && this.ws?.readyState === WebSocket.OPEN) {
+            console.log(`Already connected to beji ${bejiId}, skipping reconnect`);
             return;
         }
 
-        this.disconnect();
+        // If connecting to a different bejiId or connection is not open, disconnect first
+        if (this.ws && (this.bejiId !== bejiId || this.ws.readyState !== WebSocket.OPEN)) {
+            console.log(`Disconnecting previous connection (bejiId: ${this.bejiId}, state: ${this.ws?.readyState})`);
+            this.disconnect();
+        }
+
         this.bejiId = bejiId;
 
         return this.establishWebSocketConnection();
     }
 
     private async establishWebSocketConnection(): Promise<void> {
+        // Prevent multiple simultaneous connection attempts
+        if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+            console.log("WebSocket connection already in progress or open, skipping new connection attempt");
+            return Promise.resolve();
+        }
+
         return new Promise((resolve, reject) => {
             try {
                 // Determine WebSocket URL - for development, use ws://, for production use wss://
                 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
                 const wsUrl = `${protocol}//${window.location.host}/api/ws/beji-sync`;
 
+                console.log(`Establishing WebSocket connection to ${wsUrl} for beji ${this.bejiId}`);
                 this.ws = new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {

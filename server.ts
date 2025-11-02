@@ -17,6 +17,20 @@ app.prepare().then(() => {
     // Create HTTP server
     const server = createServer(async (req, res) => {
         try {
+            // Check for WebSocket upgrade requests - these should be handled by WebSocketServer
+            // Don't pass them to Next.js
+            const upgradeHeader = req.headers.upgrade;
+            const connectionHeader = req.headers.connection;
+            if (
+                upgradeHeader?.toLowerCase() === "websocket" &&
+                connectionHeader?.toLowerCase().includes("upgrade") &&
+                req.url?.startsWith("/api/ws/")
+            ) {
+                // Let the WebSocketServer handle this - don't process as HTTP request
+                // The WebSocketServer will automatically upgrade the connection
+                return;
+            }
+
             // Use WHATWG URL API instead of deprecated url.parse()
             const host = req.headers.host || `${hostname}:${port}`;
             const url = new URL(req.url || "/", `http://${host}`);
