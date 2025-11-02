@@ -1,5 +1,14 @@
 // Load environment variables from .env.local (before other imports)
-import 'dotenv/config';
+import { config } from 'dotenv';
+import path from 'path';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env.local file
+config({ path: resolve(__dirname, '.env.local') });
 
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
@@ -11,9 +20,7 @@ import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
 import { createConnectRouter } from '@connectrpc/connect';
 import { Interceptor } from '@connectrpc/connect';
 import { WebSocket } from 'ws';
-import { create, protoInt64 } from '@bufbuild/protobuf';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { protoInt64 } from '@bufbuild/protobuf';
 import { verifyJWT, signJWT, type JWTPayload } from './src/lib/auth/jwt';
 import {
   registerPublicRoutes,
@@ -36,15 +43,30 @@ import {
 } from './src/lib/redis/gameState';
 // Proto imports removed - now handled by service implementations
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// __filename and __dirname already defined above for dotenv config
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);
 
 const fastify = Fastify({
-  logger: true,
+  logger: {
+    level: dev ? 'info' : 'warn',
+    // In development, use pretty printing for better readability
+    ...(dev && {
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'HH:MM:ss Z',
+          ignore: 'pid,hostname,reqId',
+          singleLine: false,
+        },
+      },
+    }),
+  },
+  // Only log errors in production, disable request logging for static assets
+  disableRequestLogging: !dev, // Disable in production, enable in dev but filter below
 });
 
 // Helper to get env vars
