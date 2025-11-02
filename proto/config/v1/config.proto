@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package config.v1;
+
+option go_package = "github.com/pouyajoon/beji/config/v1";
+
+// Configuration service for public client configuration
+service ConfigService {
+  // GetPublicConfig retrieves public configuration that does not require authentication
+  rpc GetPublicConfig (GetPublicConfigRequest) returns (GetPublicConfigResponse);
+}
+
+// Request to get public configuration
+message GetPublicConfigRequest {}
+
+// Response containing public configuration
+message GetPublicConfigResponse {
+  // Google OAuth client ID for authentication
+  string google_client_id = 1;
+}
+

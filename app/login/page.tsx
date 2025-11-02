@@ -36,24 +36,28 @@ export default function LoginPage() {
         checkAuth();
     }, [router, setUserSub]);
 
-    const handleGoogleLogin = () => {
-        // Helper to get env vars at runtime, preventing build-time analysis
-        // Note: NEXT_PUBLIC_* vars are public, but we use this pattern to prevent Netlify scanning
-        const getEnvVar = (key: string): string | undefined => process.env[key];
-        const clientId = getEnvVar("NEXT_PUBLIC_GOOGLE_CLIENT_ID");
-        const redirectUri = `${window.location.origin}/authentication/oauth/google`;
-        const scope = "openid email profile";
-        const responseType = "code";
+    const handleGoogleLogin = async () => {
+        try {
+            // Fetch Google Client ID from public config RPC
+            const { getPublicConfig } = await import("../../src/lib/rpc/configClient");
+            const config = await getPublicConfig();
+            const clientId = config.googleClientId;
+            const redirectUri = `${window.location.origin}/authentication/oauth/google`;
+            const scope = "openid email profile";
+            const responseType = "code";
 
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-            `client_id=${clientId}&` +
-            `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-            `response_type=${responseType}&` +
-            `scope=${encodeURIComponent(scope)}&` +
-            `access_type=offline&` +
-            `prompt=consent`;
+            const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${clientId}&` +
+                `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+                `response_type=${responseType}&` +
+                `scope=${encodeURIComponent(scope)}&` +
+                `access_type=offline&` +
+                `prompt=consent`;
 
-        window.location.href = googleAuthUrl;
+            window.location.href = googleAuthUrl;
+        } catch (error) {
+            console.error("Failed to get Google Client ID:", error);
+        }
     };
 
     if (!isClient) {

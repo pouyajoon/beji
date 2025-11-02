@@ -117,8 +117,29 @@ export async function POST(request: NextRequest): Promise<Response> {
         if (body.type === "update" && body.bejiId && body.position) {
             // Verify beji belongs to this user
             const beji = await getBeji(body.bejiId);
-            if (!beji || beji.playerId !== playerId) {
-                return Response.json({ error: "Forbidden" }, { status: 403 });
+            
+            if (!beji) {
+                console.error(`Beji ${body.bejiId} not found`);
+                return Response.json({ error: "Beji not found" }, { status: 404 });
+            }
+
+            // Verify beji belongs to this player - check both direct playerId match and player's beji list
+            if (beji.playerId !== playerId) {
+                // Double-check by looking at player's beji list
+                const playerBejis = await getBejiForPlayer(playerId);
+                const isOwnedByPlayer = playerBejis.some((b) => b.id === body.bejiId);
+                
+                if (!isOwnedByPlayer) {
+                    console.error(`Forbidden: beji ${body.bejiId} (playerId: ${beji.playerId}) does not belong to player ${playerId}`);
+                    console.error(`Player's bejis:`, playerBejis.map((b) => b.id));
+                    return Response.json({ 
+                        error: "Forbidden",
+                        details: `Beji ${body.bejiId} does not belong to player ${playerId}` 
+                    }, { status: 403 });
+                } else {
+                    // Beji is in player's list but playerId doesn't match - log warning but allow
+                    console.warn(`Warning: beji ${body.bejiId} playerId mismatch (beji.playerId: ${beji.playerId}, playerId: ${playerId}) but found in player's beji list - allowing update`);
+                }
             }
 
             // Update position in Redis
