@@ -1,7 +1,6 @@
 // Load environment variables from .env.local (before other imports)
 import { config } from 'dotenv';
-import path from 'path';
-import { resolve } from 'path';
+import path, { resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -145,7 +144,7 @@ await fastify.register(fastifyCookie);
 const authInterceptor: Interceptor = (next) => async (req) => {
   // Only require auth for PlayerService
   const isPlayerService = req.service.typeName.includes('PlayerService');
-  
+
   if (isPlayerService) {
     // Get cookie header from Connect request
     const cookieHeader = req.header.get('cookie');
@@ -176,7 +175,7 @@ await fastify.register(fastifyConnectPlugin, {
     // Register all routes on the same router
     // Public routes (Config, World) - no auth required
     registerPublicRoutes(router);
-    
+
     // Authenticated routes (Player) - auth handled by interceptor
     registerAuthenticatedRoutes(router);
   },
@@ -211,17 +210,35 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
 fastify.get('/authentication/oauth/google', async (request, reply) => {
-  const { code, error } = request.query as { code?: string; error?: string };
-
-  if (error) {
-    return reply.redirect(`/?error=oauth_failed`);
-  }
-
-  if (!code) {
-    return reply.redirect(`/?error=no_code`);
-  }
-
   try {
+    const { code, error } = request.query as { code?: string; error?: string };
+
+    fastify.log.info({ msg: '[OAuth] Callback received', code: code ? 'present' : 'missing', error });
+
+    if (error) {
+      fastify.log.warn({ msg: '[OAuth] Error in callback', error });
+      reply.redirect(`/?error=oauth_failed`);
+      return;
+    }
+
+    if (!code) {
+      fastify.log.warn('[OAuth] No authorization code received');
+      reply.redirect(`/?error=no_code`);
+      return;
+    }
+
+    const clientId = getEnvVar('GOOGLE_CLIENT_ID');
+    const clientSecret = getEnvVar('GOOGLE_CLIENT_SECRET');
+
+    if (!clientId || !clientSecret) {
+      fastify.log.error('[OAuth] Missing Google OAuth credentials');
+      reply.redirect(`/?error=config_error`);
+      return;
+    }
+
+    const redirectUri = `${request.headers.origin || `http://${hostname}:${port}`}/authentication/oauth/google`;
+    fastify.log.info({ msg: '[OAuth] Exchanging code for token', redirectUri });
+
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -229,25 +246,30 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       },
       body: new URLSearchParams({
         code,
-        client_id: getEnvVar('GOOGLE_CLIENT_ID')!,
-        client_secret: getEnvVar('GOOGLE_CLIENT_SECRET')!,
-        redirect_uri: `${request.headers.origin || `http://${hostname}:${port}`}/authentication/oauth/google`,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     });
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error('Token exchange failed:', errorText);
-      return reply.redirect(`/?error=token_exchange_failed`);
+      fastify.log.error({ msg: '[OAuth] Token exchange failed', error: errorText });
+      reply.redirect(`/?error=token_exchange_failed`);
+      return;
     }
 
     const tokenData = await tokenResponse.json();
     const { access_token } = tokenData;
 
     if (!access_token) {
-      return reply.redirect(`/?error=no_access_token`);
+      fastify.log.error('[OAuth] No access token in response');
+      reply.redirect(`/?error=no_access_token`);
+      return;
     }
+
+    fastify.log.info('[OAuth] Fetching user info');
 
     const userInfoResponse = await fetch(GOOGLE_USERINFO_URL, {
       headers: {
@@ -256,13 +278,19 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
     });
 
     if (!userInfoResponse.ok) {
-      return reply.redirect(`/?error=userinfo_failed`);
+      const errorText = await userInfoResponse.text();
+      fastify.log.error({ msg: '[OAuth] User info fetch failed', error: errorText });
+      reply.redirect(`/?error=userinfo_failed`);
+      return;
     }
 
     const userInfo = await userInfoResponse.json();
+    fastify.log.info({ msg: '[OAuth] User authenticated', userId: userInfo.id, email: userInfo.email, picture: userInfo.picture ? 'present' : 'missing' });
+
     const jwt = await signJWT({
       userId: userInfo.id,
       email: userInfo.email,
+      picture: userInfo.picture, // Include user's profile picture from Google
     });
 
     reply.setCookie('auth_token', jwt, {
@@ -272,10 +300,14 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: '/',
     });
-    return reply.redirect('/en');
+
+    fastify.log.info('[OAuth] Authentication successful, redirecting to root');
+    reply.redirect('/');
+    return;
   } catch (error) {
-    console.error('OAuth callback error:', error);
-    return reply.redirect(`/?error=callback_error`);
+    fastify.log.error({ msg: '[OAuth] Callback error', error: error instanceof Error ? error.message : String(error) });
+    reply.redirect(`/?error=callback_error`);
+    return;
   }
 });
 
@@ -457,13 +489,35 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
 });
 
 // Serve Vite dev server in development or static files in production
+// IMPORTANT: Fastify routes are registered BEFORE Vite middleware
+// Fastify will handle /api/* and /authentication/* routes first
+// Vite only handles unmatched routes for the SPA
 if (dev) {
   const { createServer } = await import('vite');
   const vite = await createServer({
     server: { middlewareMode: true },
     appType: 'spa',
   });
-  await fastify.use(vite.middlewares);
+
+  // Wrap Vite middleware to skip API and authentication routes
+  // Fastify routes are checked FIRST, so if a route matches, Fastify handles it
+  // This middleware only runs for unmatched routes, but we still need to exclude auth/API
+  // from being passed to Vite (in case Fastify returns 404, we don't want Vite to serve SPA)
+  const originalMiddleware = vite.middlewares;
+  const wrappedMiddleware = (req: any, res: any, next: any) => {
+    const url = req.url?.split('?')[0]; // Remove query string for route matching
+    // Don't pass API/auth routes to Vite - Fastify handles these (or returns 404)
+    if (url?.startsWith('/api/') || url?.startsWith('/authentication/')) {
+      // If Fastify already handled it, response is sent - do nothing
+      // If Fastify didn't handle it (404), don't pass to Vite either
+      // Fastify will have sent its response already, so just call next() to finish the request
+      return next();
+    }
+    // Pass other routes to Vite for SPA handling
+    return originalMiddleware(req, res, next);
+  };
+
+  await fastify.use(wrappedMiddleware);
 } else {
   await fastify.register(fastifyStatic, {
     root: path.join(__dirname, 'dist'),
