@@ -5,6 +5,7 @@ import { verifyJWT } from "./src/lib/auth/jwt";
  * Authentication proxy that protects all routes except:
  * - /login
  * - /authentication/* (all authentication routes, including OAuth)
+ * - /api/rpc/config/* (public config RPC endpoint)
  * - Static assets (_next/*, favicon.ico, etc.)
  */
 export async function proxy(request: NextRequest) {
@@ -17,6 +18,11 @@ export async function proxy(request: NextRequest) {
 
     // Allow access to all authentication routes (no JWT required)
     if (pathname.startsWith("/authentication/")) {
+        return NextResponse.next();
+    }
+
+    // Allow access to public config RPC endpoint
+    if (pathname.startsWith("/api/rpc/config/")) {
         return NextResponse.next();
     }
 
