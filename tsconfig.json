@@ -46,6 +46,7 @@
     "app/layout.tsx",
     "app/[locale]",
     "next.config.ts",
-    "next-env.d.ts"
+    "next-env.d.ts",
+    "netlify/functions/**"
   ]
 }

@@ -2,19 +2,15 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderToString } from 'react-dom/server';
 
-// Mock next/navigation before importing the component
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-  }),
+// Mock react-router-dom before importing the component
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
   useParams: () => ({}),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/',
+  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useLocation: () => ({ pathname: '/' }),
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Routes: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Route: ({ element }: { element: React.ReactNode }) => <>{element}</>,
 }));
 
 import { Map } from '../components/Map';
