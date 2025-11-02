@@ -68,7 +68,6 @@ Configuration in `vitest.config.ts`:
 
 ### Component SSR Tests  
 - ✅ `tests/map-ssr.test.tsx` - Map component SSR
-- ✅ `tests/emoji-ssr.test.tsx` - Emoji page SSR
 - ✅ `tests/locale-ssr.test.ts` - Home page SSR with language support (language managed via jotai state/localStorage, not URL routing)
 - ✅ `tests/components-ssr.test.tsx` - Component SSR rendering for all components: Map, MapGrid, StartPage, LocaleSwitcher, Tooltip, VirtualJoystick, Header, EmojiPicker, BejiNameInput, SelectedPreview, StartAction, CreateBejiForm, BejisLoader, InventoryDisplay, ToggleFollowMouseAction, ZoomToBejiAction, ActionsBar, JotaiProvider, CanvasMap, LanguageProvider, UserMenu, ExistingBejisList
 - ✅ `tests/page-import.test.ts` - Regression test to ensure `app/page.tsx` imports without throwing (catches invalid require usage)

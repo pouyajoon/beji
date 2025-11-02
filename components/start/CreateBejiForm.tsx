@@ -43,7 +43,7 @@ export function CreateBejiForm({
 
             <StartAction
                 label={isCreating ? (messages.creating ?? "Creating...") : (messages.startButton ?? "Start Adventure! 🚀")}
-                href="/emoji"
+                href="#"
                 disabled={!selectedEmoji || !bejiName.trim() || isCreating}
                 onActivate={onCreate}
             />

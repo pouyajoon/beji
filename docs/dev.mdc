@@ -21,3 +21,6 @@ to check the ts issues and application run use `pnpm dev` it's in watch mode so 
 don't cast to `any` without a good reason and withouy my approval, prefer to use the specific type.
 
 create tooltip for all actions and buttons in the app
+
+Don't rexport functions and components in the index.ts file, it's not a good practice and it's not necessary.
+Don't export a type or function if it's not used in another file.
