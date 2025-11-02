@@ -588,7 +588,8 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
   const connectionId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
   (async () => {
-    const socket = connection.socket as unknown as WebSocket;
+    // @ts-expect-error - Fastify websocket connection has socket property but types are incomplete
+    const socket: WebSocket = connection.socket;
     
     try {
       const cookies = parseCookies(req.headers.cookie || '');

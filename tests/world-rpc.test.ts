@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { Player, Beji, StaticBeji, World } from '../components/atoms';
+import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 
 // Mock Redis functions
 const mockSavePlayer = vi.fn();
@@ -29,13 +29,22 @@ vi.mock('../components/emoji', () => ({
 }));
 
 describe('World RPC API', () => {
-    beforeEach(() => {
+    let fastify: Awaited<ReturnType<typeof createTestFastifyWithRoutes>>;
+
+    beforeEach(async () => {
         vi.clearAllMocks();
         // Default mock implementations
         mockSavePlayer.mockResolvedValue(true);
         mockSaveBeji.mockResolvedValue(true);
         mockSaveStaticBeji.mockResolvedValue(true);
         mockSaveWorld.mockResolvedValue(true);
+        
+        fastify = await createTestFastifyWithRoutes();
+        await fastify.ready();
+    });
+
+    afterEach(async () => {
+        await fastify.close();
     });
 
     describe('POST /api/rpc/world/v1 - CreateWorld', () => {
@@ -48,17 +57,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(200);
+            expect(response.statusCode).toBe(200);
             expect(data).toHaveProperty('world');
             expect(data.world).toHaveProperty('world');
             expect(data.world).toHaveProperty('player');
@@ -101,17 +109,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(400);
+            expect(response.statusCode).toBe(400);
             expect(data).toHaveProperty('error');
             expect(data.error).toContain('bejiName');
         });
@@ -124,17 +131,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(400);
+            expect(response.statusCode).toBe(400);
             expect(data).toHaveProperty('error');
         });
 
@@ -148,17 +154,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(200);
+            expect(response.statusCode).toBe(200);
 
             // Verify static beji codepoints are -5 to +5 offsets
             const staticBejis = data.world.staticBeji;
@@ -235,17 +240,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(200);
+            expect(response.statusCode).toBe(200);
             expect(data).toHaveProperty('world');
             expect(data.world.world.id).toBe(worldId);
             expect(data.world.beji.id).toBe(bejiId);
@@ -269,17 +273,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(404);
+            expect(response.statusCode).toBe(404);
             expect(data).toHaveProperty('error');
             expect(data.error).toContain('not found');
         });
@@ -306,17 +309,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(404);
+            expect(response.statusCode).toBe(404);
             expect(data).toHaveProperty('error');
             expect(data.error).toContain('beji');
         });
@@ -357,17 +359,16 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(404);
+            expect(response.statusCode).toBe(404);
             expect(data).toHaveProperty('error');
             expect(data.error).toContain('Player');
         });
@@ -378,17 +379,16 @@ describe('World RPC API', () => {
                 params: {},
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(400);
+            expect(response.statusCode).toBe(400);
             expect(data).toHaveProperty('error');
         });
 
@@ -398,20 +398,18 @@ describe('World RPC API', () => {
                 params: {},
             };
 
-            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
+            const response = await fastify.inject({
                 method: 'POST',
+                url: '/api/rpc/world/v1',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                payload: requestBody,
             });
 
-            const { POST } = await import('../app/api/rpc/world/v1/route');
-            const response = await POST(request);
-            const data = await response.json();
+            const data = JSON.parse(response.body);
 
-            expect(response.status).toBe(400);
+            expect(response.statusCode).toBe(400);
             expect(data).toHaveProperty('error');
             expect(data.error).toContain('Unknown method');
         });
     });
 });
-

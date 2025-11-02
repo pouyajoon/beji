@@ -21,7 +21,7 @@ import { ZoomToBejiAction } from '../components/map/ZoomToBejiAction';
 import { ActionsBar } from '../components/map/ActionsBar';
 import { DictionaryProvider } from '../i18n/DictionaryProvider';
 import { Provider } from '../lib/jotai';
-import JotaiProvider from '../components/JotaiProvider';
+import { JotaiProvider } from '../components/JotaiProvider';
 import { CanvasMap } from '../components/CanvasMap';
 import { LanguageProvider } from '../components/LanguageProvider';
 import UserMenu from '../components/UserMenu';

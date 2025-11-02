@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextRequest } from "next/server";
-
-// Mock dependencies before importing routes
-vi.mock("next/headers", () => ({
-    cookies: vi.fn(),
-}));
+import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 
 const mockGetPlayerIdForUser = vi.fn();
 const mockGetBejiForPlayer = vi.fn();
@@ -22,88 +17,92 @@ vi.mock("../src/lib/auth/jwt", () => ({
     verifyJWT: (...args: any[]) => mockVerifyJWT(...args),
 }));
 
-// Import route after mocking
-const { GET } = await import("../app/api/users/[userId]/bejis/route");
-const { cookies } = await import("next/headers");
-
 describe("User Bejis API Route", () => {
     const originalEnv = process.env;
-    const mockCookieStore = {
-        get: vi.fn(),
-    };
+    let fastify: Awaited<ReturnType<typeof createTestFastifyWithRoutes>>;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
         process.env = {
             ...originalEnv,
             JWT_SECRET: "test-jwt-secret",
         };
-        vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
+        
+        fastify = await createTestFastifyWithRoutes();
+        await fastify.ready();
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         process.env = originalEnv;
         vi.restoreAllMocks();
+        await fastify.close();
     });
 
     it("returns 401 when no auth token exists", async () => {
-        const url = new URL("http://localhost:3000/api/users/user123/bejis");
-        const request = new NextRequest(url);
+        mockVerifyJWT.mockResolvedValueOnce(null);
 
-        mockCookieStore.get.mockReturnValueOnce(undefined);
+        const response = await fastify.inject({
+            method: 'GET',
+            url: '/api/users/user123/bejis',
+            headers: {
+                cookie: '', // No auth token
+            },
+        });
 
-        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
-        const data = await response.json();
+        const data = JSON.parse(response.body);
 
-        expect(response.status).toBe(401);
+        expect(response.statusCode).toBe(401);
         expect(data).toEqual({ error: "Unauthorized" });
         expect(mockVerifyJWT).not.toHaveBeenCalled();
     });
 
     it("returns 403 when user requests another user's bejis", async () => {
-        const url = new URL("http://localhost:3000/api/users/user123/bejis");
-        const request = new NextRequest(url);
-
         const mockPayload = {
             userId: "different-user",
             email: "different@example.com",
         };
 
-        mockCookieStore.get.mockReturnValueOnce({ value: "valid-token" });
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
 
-        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
-        const data = await response.json();
+        const response = await fastify.inject({
+            method: 'GET',
+            url: '/api/users/user123/bejis',
+            headers: {
+                cookie: 'auth_token=valid-token',
+            },
+        });
 
-        expect(response.status).toBe(403);
+        const data = JSON.parse(response.body);
+
+        expect(response.statusCode).toBe(403);
         expect(data).toEqual({ error: "Forbidden" });
     });
 
     it("returns empty array when user has no player", async () => {
-        const url = new URL("http://localhost:3000/api/users/user123/bejis");
-        const request = new NextRequest(url);
-
         const mockPayload = {
             userId: "user123",
             email: "user@example.com",
         };
 
-        mockCookieStore.get.mockReturnValueOnce({ value: "valid-token" });
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
         mockGetPlayerIdForUser.mockResolvedValueOnce(null);
 
-        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
-        const data = await response.json();
+        const response = await fastify.inject({
+            method: 'GET',
+            url: '/api/users/user123/bejis',
+            headers: {
+                cookie: 'auth_token=valid-token',
+            },
+        });
 
-        expect(response.status).toBe(200);
+        const data = JSON.parse(response.body);
+
+        expect(response.statusCode).toBe(200);
         expect(data).toEqual({ bejis: [] });
         expect(mockGetBejiForPlayer).not.toHaveBeenCalled();
     });
 
     it("returns bejis with world info for user with player", async () => {
-        const url = new URL("http://localhost:3000/api/users/user123/bejis");
-        const request = new NextRequest(url);
-
         const mockPayload = {
             userId: "user123",
             email: "user@example.com",
@@ -149,7 +148,6 @@ describe("User Bejis API Route", () => {
             createdAt: Date.now(),
         };
 
-        mockCookieStore.get.mockReturnValueOnce({ value: "valid-token" });
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
         mockGetPlayerIdForUser.mockResolvedValueOnce(mockPlayerId);
         mockGetBejiForPlayer.mockResolvedValueOnce(mockBejis);
@@ -157,10 +155,17 @@ describe("User Bejis API Route", () => {
             .mockResolvedValueOnce(mockWorld1)
             .mockResolvedValueOnce(mockWorld2);
 
-        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
-        const data = await response.json();
+        const response = await fastify.inject({
+            method: 'GET',
+            url: '/api/users/user123/bejis',
+            headers: {
+                cookie: 'auth_token=valid-token',
+            },
+        });
 
-        expect(response.status).toBe(200);
+        const data = JSON.parse(response.body);
+
+        expect(response.statusCode).toBe(200);
         expect(data.bejis).toHaveLength(2);
         expect(data.bejis[0]).toMatchObject({
             ...mockBejis[0],
@@ -181,9 +186,6 @@ describe("User Bejis API Route", () => {
     });
 
     it("handles bejis without world gracefully", async () => {
-        const url = new URL("http://localhost:3000/api/users/user123/bejis");
-        const request = new NextRequest(url);
-
         const mockPayload = {
             userId: "user123",
             email: "user@example.com",
@@ -204,18 +206,23 @@ describe("User Bejis API Route", () => {
             },
         ];
 
-        mockCookieStore.get.mockReturnValueOnce({ value: "valid-token" });
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
         mockGetPlayerIdForUser.mockResolvedValueOnce(mockPlayerId);
         mockGetBejiForPlayer.mockResolvedValueOnce(mockBejis);
         mockGetWorld.mockResolvedValueOnce(null);
 
-        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
-        const data = await response.json();
+        const response = await fastify.inject({
+            method: 'GET',
+            url: '/api/users/user123/bejis',
+            headers: {
+                cookie: 'auth_token=valid-token',
+            },
+        });
 
-        expect(response.status).toBe(200);
+        const data = JSON.parse(response.body);
+
+        expect(response.statusCode).toBe(200);
         expect(data.bejis).toHaveLength(1);
         expect(data.bejis[0].world).toBeNull();
     });
 });
-
