@@ -1,25 +1,21 @@
+import { createClient } from '@connectrpc/connect';
+import type { DescService } from '@bufbuild/protobuf';
 import { WorldService } from '../../proto/world/v1/world_connect';
-import type {
+import {
     CreateWorldRequest,
     CreateWorldResponse,
     GetWorldRequest,
     GetWorldResponse,
 } from '../../proto/world/v1/world_pb';
-import { create } from '@bufbuild/protobuf';
-import {
-    CreateWorldRequestSchema,
-    GetWorldRequestSchema,
-} from '../../proto/world/v1/world_pb';
 import { transport } from './transport';
-import { createServiceClient } from './clientHelpers';
 
-const client = createServiceClient(WorldService, transport);
+const client = createClient(WorldService as unknown as DescService, transport);
 
 export async function createWorld(
     bejiName: string,
     emojiCodepoints: number[]
 ): Promise<CreateWorldResponse> {
-    const request = create(CreateWorldRequestSchema, {
+    const request = new CreateWorldRequest({
         bejiName,
         emojiCodepoints,
     });
@@ -34,7 +30,7 @@ export async function createWorld(
 }
 
 export async function getWorld(worldId: string): Promise<GetWorldResponse> {
-    const request = create(GetWorldRequestSchema, {
+    const request = new GetWorldRequest({
         worldId,
     });
 
