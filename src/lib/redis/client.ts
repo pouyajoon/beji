@@ -22,21 +22,25 @@ export function getRedisClient(): RedisClientType {
     if (redisUrl) {
         // If URL uses rediss://, TLS is automatically enabled
         // If URL uses redis://, we need to force TLS
-        const url = redisUrl.startsWith('rediss://') 
-            ? redisUrl 
+        const url = redisUrl.startsWith('rediss://')
+            ? redisUrl
             : redisUrl.replace('redis://', 'rediss://');
         redis = createClient({
             url: url,
         });
     } else {
+        // TLS configuration for Redis Cloud
+        // Note: redis socket.tls is typed as boolean | undefined, but accepts TLS options object at runtime
+        // This is a known limitation of the redis package types
         redis = createClient({
             socket: {
                 host: redisHost,
                 port: redisPort,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 tls: {
                     rejectUnauthorized: false, // For Redis Cloud TLS
-                } as any,
-            },
+                } as any as boolean,
+            } as any,
             username: redisUsername,
             password: redisPassword,
         });

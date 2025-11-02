@@ -34,7 +34,14 @@ export function Tooltip({ label, children }: TooltipProps) {
     const role = useRole(context, { role: "tooltip" });
     const { getReferenceProps, getFloatingProps } = useInteractions([hover, dismiss, role]);
 
-    const referenceEl = cloneElement(children, getReferenceProps({ ref: refs.setReference } as any));
+    // getReferenceProps returns Record<string, unknown> which is compatible with React props
+    // Type assertion is necessary because floating-ui returns Record<string, unknown>
+    // but cloneElement expects a more specific props type. This is safe because
+    // floating-ui guarantees the props are valid React HTMLAttributes.
+    const referenceProps = getReferenceProps({ 
+        ref: refs.setReference
+    }) as React.HTMLAttributes<HTMLElement>;
+    const referenceEl = cloneElement(children, referenceProps);
 
     return (
         <>

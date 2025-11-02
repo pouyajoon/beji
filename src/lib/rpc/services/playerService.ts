@@ -53,9 +53,8 @@ function convertWorldToSummary(world: WorldType | null) {
 }
 
 export function registerPlayerService(router: ConnectRouter) {
-    router.service(PlayerService as any, {
-        // @ts-expect-error - Service type compatibility
-        async getUserBejis(req: GetUserBejisRequest, context: HandlerContext) {
+    registerService(router, PlayerService, {
+        async getUserBejis(req: GetUserBejisRequest, context: HandlerContext): Promise<GetUserBejisResponse> {
             const authPayload = context.values.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
 
             if (!authPayload) {
