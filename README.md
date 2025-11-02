@@ -10,8 +10,9 @@ pnpm dev
 ```
 
 This will start:
-- Vite dev server on `http://localhost:5173` (frontend)
-- Fastify server on `http://localhost:3000` (backend API)
+- A single server on `http://localhost:3000` serving both frontend and backend
+  - In development: Vite handles frontend with HMR, Fastify handles API routes
+  - In production: Fastify serves static files and API routes
 
 ## Architecture
 

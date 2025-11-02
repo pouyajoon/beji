@@ -3,6 +3,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
+import fastifyMiddie from '@fastify/middie';
 import { WebSocket } from 'ws';
 import type { JsonValue } from '@bufbuild/protobuf';
 import path from 'path';
@@ -236,13 +237,8 @@ await fastify.register(fastifyCors, {
 // Register WebSocket plugin
 await fastify.register(fastifyWebsocket);
 
-// Serve static files in production
-if (!dev) {
-  await fastify.register(fastifyStatic, {
-    root: path.join(__dirname, 'dist'),
-    prefix: '/',
-  });
-}
+// Register middie plugin for Vite middleware integration
+await fastify.register(fastifyMiddie);
 
 // Authentication routes
 fastify.get('/api/authentication/get-token', async (request, reply) => {
@@ -706,6 +702,21 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
     }
   })();
 });
+
+// Serve Vite dev server in development or static files in production
+if (dev) {
+  const { createServer } = await import('vite');
+  const vite = await createServer({
+    server: { middlewareMode: true },
+    appType: 'spa',
+  });
+  await fastify.use(vite.middlewares);
+} else {
+  await fastify.register(fastifyStatic, {
+    root: path.join(__dirname, 'dist'),
+    prefix: '/',
+  });
+}
 
 // SPA fallback - serve index.html for all non-API routes
 if (!dev) {

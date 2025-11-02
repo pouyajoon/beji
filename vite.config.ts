@@ -13,19 +13,6 @@ export default defineConfig({
       '@/proto': path.resolve(__dirname, './src/proto'),
     },
   },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/authentication': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-    },
-  },
   build: {
     outDir: 'dist',
     sourcemap: true,
