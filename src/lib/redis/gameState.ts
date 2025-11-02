@@ -407,3 +407,74 @@ export async function getWorldForBeji(bejiId: string): Promise<World | null> {
     }
 }
 
+/**
+ * Link a user ID to a player ID in Redis
+ */
+export async function linkUserToPlayer(userId: string, playerId: string): Promise<boolean> {
+    try {
+        const client = getRedisClient();
+        await client.set(`beji:user:${userId}:player`, playerId);
+        return true;
+    } catch (error) {
+        console.error(`Error linking user ${userId} to player ${playerId} in Redis:`, error);
+        return false;
+    }
+}
+
+/**
+ * Get the player ID for a given user ID
+ */
+export async function getPlayerIdForUser(userId: string): Promise<string | null> {
+    try {
+        const client = getRedisClient();
+        const playerId = await client.get(`beji:user:${userId}:player`);
+        return playerId;
+    } catch (error) {
+        console.error(`Error getting player ID for user ${userId} from Redis:`, error);
+        return null;
+    }
+}
+
+/**
+ * Get or create a player for a user
+ * If the user already has a player, return it. Otherwise, create a new one.
+ */
+export async function getOrCreatePlayerForUser(
+    userId: string,
+    emojiCodepoints: number[]
+): Promise<Player> {
+    try {
+        // Check if user already has a player
+        const existingPlayerId = await getPlayerIdForUser(userId);
+        if (existingPlayerId) {
+            const existingPlayer = await getPlayer(existingPlayerId);
+            if (existingPlayer) {
+                return existingPlayer;
+            }
+        }
+
+        // Create a new player
+        const playerId = `player:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
+        const { codepointsToEmoji } = await import("../../../components/emoji");
+        
+        const newPlayer: Player = {
+            id: playerId,
+            emojiCodepoints,
+            emoji: codepointsToEmoji(emojiCodepoints),
+            bejiIds: [],
+            createdAt: Date.now(),
+        };
+
+        // Save the player
+        await savePlayer(newPlayer);
+
+        // Link user to player
+        await linkUserToPlayer(userId, playerId);
+
+        return newPlayer;
+    } catch (error) {
+        console.error(`Error getting or creating player for user ${userId} in Redis:`, error);
+        throw error;
+    }
+}
+

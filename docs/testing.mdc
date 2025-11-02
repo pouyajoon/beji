@@ -15,8 +15,9 @@ title: Testing
 - ✅ Coverage configured with `@vitest/coverage-v8` provider
 - ✅ `dotenv` package installed for loading `.env.local` in tests
 - ✅ `jsdom` installed for DOM testing (canvas, ResizeObserver, etc.)
+- ✅ Default test environment is `node`; component tests use `@vitest-environment jsdom` directive at the top of test files to override
 - ✅ Redis integration tests load `.env.local` directly at the top of test files (to avoid interfering with unit tests)
-- Use `@testing-library/react` and `jsdom` for component testing
+- ✅ Use `@testing-library/react` and `jsdom` for component testing
 
 ## Vitest 4 Migration
 - All tests migrated to Vitest 4
@@ -70,13 +71,20 @@ Configuration in `vitest.config.ts`:
 - ✅ `tests/emoji-ssr.test.tsx` - Emoji page SSR
 - ✅ `tests/locale-ssr.test.ts` - Home page SSR with language support (language managed via jotai state/localStorage, not URL routing)
 - ✅ `tests/components-ssr.test.tsx` - Component SSR rendering for all components: Map, MapGrid, StartPage, LocaleSwitcher, Tooltip, VirtualJoystick, Header, EmojiPicker, BejiNameInput, SelectedPreview, StartAction, CreateBejiForm, BejisLoader, InventoryDisplay, ToggleFollowMouseAction, ZoomToBejiAction, ActionsBar, JotaiProvider, CanvasMap, LanguageProvider, UserMenu, ExistingBejisList
+- ✅ `tests/page-import.test.ts` - Regression test to ensure `app/page.tsx` imports without throwing (catches invalid require usage)
 
 ### Integration Tests  
 - ✅ `tests/dev-server.test.ts` - Dev server startup
+- ✅ `tests/dev-server-3001.test.ts` - Dev server startup on port 3001 (runs only when `INTEGRATION=1` env var is set)
 - ✅ `tests/redis-integration.test.ts` - Redis connection verification and basic operations (hashes, lists) using `node-redis` and `.env.local` credentials. Tests are skipped gracefully if Redis is unavailable.
 - ✅ `tests/redis-beji-world.test.ts` - Redis integration tests for creating beji and worlds using same methods as app (`savePlayer`, `saveBeji`, `saveWorld`, `saveStaticBeji`). Tests the complete CreateWorld flow with real Redis storage. Tests are skipped gracefully if Redis is unavailable.
+- ✅ `tests/user-registration.test.ts` - Redis integration tests for user registration, player creation, and linking users to players. Tests `linkUserToPlayer`, `getOrCreatePlayerForUser`, and related operations using real Redis storage. Tests are skipped gracefully if Redis is unavailable.
 - ✅ `tests/redis-cloud.test.ts` - Redis Cloud connection test specifically for `redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com:12901`. Verifies TLS connection, basic operations, hash operations, set operations, pipelined operations, and connection persistence. All connections use TLS.
 - ✅ `tests/redis-cloud-diagnostic.test.ts` - Diagnostic test to verify Redis Cloud TLS connection methods. Tests TLS socket option and rediss:// URL connections.
+
+### API Route Tests
+- ✅ `tests/user-bejis-api.test.ts` - User Bejis API route (`/api/users/[userId]/bejis`) with authentication, error handling, and Redis operations
+- ✅ `tests/middleware-auth.test.ts` - Authentication middleware tests for JWT validation, cookie handling, route protection, and redirect logic
 
 **Note:** Redis integration tests require a properly configured `.env.local` file with Redis connection credentials (`REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, etc.). All connections automatically use TLS. If Redis is not available, these tests will skip gracefully without failing the test suite.
 
