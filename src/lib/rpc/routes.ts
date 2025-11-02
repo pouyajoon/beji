@@ -12,9 +12,3 @@ export function registerAuthenticatedRoutes(router: ConnectRouter) {
   registerPlayerService(router);
 }
 
-export function routes(router: ConnectRouter) {
-  registerConfigService(router);
-  registerWorldService(router);
-  registerPlayerService(router);
-}
-
