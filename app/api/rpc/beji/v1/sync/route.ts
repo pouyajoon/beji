@@ -1,13 +1,11 @@
-import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { verifyJWT } from "../../../../../src/lib/auth/jwt";
-import { getPlayerIdForUser, getBejiForPlayer, updateBejiPosition, getBeji } from "../../../../../src/lib/redis/gameState";
+import { getPlayerIdForUser, updateBejiPosition, getBeji, getBejiForPlayer } from "../../../../../src/lib/redis/gameState";
 import { BejiSyncService } from "../../../../../src/proto/beji/v1/beji_connect";
 import { BejiPositionUpdate } from "../../../../../src/proto/beji/v1/beji_pb";
 import { Position } from "../../../../../src/proto/common/v1/common_pb";
 import { createConnectRouter } from "@connectrpc/connect";
-import { nextJsApiHandler } from "@connectrpc/connect-next";
-import type { HandlerOptions } from "@connectrpc/connect";
+import { nextJsApiRouter } from "@connectrpc/connect-next";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +29,16 @@ async function authenticateRequest(): Promise<{ userId: string; playerId: string
 }
 
 const router = createConnectRouter().service(BejiSyncService, {
-    async syncBejiPosition(ctx, req) {
+    async *syncBejiPosition(ctx, req) {
         // Authenticate connection
-        const { playerId } = await authenticateRequest();
+        let playerId: string;
+        try {
+            const auth = await authenticateRequest();
+            playerId = auth.playerId;
+        } catch (error) {
+            console.error("Authentication failed in beji sync:", error);
+            throw new Error("Unauthorized");
+        }
 
         // Handle incoming updates
         for await (const update of req) {
@@ -45,9 +50,22 @@ const router = createConnectRouter().service(BejiSyncService, {
 
             // Verify beji belongs to this player
             const beji = await getBeji(bejiId);
-            if (!beji || beji.playerId !== playerId) {
-                console.error(`Unauthorized beji sync attempt: ${bejiId} by player ${playerId}`);
+            if (!beji) {
+                console.error(`Beji ${bejiId} not found`);
                 continue;
+            }
+
+            if (beji.playerId !== playerId) {
+                // Double-check by looking at player's beji list
+                const playerBejis = await getBejiForPlayer(playerId);
+                const isOwnedByPlayer = playerBejis.some((b) => b.id === bejiId);
+                
+                if (!isOwnedByPlayer) {
+                    console.error(`Unauthorized beji sync attempt: ${bejiId} by player ${playerId}`);
+                    continue;
+                } else {
+                    console.warn(`Warning: beji ${bejiId} playerId mismatch but found in player's list - allowing`);
+                }
             }
 
             // Update position in Redis
@@ -57,29 +75,25 @@ const router = createConnectRouter().service(BejiSyncService, {
 
             if (position) {
                 await updateBejiPosition(bejiId, position, target, walk);
+                
+                // Get updated beji to echo back
+                const updatedBeji = await getBeji(bejiId);
+                if (updatedBeji) {
+                    const response = new BejiPositionUpdate({
+                        bejiId,
+                        position: new Position({ x: updatedBeji.position.x, y: updatedBeji.position.y }),
+                        target: updatedBeji.target ? new Position({ x: updatedBeji.target.x, y: updatedBeji.target.y }) : undefined,
+                        walk: updatedBeji.walk,
+                    });
+
+                    yield response;
+                }
             }
-
-            // Echo back the update (or send to other clients if implementing multi-player sync)
-            const response = new BejiPositionUpdate({
-                bejiId,
-                position: position ? new Position({ x: position.x, y: position.y }) : undefined,
-                target: target ? new Position({ x: target.x, y: target.y }) : undefined,
-                walk: walk !== undefined ? walk : beji.walk,
-            });
-
-            yield response;
         }
     },
 });
 
-const handlerOptions: HandlerOptions = {
-    // Handle CORS if needed
-    cors: {
-        origin: true,
-        credentials: true,
-    },
-};
+const { handler, config } = nextJsApiRouter({ routes: router });
 
-export const POST = nextJsApiHandler({ router, ...handlerOptions });
-export const GET = nextJsApiHandler({ router, ...handlerOptions });
+export { handler as POST, handler as GET, config };
 

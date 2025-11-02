@@ -18,14 +18,13 @@ The app uses Google OAuth with JWT tokens. To set up:
    ```
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
-   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
    JWT_SECRET=your_jwt_secret_key
    ```
 3. Configure the authorized redirect URIs in Google Console:
    - `http://localhost:3000/authentication/oauth/google` (development)
    - `https://beji.origamix.fr/authentication/oauth/google` (production)
 
-Users must sign in with Google before accessing the game. JWT tokens are stored securely in httpOnly, secure, sameSite strict cookies.
+Users must sign in with Google before accessing the game. JWT tokens are stored securely in httpOnly, secure, sameSite strict cookies. The Google Client ID is served to clients via a public RPC endpoint, eliminating the need for NEXT_PUBLIC_ environment variables.
 
 ## Development rules
 

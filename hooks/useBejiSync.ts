@@ -58,11 +58,20 @@ export function useBejiSync({ bejiId, onUpdate }: UseBejiSyncOptions) {
 
     const sendUpdate = useCallback(
         async (position: IPosition, target?: IPosition, walk?: boolean) => {
-            if (clientRef.current && bejiId) {
-                await clientRef.current.sendUpdate(position, target, walk);
+            const client = clientRef.current;
+            const currentBejiId = bejiIdRef.current;
+            
+            if (!client || !currentBejiId) {
+                console.warn("Cannot send beji update: client or bejiId not available", {
+                    hasClient: !!client,
+                    bejiId: currentBejiId,
+                });
+                return;
             }
+
+            await client.sendUpdate(position, target, walk);
         },
-        [bejiId]
+        []
     );
 
     return { sendUpdate };

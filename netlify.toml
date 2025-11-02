@@ -9,9 +9,7 @@
   # Server-side secrets are safe to use in server runtime
   # They should not be exposed to the client, but Netlify's secret scanner
   # may detect them in server-side build artifacts. Configure it to ignore them.
-  # NEXT_PUBLIC_GOOGLE_CLIENT_ID is intentionally public (OAuth client IDs are public),
-  # but Netlify's scanner flags it in build artifacts. Configure it to ignore.
-  SECRETS_SCAN_OMIT_KEYS = "REDIS_URL,REDIS_HOST,REDIS_PORT,REDIS_USERNAME,REDIS_PASSWORD,REDIS_TLS,JWT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+  SECRETS_SCAN_OMIT_KEYS = "REDIS_URL,REDIS_HOST,REDIS_PORT,REDIS_USERNAME,REDIS_PASSWORD,REDIS_TLS,JWT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
