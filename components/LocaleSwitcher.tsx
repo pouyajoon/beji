@@ -1,11 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import type { Route } from "next";
-import Link from "next/link";
+import { useSetAtom } from "../lib/jotai";
+import { languageAtom } from "./atoms";
 import { Tooltip } from "./Tooltip";
+import type { AppLocale } from "../src/i18n";
 
-const LOCALES = [
+const LOCALES: { code: AppLocale; flag: string; label: string }[] = [
   { code: "en", flag: "🇺🇸", label: "English" },
   { code: "fr", flag: "🇫🇷", label: "Français" },
   { code: "it", flag: "🇮🇹", label: "Italiano" },
@@ -13,28 +13,18 @@ const LOCALES = [
 ];
 
 export default function LocaleSwitcher() {
-  const pathname = usePathname();
+  const setLanguage = useSetAtom(languageAtom);
 
-  const makeHref = (targetLocale: string): Route => {
-    const currentPath = pathname ?? '/';
-    const segments = currentPath.split('/');
-    const knownLocales = new Set(LOCALES.map(l => l.code));
-    const firstSegment = segments[1] ?? '';
-    if (segments.length > 1 && knownLocales.has(firstSegment)) {
-      // Replace existing locale segment
-      segments[1] = targetLocale;
-      return (segments.join('/') || '/') as Route;
-    }
-    // No locale prefix present; add one
-    return (`/${targetLocale}${currentPath.startsWith('/') ? currentPath : `/${currentPath}`}`) as Route;
+  const handleLanguageChange = (code: AppLocale) => {
+    setLanguage(code);
   };
 
   return (
     <div style={{ display: "flex", gap: "clamp(4px, 1vw, 8px)", flexWrap: "wrap" }}>
       {LOCALES.map(({ code, flag, label }) => (
         <Tooltip key={code} label={label}>
-          <Link
-            href={makeHref(code)}
+          <button
+            onClick={() => handleLanguageChange(code)}
             aria-label={label}
             style={{
               fontSize: "clamp(16px, 4vw, 20px)",
@@ -49,10 +39,11 @@ export default function LocaleSwitcher() {
               background: "var(--bg)",
               minWidth: "clamp(28px, 7vw, 32px)",
               minHeight: "clamp(28px, 7vw, 32px)",
+              cursor: "pointer",
             }}
           >
             <span aria-hidden>{flag}</span>
-          </Link>
+          </button>
         </Tooltip>
       ))}
     </div>

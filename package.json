@@ -38,6 +38,7 @@
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
     "@netlify/plugin-nextjs": "^5.0.0",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20.11.30",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

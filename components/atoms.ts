@@ -1,4 +1,6 @@
 import { atom, atomWithStorage, createJSONStorage } from "../lib/jotai";
+import { detectLanguage } from '../src/lib/language';
+import type { AppLocale } from '../src/i18n';
 
 // Game State
 export interface IPosition {
@@ -216,5 +218,13 @@ export const zoomPxPerMeterAtom = atomWithStorage<number>(
     "beji:zoomPxPerMeter",
     100,
     zoomStorage
+);
+
+// Language state persisted in localStorage
+const languageStorage = createJSONStorage<AppLocale>(() => localStorage);
+export const languageAtom = atomWithStorage<AppLocale>(
+    "beji:language",
+    typeof window !== 'undefined' ? detectLanguage() : 'en',
+    languageStorage
 );
 

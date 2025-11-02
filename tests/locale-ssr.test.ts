@@ -2,10 +2,11 @@ import { expect, test } from 'vitest';
 import getPort from 'get-port';
 import { spawn } from 'node:child_process';
 
-// Starts Next.js in dev mode and verifies SSR for a locale route (e.g., /en)
+// Starts Next.js in dev mode and verifies SSR for the home page with language support
+// Language is now managed via jotai state (stored in localStorage) instead of URL routing
 const run = process.env.INTEGRATION === '1' ? test : test.skip;
 
-run('SSR renders the locale-prefixed home page with translations', async () => {
+run('SSR renders the home page with translations (language via state, not routing)', async () => {
     const port = await getPort();
     const child = spawn(
         process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
@@ -37,12 +38,12 @@ run('SSR renders the locale-prefixed home page with translations', async () => {
         await new Promise((r) => setTimeout(r, 200));
     }
 
-    // Try hitting the locale route
+    // Try hitting the root route (no locale prefix)
     let resOk = false;
     let body = '';
     for (let i = 0; i < 25 && !resOk; i++) {
         try {
-            const res = await fetch(`http://localhost:${port}/en`);
+            const res = await fetch(`http://localhost:${port}/`);
             body = await res.text();
             resOk = res.status === 200 && body.length > 0;
         } catch {
@@ -63,7 +64,7 @@ run('SSR renders the locale-prefixed home page with translations', async () => {
     }
 
     expect(resOk).toBe(true);
-    // Assert that an English translation string is present
+    // Assert that an English translation string is present (default/fallback language)
     expect(body).toMatch(/Choose your emoji and give it a name/i);
 }, 60000);
 

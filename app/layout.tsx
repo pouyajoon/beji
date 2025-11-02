@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import JotaiProvider from '../components/JotaiProvider';
+import { LanguageProvider } from '../components/LanguageProvider';
 
 export const metadata: Metadata = {
   title: 'Beji',
@@ -27,7 +28,9 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning>
         <JotaiProvider>
-          {children}
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
         </JotaiProvider>
       </body>
     </html>

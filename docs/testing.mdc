@@ -16,7 +16,7 @@ title: Testing
 - ✅ `dotenv` package installed for loading `.env.local` in tests
 - ✅ `jsdom` installed for DOM testing (canvas, ResizeObserver, etc.)
 - ✅ Redis integration tests load `.env.local` directly at the top of test files (to avoid interfering with unit tests)
-- ⏳ `@testing-library/react` is planned for component testing
+- Use `@testing-library/react` and `jsdom` for component testing
 
 ## Vitest 4 Migration
 - All tests migrated to Vitest 4
@@ -58,15 +58,20 @@ Configuration in `vitest.config.ts`:
 - ✅ `tests/debugOverlay.test.ts` - Debug overlay drawing function with edge cases (undefined positions, targets, physics positions)
 - ✅ `tests/auth-jwt.test.ts` - JWT authentication functions (signJWT, verifyJWT) with validation, tampering, and edge case tests
 - ✅ `tests/auth-oauth.test.ts` - Google OAuth authentication flow (OAuth callback route, get-token route) with error handling, token exchange, user info fetching, cookie management, and all edge cases
+- ✅ `tests/utilities.test.ts` - Utility functions (touchUtils: getTouchDistance, getTouchCenter; emoji: codepointsToEmoji) with edge cases
+- ✅ `tests/drawing-functions.test.ts` - Canvas drawing functions (background, grid, originMarker, guidanceLine, staticBeji, beji, canvasSetup) with edge cases
+- ✅ `tests/useKeyboardMovement.test.tsx` - Keyboard movement hook with all arrow keys, custom step sizes, disabled state, and cleanup
 
 ### Component Tests
 - ✅ `tests/canvas-map.test.tsx` - CanvasMap component initialization order tests. Specifically catches "Cannot access X before initialization" errors when refs are accessed in hooks before declaration. Uses SSR rendering to surface initialization issues early.
 
-### Integration Tests  
+### Component SSR Tests  
 - ✅ `tests/map-ssr.test.tsx` - Map component SSR
 - ✅ `tests/emoji-ssr.test.tsx` - Emoji page SSR
-- ✅ `tests/locale-ssr.test.ts` - Locale routing SSR
-- ✅ `tests/components-ssr.test.tsx` - Component SSR rendering
+- ✅ `tests/locale-ssr.test.ts` - Home page SSR with language support (language managed via jotai state/localStorage, not URL routing)
+- ✅ `tests/components-ssr.test.tsx` - Component SSR rendering for all components: Map, MapGrid, StartPage, LocaleSwitcher, Tooltip, VirtualJoystick, Header, EmojiPicker, BejiNameInput, SelectedPreview, StartAction, CreateBejiForm, BejisLoader, InventoryDisplay, ToggleFollowMouseAction, ZoomToBejiAction, ActionsBar, JotaiProvider, CanvasMap, LanguageProvider, UserMenu, ExistingBejisList
+
+### Integration Tests  
 - ✅ `tests/dev-server.test.ts` - Dev server startup
 - ✅ `tests/redis-integration.test.ts` - Redis connection verification and basic operations (hashes, lists) using `node-redis` and `.env.local` credentials. Tests are skipped gracefully if Redis is unavailable.
 - ✅ `tests/redis-beji-world.test.ts` - Redis integration tests for creating beji and worlds using same methods as app (`savePlayer`, `saveBeji`, `saveWorld`, `saveStaticBeji`). Tests the complete CreateWorld flow with real Redis storage. Tests are skipped gracefully if Redis is unavailable.
