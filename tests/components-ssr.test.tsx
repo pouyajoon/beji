@@ -14,6 +14,8 @@ import { EmojiPicker } from '../components/start/EmojiPicker';
 import { BejiNameInput } from '../components/start/BejiNameInput';
 import { SelectedPreview } from '../components/start/SelectedPreview';
 import { StartAction } from '../components/start/StartAction';
+import { CreateBejiForm } from '../components/start/CreateBejiForm';
+import { BejisLoader } from '../components/start/BejisLoader';
 import { InventoryDisplay } from '../components/map/InventoryDisplay';
 import { ToggleFollowMouseAction } from '../components/map/ToggleFollowMouseAction';
 import { ZoomToBejiAction } from '../components/map/ZoomToBejiAction';
@@ -108,6 +110,75 @@ describe('Components SSR', () => {
     it('renders null when no emoji', () => {
       const html = renderToString(
         <SelectedPreview emoji={null} name="" />
+      );
+      expect(html).toBe('');
+    });
+  });
+
+  describe('CreateBejiForm', () => {
+    it('renders to an HTML string without throwing', () => {
+      const html = renderToString(
+        <CreateBejiForm
+          emojiGrid={[[0x1f600], [0x1f601]]}
+          selectedEmoji={null}
+          bejiName=""
+          isCreating={false}
+          messages={mockMessages.Start}
+          onSelectEmoji={() => {}}
+          onNameChange={() => {}}
+          onCreate={() => {}}
+        />
+      );
+      expect(typeof html).toBe('string');
+      expect(html.length).toBeGreaterThan(0);
+    });
+
+    it('renders with selected emoji and name', () => {
+      const html = renderToString(
+        <CreateBejiForm
+          emojiGrid={[[0x1f600], [0x1f601]]}
+          selectedEmoji={[0x1f600]}
+          bejiName="Test Beji"
+          isCreating={false}
+          messages={mockMessages.Start}
+          onSelectEmoji={() => {}}
+          onNameChange={() => {}}
+          onCreate={() => {}}
+        />
+      );
+      expect(typeof html).toBe('string');
+      expect(html.length).toBeGreaterThan(0);
+      expect(html).toContain('Test Beji');
+    });
+
+    it('shows creating state when isCreating is true', () => {
+      const html = renderToString(
+        <CreateBejiForm
+          emojiGrid={[[0x1f600], [0x1f601]]}
+          selectedEmoji={[0x1f600]}
+          bejiName="Test Beji"
+          isCreating={true}
+          messages={mockMessages.Start}
+          onSelectEmoji={() => {}}
+          onNameChange={() => {}}
+          onCreate={() => {}}
+        />
+      );
+      expect(typeof html).toBe('string');
+      expect(html.length).toBeGreaterThan(0);
+      expect(html).toContain('Creating...');
+    });
+  });
+
+  describe('BejisLoader', () => {
+    it('renders null (component does not render anything)', () => {
+      const html = renderToString(
+        <BejisLoader
+          setUserSub={() => {}}
+          setUserId={() => {}}
+          setExistingBejis={() => {}}
+          setIsLoadingBejis={() => {}}
+        />
       );
       expect(html).toBe('');
     });

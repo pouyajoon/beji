@@ -28,7 +28,6 @@ export function EmojiPicker(props: EmojiPickerProps) {
                 border: "1px solid var(--muted)",
                 overflowY: "auto",
                 justifyContent: "center",
-                maxHeight: "40vh",
                 padding: "clamp(8px, 2vw, 12px)",
             }}>
                 {emojiGrid.map((codePoints, index) => {
