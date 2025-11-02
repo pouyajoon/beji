@@ -96,19 +96,52 @@ pnpm prune
 
 Verify the output is cleaner and matches expectations.
 
-## Recent Pruning Session
+## Recent Pruning Sessions
 
-### Removed Unused Exports
+### December 2024 (Current Session)
+
+#### Removed Unused Exports (used in module only)
+
+- ✅ `gameStateAtom` from `components/atoms.ts` - Removed export, only used within module
+- ✅ `ShortcutActionId` and `Shortcut` types from `src/lib/shortcuts.ts` - Removed export, only used within module
+- ✅ `getStaticBeji` from `src/lib/redis/gameState.ts` - Removed export, only used within module
+- ✅ `BejisLoaderProps` from `components/start/BejisLoader.tsx` - Removed export, only used within module
+- ✅ `CreateBejiFormProps` from `components/start/CreateBejiForm.tsx` - Removed export, only used within module
+
+#### Removed Barrel Export Files
+
+- ✅ `components/map/drawing/index.ts` - Removed re-export file, updated `CanvasMap.tsx` to import directly from individual files
+
+### Previous Sessions
+
+#### Removed Unused Exports
 
 - ✅ `bejiForPlayerAtom` and `worldForBejiAtom` from `components/atoms.ts`
 - ✅ `DEFAULT_PX_PER_M` from `lib/constants.ts`
 - ✅ `getRegisteredShortcuts` from `src/lib/shortcuts.ts`
 - ✅ Default export from `components/MapGrid.tsx` (kept named export)
 
-### Removed Unused Files
+#### Removed Unused Files
 
 - ✅ `components/SvgMap.tsx` - Not imported anywhere
 - ✅ `src/proxy.ts` - No middleware using it
+- ✅ `components/MapGrid.tsx` - Only used in tests
+- ✅ `proxy.ts` - Only used in tests, not configured as middleware
+
+#### Removed Unused Redis Functions
+
+- ✅ `closeRedisClient` from `src/lib/redis/client.ts` - Only used in tests
+- ✅ `getGameState` and `saveGameState` from `src/lib/redis/gameState.ts` - Not used anywhere
+- ✅ `getAllPlayers` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `getAllBeji` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `getAllStaticBeji` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `getInventory` and `saveInventory` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `updateInventoryItem` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `getAllWorlds` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `getWorldForBeji` from `src/lib/redis/gameState.ts` - Not used in production
+- ✅ `getOrCreatePlayerForUser` from `src/lib/redis/gameState.ts` - Only used in tests
+- ✅ `linkUserToPlayer` from `src/lib/redis/gameState.ts` - Only used in tests
+- ✅ Removed unused constants: `GAME_STATE_KEY` and `INVENTORY_KEY`
 
 ## Best Practices
 
@@ -121,7 +154,7 @@ Verify the output is cleaner and matches expectations.
 
 ```bash
 # 1. Run prune to see what's unused
-pnpm prune
+pnpm run prune
 
 # 2. Search for a potentially unused export
 grep -r "myFunction" app/ components/ lib/
@@ -130,7 +163,7 @@ grep -r "myFunction" app/ components/ lib/
 # ... edit file to remove export ...
 
 # 4. Re-run prune to verify
-pnpm prune
+pnpm run prune
 
 # 5. Commit your changes
 git add .
@@ -150,3 +183,11 @@ As the project evolves, maintain this pruning discipline:
 
 Make sure not used methods and functions are removed from the codebase.
 Don't export a type or function if it's not used in another file.
+
+When ts-prune add for a function at the end of the line `(used in module)` it means that the function is used in the module only and do not need the `export` keyword. In this case, you can remove the `export` keyword.
+
+
+Remove index.ts files which just reexport the components and functions from the folder or other files.
+
+
+When `ts-prune` outputs a line without the `(used in module)` suffix, it means that the function is not used in the codebase. In this case, you can remove the function. if you prefer you can search for each function or const in the codebase, if the function is only part of test file or not used in the codebase, you can remove the function.

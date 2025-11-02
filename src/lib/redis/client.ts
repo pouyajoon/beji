@@ -60,17 +60,3 @@ export function getRedisClient(): RedisClientType {
     return redis;
 }
 
-export async function closeRedisClient(): Promise<void> {
-    if (redis) {
-        try {
-            if (redis.isOpen) {
-                await redis.quit();
-            }
-        } catch (error) {
-            // Ignore errors if client is already closed
-            console.warn('Error closing Redis client:', error);
-        } finally {
-            redis = null;
-        }
-    }
-}

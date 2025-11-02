@@ -130,7 +130,7 @@ const gameStorage = createJSONStorage<GameState>(() => {
     };
 });
 
-export const gameStateAtom = atomWithStorage<GameState>(
+const gameStateAtom = atomWithStorage<GameState>(
     "beji:gameState",
     {
         players: [],

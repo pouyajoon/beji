@@ -1,12 +1,10 @@
 import { getRedisClient } from "./client";
 import type { GameState, Player, Beji, StaticBeji, World } from "../../../components/atoms";
 
-const GAME_STATE_KEY = "beji:gameState";
 const PLAYERS_KEY = "beji:players";
 const WORLDS_KEY = "beji:worlds";
 const BEJI_KEY = "beji:beji";
 const STATIC_BEJI_KEY = "beji:staticBeji";
-const INVENTORY_KEY = "beji:inventory";
 
 // Key helpers
 function playerKey(playerId: string): string {
@@ -25,38 +23,6 @@ function staticBejiKey(staticBejiId: string): string {
     return `beji:staticBeji:${staticBejiId}`;
 }
 
-function inventoryKey(playerId: string): string {
-    return `beji:inventory:${playerId}`;
-}
-
-/**
- * Get the full game state from Redis
- */
-export async function getGameState(): Promise<GameState | null> {
-    try {
-        const client = getRedisClient();
-        const data = await client.get(GAME_STATE_KEY);
-        if (!data) return null;
-        return JSON.parse(data) as GameState;
-    } catch (error) {
-        console.error("Error getting game state from Redis:", error);
-        return null;
-    }
-}
-
-/**
- * Save the full game state to Redis
- */
-export async function saveGameState(state: GameState): Promise<boolean> {
-    try {
-        const client = getRedisClient();
-        await client.set(GAME_STATE_KEY, JSON.stringify(state));
-        return true;
-    } catch (error) {
-        console.error("Error saving game state to Redis:", error);
-        return false;
-    }
-}
 
 /**
  * Get a specific player from Redis
@@ -96,26 +62,6 @@ export async function savePlayer(player: Player): Promise<boolean> {
     }
 }
 
-/**
- * Get all players from Redis
- */
-export async function getAllPlayers(): Promise<Player[]> {
-    try {
-        const client = getRedisClient();
-        const playerIds = await client.sMembers(PLAYERS_KEY);
-        if (playerIds.length === 0) return [];
-
-        const players: Player[] = [];
-        for (const id of playerIds) {
-            const player = await getPlayer(id);
-            if (player) players.push(player);
-        }
-        return players;
-    } catch (error) {
-        console.error("Error getting all players from Redis:", error);
-        return [];
-    }
-}
 
 /**
  * Get a specific beji from Redis
@@ -185,26 +131,6 @@ export async function updateBejiPosition(
     }
 }
 
-/**
- * Get all beji from Redis
- */
-export async function getAllBeji(): Promise<Beji[]> {
-    try {
-        const client = getRedisClient();
-        const bejiIds = await client.sMembers(BEJI_KEY);
-        if (bejiIds.length === 0) return [];
-
-        const beji: Beji[] = [];
-        for (const id of bejiIds) {
-            const b = await getBeji(id);
-            if (b) beji.push(b);
-        }
-        return beji;
-    } catch (error) {
-        console.error("Error getting all beji from Redis:", error);
-        return [];
-    }
-}
 
 /**
  * Get beji for a specific player
@@ -230,7 +156,7 @@ export async function getBejiForPlayer(playerId: string): Promise<Beji[]> {
 /**
  * Get a static beji from Redis
  */
-export async function getStaticBeji(staticBejiId: string): Promise<StaticBeji | null> {
+async function getStaticBeji(staticBejiId: string): Promise<StaticBeji | null> {
     try {
         const client = getRedisClient();
         const data = await client.get(staticBejiKey(staticBejiId));
@@ -284,85 +210,8 @@ export async function getStaticBejiForWorld(worldId: string): Promise<StaticBeji
     }
 }
 
-/**
- * Get all static beji from Redis
- */
-export async function getAllStaticBeji(): Promise<StaticBeji[]> {
-    try {
-        const client = getRedisClient();
-        const staticBejiIds = await client.sMembers(STATIC_BEJI_KEY);
-        if (staticBejiIds.length === 0) return [];
 
-        const staticBeji: StaticBeji[] = [];
-        for (const id of staticBejiIds) {
-            const sb = await getStaticBeji(id);
-            if (sb) staticBeji.push(sb);
-        }
-        return staticBeji;
-    } catch (error) {
-        console.error("Error getting all static beji from Redis:", error);
-        return [];
-    }
-}
 
-/**
- * Get inventory for a player
- */
-export async function getInventory(playerId: string): Promise<Record<number, number>> {
-    try {
-        const client = getRedisClient();
-        const data = await client.get(inventoryKey(playerId));
-        if (!data) return {};
-        return JSON.parse(data) as Record<number, number>;
-    } catch (error) {
-        console.error(`Error getting inventory for player ${playerId} from Redis:`, error);
-        return {};
-    }
-}
-
-/**
- * Save inventory for a player
- */
-export async function saveInventory(
-    playerId: string,
-    inventory: Record<number, number>
-): Promise<boolean> {
-    try {
-        const client = getRedisClient();
-        await client.set(inventoryKey(playerId), JSON.stringify(inventory));
-        return true;
-    } catch (error) {
-        console.error(`Error saving inventory for player ${playerId} to Redis:`, error);
-        return false;
-    }
-}
-
-/**
- * Update inventory item count for a player
- */
-export async function updateInventoryItem(
-    playerId: string,
-    codepoint: number,
-    delta: number
-): Promise<boolean> {
-    try {
-        const inventory = await getInventory(playerId);
-        const currentCount = inventory[codepoint] || 0;
-        const newCount = Math.max(0, currentCount + delta);
-        if (newCount === 0) {
-            delete inventory[codepoint];
-        } else {
-            inventory[codepoint] = newCount;
-        }
-        return await saveInventory(playerId, inventory);
-    } catch (error) {
-        console.error(
-            `Error updating inventory item ${codepoint} for player ${playerId} in Redis:`,
-            error
-        );
-        return false;
-    }
-}
 
 /**
  * Get a specific world from Redis
@@ -402,54 +251,7 @@ export async function saveWorld(world: World): Promise<boolean> {
     }
 }
 
-/**
- * Get all worlds from Redis
- */
-export async function getAllWorlds(): Promise<World[]> {
-    try {
-        const client = getRedisClient();
-        const worldIds = await client.sMembers(WORLDS_KEY);
-        if (worldIds.length === 0) return [];
 
-        const worlds: World[] = [];
-        for (const id of worldIds) {
-            const world = await getWorld(id);
-            if (world) worlds.push(world);
-        }
-        return worlds;
-    } catch (error) {
-        console.error("Error getting all worlds from Redis:", error);
-        return [];
-    }
-}
-
-/**
- * Get world for a specific beji (main beji)
- */
-export async function getWorldForBeji(bejiId: string): Promise<World | null> {
-    try {
-        const beji = await getBeji(bejiId);
-        if (!beji || !beji.worldId) return null;
-        return await getWorld(beji.worldId);
-    } catch (error) {
-        console.error(`Error getting world for beji ${bejiId} from Redis:`, error);
-        return null;
-    }
-}
-
-/**
- * Link a user ID to a player ID in Redis
- */
-export async function linkUserToPlayer(userId: string, playerId: string): Promise<boolean> {
-    try {
-        const client = getRedisClient();
-        await client.set(`beji:user:${userId}:player`, playerId);
-        return true;
-    } catch (error) {
-        console.error(`Error linking user ${userId} to player ${playerId} in Redis:`, error);
-        return false;
-    }
-}
 
 /**
  * Get the player ID for a given user ID
@@ -465,46 +267,4 @@ export async function getPlayerIdForUser(userId: string): Promise<string | null>
     }
 }
 
-/**
- * Get or create a player for a user
- * If the user already has a player, return it. Otherwise, create a new one.
- */
-export async function getOrCreatePlayerForUser(
-    userId: string,
-    emojiCodepoints: number[]
-): Promise<Player> {
-    try {
-        // Check if user already has a player
-        const existingPlayerId = await getPlayerIdForUser(userId);
-        if (existingPlayerId) {
-            const existingPlayer = await getPlayer(existingPlayerId);
-            if (existingPlayer) {
-                return existingPlayer;
-            }
-        }
-
-        // Create a new player
-        const playerId = `player:${Date.now()}:${Math.random().toString(36).substring(2, 9)}`;
-        const { codepointsToEmoji } = await import("../../../components/emoji");
-        
-        const newPlayer: Player = {
-            id: playerId,
-            emojiCodepoints,
-            emoji: codepointsToEmoji(emojiCodepoints),
-            bejiIds: [],
-            createdAt: Date.now(),
-        };
-
-        // Save the player
-        await savePlayer(newPlayer);
-
-        // Link user to player
-        await linkUserToPlayer(userId, playerId);
-
-        return newPlayer;
-    } catch (error) {
-        console.error(`Error getting or creating player for user ${userId} in Redis:`, error);
-        throw error;
-    }
-}
 
