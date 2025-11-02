@@ -101,18 +101,25 @@ const gameStorage = createJSONStorage<GameState>(() => {
                     if (parsed.inventory && !parsed.inventory[0]) {
                         // Old structure: Record<number, number>
                         // New structure: Record<playerId, Record<number, number>>
-                        const oldInventory = parsed.inventory as any;
-                        if (oldInventory && typeof oldInventory === 'object') {
-                            const hasNumberKeys = Object.keys(oldInventory).some((k) => !isNaN(Number(k)));
-                            if (hasNumberKeys && parsed.players && parsed.players.length > 0) {
-                                // Migrate to first player's inventory
-                                const playerId = parsed.players[0]?.id || 'default';
-                                parsed.inventory = {
-                                    [playerId]: oldInventory,
-                                };
-                            } else {
-                                parsed.inventory = {};
-                            }
+                        // Type guard to check if it's the old structure
+                        const isOldInventoryStructure = (
+                            inv: unknown
+                        ): inv is Record<number, number> => {
+                            if (!inv || typeof inv !== 'object') return false;
+                            // Check if keys are numbers (old structure) vs strings (new structure)
+                            const keys = Object.keys(inv);
+                            return keys.length > 0 && keys.every((k) => !isNaN(Number(k)));
+                        };
+
+                        const inventory = parsed.inventory;
+                        if (isOldInventoryStructure(inventory) && parsed.players && parsed.players.length > 0) {
+                            // Migrate to first player's inventory
+                            const playerId = parsed.players[0]?.id || 'default';
+                            parsed.inventory = {
+                                [playerId]: inventory,
+                            };
+                        } else {
+                            parsed.inventory = {};
                         }
                     }
                 }

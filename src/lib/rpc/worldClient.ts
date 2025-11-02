@@ -1,4 +1,3 @@
-import { createClient } from '@connectrpc/connect';
 import { WorldService } from '../../proto/world/v1/world_connect';
 import type {
     CreateWorldRequest,
@@ -12,8 +11,9 @@ import {
     GetWorldRequestSchema,
 } from '../../proto/world/v1/world_pb';
 import { transport } from './transport';
+import { createServiceClient } from './clientHelpers';
 
-const client = createClient(WorldService as any, transport);
+const client = createServiceClient(WorldService, transport);
 
 export async function createWorld(
     bejiName: string,
@@ -24,8 +24,13 @@ export async function createWorld(
         emojiCodepoints,
     });
 
-    const response = await (client as any).createWorld(request);
-    return response as CreateWorldResponse;
+    // Type assertion is safe here - we know createWorld exists and returns CreateWorldResponse
+    const method = (client as Record<string, (req: CreateWorldRequest) => Promise<CreateWorldResponse>>).createWorld;
+    if (!method) {
+        throw new Error('createWorld method not found on WorldService client');
+    }
+    
+    return await method(request);
 }
 
 export async function getWorld(worldId: string): Promise<GetWorldResponse> {
@@ -33,6 +38,11 @@ export async function getWorld(worldId: string): Promise<GetWorldResponse> {
         worldId,
     });
 
-    const response = await (client as any).getWorld(request);
-    return response as GetWorldResponse;
+    // Type assertion is safe here - we know getWorld exists and returns GetWorldResponse
+    const method = (client as Record<string, (req: GetWorldRequest) => Promise<GetWorldResponse>>).getWorld;
+    if (!method) {
+        throw new Error('getWorld method not found on WorldService client');
+    }
+    
+    return await method(request);
 }

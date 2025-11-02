@@ -16,23 +16,24 @@ export function registerService<
       readonly name: string;
       readonly I: unknown;
       readonly O: unknown;
-      readonly kind: DescMethod['kind'];
+      readonly kind: unknown;
     }>;
   }
 >(
   router: ConnectRouter,
   service: S,
-  implementation: {
+  implementation: Partial<{
     [K in keyof S['methods']]: S['methods'][K] extends { readonly kind: infer Kind }
       ? Kind extends 'unary'
         ? (request: S['methods'][K]['I'], context?: unknown) => Promise<S['methods'][K]['O']>
         : never
       : never;
-  }
+  }>
 ): void {
   // Cast through 'unknown' first (safer than 'as any')
   // The generated services work at runtime because ConnectRouter's internal
   // createServiceImplSpec handles the conversion
-  router.service(service as unknown as DescService, implementation as unknown as ServiceImpl<DescService>);
+  // Partial<> allows registering only some methods, matching ConnectRouter's Partial<ServiceImpl<T>>
+  router.service(service as unknown as DescService, implementation as unknown as Partial<ServiceImpl<DescService>>);
 }
 
