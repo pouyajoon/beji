@@ -3,6 +3,7 @@
  */
 
 import type { Beji } from "../../atoms";
+import { BEJI_SPEED_MPS } from "../../../lib/constants";
 
 type DebugOverlayParams = {
     ctx: CanvasRenderingContext2D;
@@ -40,7 +41,21 @@ export function drawDebugOverlay({
         const posY = typeof p.y === 'number' ? p.y.toFixed(2) : '?';
         const targetX = typeof b.target?.x === 'number' ? b.target.x.toFixed(2) : '?';
         const targetY = typeof b.target?.y === 'number' ? b.target.y.toFixed(2) : '?';
-        return `${b.emoji}  pos:(${posX},${posY})  target:(${targetX},${targetY})  (player:${b.playerId ?? "-"})`;
+        
+        // Calculate speed: if beji is moving (walk is true and distance to target > threshold), use BEJI_SPEED_MPS, otherwise 0
+        let speedMps = 0;
+        if (b.walk && typeof p.x === 'number' && typeof p.y === 'number' && typeof b.target?.x === 'number' && typeof b.target?.y === 'number') {
+            const dx = b.target.x - p.x;
+            const dy = b.target.y - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 1e-3) {
+                speedMps = BEJI_SPEED_MPS;
+            }
+        }
+        const speedKmh = speedMps * 3.6; // Convert m/s to km/h
+        const speedText = `speed: ${speedMps.toFixed(1)} m/s (${speedKmh.toFixed(1)} km/h)`;
+        
+        return `${b.emoji}  pos:(${posX},${posY})  target:(${targetX},${targetY})  ${speedText}  (player:${b.playerId ?? "-"})`;
     });
     const lines = [
         `zoom: ${Math.round(pixelsPerMeter)} px/m`,

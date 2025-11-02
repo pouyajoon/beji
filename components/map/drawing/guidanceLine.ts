@@ -49,7 +49,17 @@ export function drawGuidanceLine({
 
     // ETA label in screen space near the mouse position (independent of zoom)
     const etaSec = dist / BEJI_SPEED_MPS;
+    
+    // Format distance: show meters if < 1000m, otherwise show kilometers
+    let distanceText: string;
+    if (dist < 1000) {
+        distanceText = `${Math.round(dist)} m`;
+    } else {
+        distanceText = `${(dist / 1000).toFixed(2)} km`;
+    }
+    
     const etaText = `${etaSec.toFixed(1)}s`;
+    const fullText = `${etaText} · ${distanceText}`;
     const mouseScreenX = (mouseWorld.x - renderViewX) * (canvas.width / renderViewWidth);
     const mouseScreenY = (mouseWorld.y - renderViewY) * (canvas.height / renderViewHeight);
     const dpr = window.devicePixelRatio || 1;
@@ -70,7 +80,7 @@ export function drawGuidanceLine({
     ctx.font = `${fontPx}px system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    const metrics = ctx.measureText(etaText);
+    const metrics = ctx.measureText(fullText);
     const textW = metrics.width;
     const textH = fontPx;
 
@@ -86,7 +96,7 @@ export function drawGuidanceLine({
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.fillRect(labelX - textW / 2 - padding, labelY - textH - padding, textW + padding * 2, textH + padding);
     ctx.fillStyle = "#111827";
-    ctx.fillText(etaText, labelX, labelY - 2);
+    ctx.fillText(fullText, labelX, labelY - 2);
     ctx.restore();
 }
 
