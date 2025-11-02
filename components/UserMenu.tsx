@@ -24,7 +24,7 @@ export default function UserMenu() {
     useEffect(() => {
         async function fetchUserInfo() {
             try {
-                const response = await fetch("/authentication/oauth/get-token");
+                const response = await fetch("/api/authentication/get-token");
                 if (response.ok) {
                     const data = await response.json();
                     setUserInfo(data);

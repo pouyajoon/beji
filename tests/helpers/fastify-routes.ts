@@ -53,11 +53,11 @@ function getEnvVar(key: string): string | undefined {
 function parseCookies(cookieHeader?: string): Record<string, string> {
   const cookies: Record<string, string> = {};
   if (!cookieHeader) return cookies;
-  
+
   cookieHeader.split(';').forEach((cookie) => {
-    const [name, ...rest] = cookie.trim().split('=');
-    if (name && rest.length > 0) {
-      cookies[name] = rest.join('=');
+    const [name, value] = cookie.trim().split('=');
+    if (name && value) {
+      cookies[name] = decodeURIComponent(value);
     }
   });
   return cookies;
@@ -67,7 +67,7 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
 async function authenticateRequest(request: { headers: { cookie?: string } }): Promise<JWTPayload | null> {
   const cookies = parseCookies(request.headers.cookie);
   const token = cookies.auth_token;
-  
+
   if (!token) {
     return null;
   }
@@ -203,6 +203,9 @@ export async function createTestFastifyWithRoutes(): Promise<FastifyInstance> {
     logger: false,
   });
 
+  const hostname = 'localhost';
+  const port = 3000;
+
   await fastify.register(fastifyCookie);
   await fastify.register(fastifyCors, {
     origin: true,
@@ -212,7 +215,7 @@ export async function createTestFastifyWithRoutes(): Promise<FastifyInstance> {
   // Authentication routes
   fastify.get('/api/authentication/get-token', async (request, reply) => {
     const payload = await authenticateRequest(request);
-    
+
     if (!payload) {
       return reply.status(401).send({ error: 'Unauthorized' });
     }
@@ -245,7 +248,7 @@ export async function createTestFastifyWithRoutes(): Promise<FastifyInstance> {
           code,
           client_id: getEnvVar('GOOGLE_CLIENT_ID')!,
           client_secret: getEnvVar('GOOGLE_CLIENT_SECRET')!,
-          redirect_uri: `${request.protocol}://${request.hostname}/authentication/oauth/google`,
+          redirect_uri: `${request.headers.origin || `http://${hostname}:${port}`}/authentication/oauth/google`,
           grant_type: 'authorization_code',
         }),
       });
@@ -513,10 +516,10 @@ export async function createTestFastifyWithRoutes(): Promise<FastifyInstance> {
           ...beji,
           world: world
             ? {
-                id: world.id,
-                mainBejiId: world.mainBejiId,
-                createdAt: world.createdAt,
-              }
+              id: world.id,
+              mainBejiId: world.mainBejiId,
+              createdAt: world.createdAt,
+            }
             : null,
         };
       })

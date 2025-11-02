@@ -8,7 +8,7 @@ title: Testing
 ## Framework
 - Use Vitest for unit tests and component tests.
 - Mock global features for coverage and isolation.
-- **Migration Note**: After migrating from Next.js to Vite/Fastify, some tests referencing Next.js routes need updating to test Fastify endpoints directly.
+- All tests have been migrated to work with the unified Fastify/Vite server architecture.
 
 ## Setup
 - ✅ `vitest` v4 is installed and configured via `vitest.config.ts`
@@ -29,7 +29,8 @@ title: Testing
 - Test public surface of components (props → UI behavior).
 - Mock network/realtime boundaries; don't hit real routers in unit tests.
 - Keep tests fast; avoid global state bleed.
-- **After Next.js Migration**: API route tests should use `fastify.inject()` or HTTP client to test Fastify endpoints directly, not import route handlers.
+- **Fastify Route Testing**: Use `fastify.inject()` to test API endpoints. See `tests/helpers/fastify-routes.ts` for the test helper.
+- When testing authenticated routes, don't set up mock return values if the mock won't be called (avoids consuming mock for next test).
 
 ## Scope
 
@@ -72,7 +73,6 @@ Configuration in `vitest.config.ts`:
 - ✅ `tests/map-ssr.test.tsx` - Map component SSR
 - ✅ `tests/locale-ssr.test.ts` - Home page SSR with language support (language managed via jotai state/localStorage, not URL routing)
 - ✅ `tests/components-ssr.test.tsx` - Component SSR rendering for all components: Map, MapGrid, StartPage, LocaleSwitcher, Tooltip, VirtualJoystick, Header, EmojiPicker, BejiNameInput, SelectedPreview, StartAction, CreateBejiForm, BejisLoader, InventoryDisplay, ToggleFollowMouseAction, ZoomToBejiAction, ActionsBar, JotaiProvider, CanvasMap, LanguageProvider, UserMenu, ExistingBejisList
-- ⚠️ `tests/page-import.test.ts` - **BROKEN**: Tests `app/page.tsx` which no longer exists. Should be updated to test React Router pages or removed.
 
 ### Integration Tests  
 - ✅ `tests/dev-server.test.ts` - Dev server startup
@@ -83,24 +83,20 @@ Configuration in `vitest.config.ts`:
 - ✅ `tests/redis-cloud.test.ts` - Redis Cloud connection test specifically for `redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com:12901`. Verifies TLS connection, basic operations, hash operations, set operations, pipelined operations, and connection persistence. All connections use TLS.
 - ✅ `tests/redis-cloud-diagnostic.test.ts` - Diagnostic test to verify Redis Cloud TLS connection methods. Tests TLS socket option and rediss:// URL connections.
 
-### API Route Tests (⚠️ Needs Update After Next.js Migration)
+### API Route Tests
 
-After migrating from Next.js to Fastify, the following tests need to be updated:
-
-- ⚠️ `tests/world-rpc.test.ts` - **BROKEN**: Imports `app/api/rpc/world/v1/route` which no longer exists. 
-  - **Action**: Update to test Fastify routes directly using `fastify.inject()` or HTTP client
-- ⚠️ `tests/auth-oauth.test.ts` - **BROKEN**: Imports `app/api/authentication/oauth/google/route` and `app/api/authentication/get-token/route` which no longer exist.
-  - **Action**: Update to test Fastify routes directly
-- ⚠️ `tests/user-bejis-api.test.ts` - **BROKEN**: Imports `app/api/users/[userId]/bejis/route` which no longer exists.
-  - **Action**: Update to test Fastify route at `/api/users/:userId/bejis` directly
-- ⚠️ `tests/middleware-auth.test.ts` - May need updates for Fastify authentication middleware (different from Next.js middleware)
-- ⚠️ `tests/page-import.test.ts` - **BROKEN**: Tests `app/page.tsx` which no longer exists.
-  - **Action**: Update to test React Router pages in `src/pages/` or remove if no longer needed
+- ✅ `tests/world-rpc.test.ts` - World RPC API (CreateWorld and GetWorld) using `fastify.inject()` with mocked Redis
+- ✅ `tests/auth-oauth.test.ts` - Google OAuth authentication flow and get-token endpoint using `fastify.inject()`
+- ✅ `tests/user-bejis-api.test.ts` - User bejis API endpoint using `fastify.inject()` with mocked Redis
+- ⚠️ `tests/middleware-auth.test.ts` - Skipped (proxy middleware removed during code pruning)
 
 **Testing Fastify Routes:**
 
-To test Fastify routes, use the `fastify.inject()` method:
+All API route tests use `createTestFastifyWithRoutes()` helper from `tests/helpers/fastify-routes.ts`:
 ```typescript
+import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
+
+const fastify = await createTestFastifyWithRoutes();
 const response = await fastify.inject({
   method: 'POST',
   url: '/api/rpc/world/v1',
