@@ -203,7 +203,7 @@ export function useMouseHandlers({
         dragStartRef.current = null;
     };
 
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const handleWheel = (e: WheelEvent) => {
         if (isTouchPreferred) return;
         e.preventDefault();
         const factor = e.deltaY > 0 ? 1 / 1.1 : 1.1;

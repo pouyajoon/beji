@@ -39,11 +39,16 @@ export default function WorldPage() {
 
                 const response = await getWorld(worldId);
 
-                if (!response.world) {
-                    throw new Error("World not found");
+                if (!response || !response.world) {
+                    throw new Error("World not found or invalid response structure");
                 }
 
                 const worldData = response.world;
+
+                // Validate required data exists
+                if (!worldData.beji || !worldData.player || !worldData.world) {
+                    throw new Error("Invalid world data structure");
+                }
 
                 // Convert proto types to app types and set state
                 const player: Player = {
@@ -60,10 +65,10 @@ export default function WorldPage() {
                     worldId: worldData.beji!.worldId,
                     emoji: worldData.beji!.emoji,
                     name: worldData.beji!.name,
-                    position: worldData.beji!.position
+                    position: worldData.beji!.position && typeof worldData.beji!.position.x === 'number' && typeof worldData.beji!.position.y === 'number'
                         ? { x: worldData.beji!.position.x, y: worldData.beji!.position.y }
                         : { x: 0, y: 0 },
-                    target: worldData.beji!.target
+                    target: worldData.beji!.target && typeof worldData.beji!.target.x === 'number' && typeof worldData.beji!.target.y === 'number'
                         ? { x: worldData.beji!.target.x, y: worldData.beji!.target.y }
                         : { x: 0, y: 0 },
                     walk: worldData.beji!.walk,
@@ -82,7 +87,9 @@ export default function WorldPage() {
                     worldId: sb.worldId,
                     emojiCodepoint: sb.emojiCodepoint,
                     emoji: sb.emoji,
-                    position: sb.position ? { x: sb.position.x, y: sb.position.y } : { x: 0, y: 0 },
+                    position: sb.position && typeof sb.position.x === 'number' && typeof sb.position.y === 'number'
+                        ? { x: sb.position.x, y: sb.position.y }
+                        : { x: 0, y: 0 },
                     harvested: sb.harvested,
                 }));
 

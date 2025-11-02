@@ -16,8 +16,14 @@ async function callRPC<TRequest, TResponse>(
     });
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(error.error || `RPC call failed: ${response.statusText}`);
+        let errorMessage = `RPC call failed: ${response.statusText}`;
+        try {
+            const error = await response.json();
+            errorMessage = error?.error || errorMessage;
+        } catch {
+            // Response body is not JSON or is empty, use default error message
+        }
+        throw new Error(errorMessage);
     }
 
     const data = await response.json();

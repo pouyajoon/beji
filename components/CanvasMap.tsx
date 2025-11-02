@@ -335,8 +335,9 @@ export function CanvasMap() {
             lastTs = ts;
 
             // Update camera target from physics position (for smooth following)
+            // Don't update camera when beji is walking to prevent scrolling
             const focus = currentPlayerId ? bejiRef.current.find((b) => b.playerId === currentPlayerId) : bejiRef.current[0];
-            if (focus) {
+            if (focus && !focus.walk) {
                 const physicsPos = physicsPositionsRef.current.get(focus.id);
                 if (physicsPos) {
                     cameraTargetRef.current = { x: physicsPos.x, y: physicsPos.y };
@@ -467,9 +468,24 @@ export function CanvasMap() {
         return () => cancelAnimationFrame(raf);
     }, [viewport.width, viewport.height, pixelsPerMeter, cameraOffset, mounted, currentPlayerId, staticBeji]);
 
+    // Attach wheel event listener with non-passive option to allow preventDefault
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        
+        const handleWheel = (e: WheelEvent) => {
+            mouseHandlers.handleWheel(e);
+        };
+        
+        container.addEventListener("wheel", handleWheel, { passive: false });
+        return () => {
+            container.removeEventListener("wheel", handleWheel);
+        };
+    }, [mouseHandlers.handleWheel]);
+
 
     return (
-        <div ref={containerRef} onWheel={mouseHandlers.handleWheel} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
+        <div ref={containerRef} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
             <ActionsBar
                 followMouse={followMouse}
                 onToggleFollowMouse={setFollowMouse}

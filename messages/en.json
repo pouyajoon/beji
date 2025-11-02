@@ -16,6 +16,10 @@
     "title": "Welcome to Beji 🎮",
     "subtitle": "Connect with your Google account to start playing",
     "signInButton": "Sign in with Google"
+  },
+  "UserMenu": {
+    "userMenuLabel": "User Menu",
+    "disconnect": "Disconnect"
   }
 }
 

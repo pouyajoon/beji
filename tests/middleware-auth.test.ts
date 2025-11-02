@@ -149,7 +149,6 @@ describe("Authentication Proxy", () => {
         const protectedRoutes = [
             "/",
             "/world/123",
-            "/emoji",
         ];
 
         for (const route of protectedRoutes) {

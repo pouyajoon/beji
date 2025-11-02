@@ -50,9 +50,12 @@ export function drawStaticBeji({
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         const dpr = window.devicePixelRatio || 1;
         
-        // Circle radius in world meters (0.5m radius)
-        const circleRadiusMeters = 0.5;
-        const circleRadiusPx = circleRadiusMeters * pixelsPerMeter;
+        // Draw emoji first to determine its size for proportional circle
+        const minEmojiCssPx = 20;
+        const emojiCssPx = Math.max(minEmojiCssPx, 0.6 * pixelsPerMeter);
+        
+        // Circle radius scales with emoji size (1.5x emoji size for good visual proportion)
+        const circleRadiusPx = emojiCssPx * 1.5;
         const minRadiusPx = 15; // minimum visible radius on screen
         const radius = Math.max(minRadiusPx, circleRadiusPx);
 
@@ -62,10 +65,6 @@ export function drawStaticBeji({
         ctx.strokeStyle = (sb.harvested || isNear) ? "#d3d3d3" : "#808080"; // light grey if near/harvested, grey otherwise
         ctx.lineWidth = 2;
         ctx.stroke();
-
-        // Draw emoji
-        const minEmojiCssPx = 20;
-        const emojiCssPx = Math.max(minEmojiCssPx, 0.6 * pixelsPerMeter);
         ctx.font = `${emojiCssPx * dpr}px system-ui, Apple Color Emoji, Segoe UI Emoji`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";

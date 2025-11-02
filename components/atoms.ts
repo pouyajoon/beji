@@ -30,7 +30,7 @@ export type Beji = {
     emoji: string;
     name: string;
     position: IPosition;
-    target: IPosition;
+    target?: IPosition;
     walk: boolean;
     createdAt: number; // Timestamp when beji was created
 };
