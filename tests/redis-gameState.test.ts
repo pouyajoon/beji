@@ -23,21 +23,6 @@ describe('Redis Game State Operations', () => {
         vi.clearAllMocks();
     });
 
-    // Note: getGameState and saveGameState were removed during code pruning
-    describe.skip('Game State', () => {
-        it.skip('gets game state from Redis', async () => {
-            // getGameState removed - test skipped
-        });
-
-        it.skip('returns null when game state does not exist', async () => {
-            // getGameState removed - test skipped
-        });
-
-        it.skip('saves game state to Redis', async () => {
-            // saveGameState removed - test skipped
-        });
-    });
-
     describe('Players', () => {
         it('saves a player to Redis', async () => {
             const player: Player = {
@@ -82,11 +67,6 @@ describe('Redis Game State Operations', () => {
             
             expect(mockRedis.get).toHaveBeenCalledWith('beji:player:player1');
             expect(result).toEqual(player);
-        });
-
-        // Note: getAllPlayers was removed during code pruning
-        it.skip('gets all players from Redis', async () => {
-            // getAllPlayers removed - test skipped
         });
     });
 
@@ -165,21 +145,6 @@ describe('Redis Game State Operations', () => {
             
             expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:player:player1:beji');
             expect(result).toEqual(beji);
-        });
-    });
-
-    // Note: saveInventory and updateInventoryItem were removed during code pruning
-    describe.skip('Inventory', () => {
-        it.skip('saves inventory for a player', async () => {
-            // saveInventory removed - test skipped
-        });
-
-        it.skip('updates inventory item count', async () => {
-            // updateInventoryItem removed - test skipped
-        });
-
-        it.skip('removes inventory item when count reaches zero', async () => {
-            // updateInventoryItem removed - test skipped
         });
     });
 
@@ -299,15 +264,6 @@ describe('Redis Game State Operations', () => {
 
             expect(mockRedis.get).toHaveBeenCalledWith('beji:world:world1');
             expect(result).toEqual(world);
-        });
-
-        // Note: getAllWorlds and getWorldForBeji were removed during code pruning
-        it.skip('gets all worlds from Redis', async () => {
-            // getAllWorlds removed - test skipped
-        });
-
-        it.skip('gets world for a specific beji', async () => {
-            // getWorldForBeji removed - test skipped
         });
     });
 });

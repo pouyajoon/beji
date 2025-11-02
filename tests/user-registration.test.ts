@@ -71,16 +71,6 @@ describe("User Registration in Redis", () => {
         // Note: closeRedisClient was removed during code pruning
     });
 
-    // Note: linkUserToPlayer was removed during code pruning
-    // These tests are skipped as the functionality no longer exists
-    it.skip("should link a user to a player", async () => {
-        // linkUserToPlayer removed - test skipped
-    });
-
-    it.skip("should get player ID for a linked user", async () => {
-        // linkUserToPlayer removed - test skipped
-    });
-
     it("should return null for unlinked user", async () => {
         if (!isConnected) {
             return;
@@ -90,19 +80,6 @@ describe("User Registration in Redis", () => {
         const playerId = await getPlayerIdForUser(userId);
 
         expect(playerId).toBeNull();
-    });
-
-    // Note: getOrCreatePlayerForUser was removed during code pruning
-    it.skip("should get or create a player for a new user", async () => {
-        // getOrCreatePlayerForUser removed - test skipped
-    });
-
-    it.skip("should return existing player for user who already has one", async () => {
-        // getOrCreatePlayerForUser removed - test skipped
-    });
-
-    it.skip("should handle multiple bejis per player", async () => {
-        // getOrCreatePlayerForUser removed - test skipped
     });
 });
 
