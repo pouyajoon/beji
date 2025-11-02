@@ -5,6 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { Beji } from "../../beji/v1/beji_pb";
 
 /**
  * Request to get a player by ID
@@ -372,6 +373,180 @@ export class Player extends Message<Player> {
 
   static equals(a: Player | PlainMessage<Player> | undefined, b: Player | PlainMessage<Player> | undefined): boolean {
     return proto3.util.equals(Player, a, b);
+  }
+}
+
+/**
+ * Request to get all bejis for a user
+ *
+ * @generated from message player.v1.GetUserBejisRequest
+ */
+export class GetUserBejisRequest extends Message<GetUserBejisRequest> {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId = "";
+
+  constructor(data?: PartialMessage<GetUserBejisRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "player.v1.GetUserBejisRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserBejisRequest {
+    return new GetUserBejisRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserBejisRequest {
+    return new GetUserBejisRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserBejisRequest {
+    return new GetUserBejisRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserBejisRequest | PlainMessage<GetUserBejisRequest> | undefined, b: GetUserBejisRequest | PlainMessage<GetUserBejisRequest> | undefined): boolean {
+    return proto3.util.equals(GetUserBejisRequest, a, b);
+  }
+}
+
+/**
+ * Response containing bejis with their world information
+ *
+ * @generated from message player.v1.GetUserBejisResponse
+ */
+export class GetUserBejisResponse extends Message<GetUserBejisResponse> {
+  /**
+   * @generated from field: repeated player.v1.BejiWithWorld bejis = 1;
+   */
+  bejis: BejiWithWorld[] = [];
+
+  constructor(data?: PartialMessage<GetUserBejisResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "player.v1.GetUserBejisResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "bejis", kind: "message", T: BejiWithWorld, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserBejisResponse {
+    return new GetUserBejisResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetUserBejisResponse {
+    return new GetUserBejisResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetUserBejisResponse {
+    return new GetUserBejisResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetUserBejisResponse | PlainMessage<GetUserBejisResponse> | undefined, b: GetUserBejisResponse | PlainMessage<GetUserBejisResponse> | undefined): boolean {
+    return proto3.util.equals(GetUserBejisResponse, a, b);
+  }
+}
+
+/**
+ * Beji with associated world summary
+ *
+ * @generated from message player.v1.BejiWithWorld
+ */
+export class BejiWithWorld extends Message<BejiWithWorld> {
+  /**
+   * @generated from field: beji.v1.Beji beji = 1;
+   */
+  beji?: Beji;
+
+  /**
+   * @generated from field: player.v1.WorldSummary world = 2;
+   */
+  world?: WorldSummary;
+
+  constructor(data?: PartialMessage<BejiWithWorld>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "player.v1.BejiWithWorld";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "beji", kind: "message", T: Beji },
+    { no: 2, name: "world", kind: "message", T: WorldSummary },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BejiWithWorld {
+    return new BejiWithWorld().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BejiWithWorld {
+    return new BejiWithWorld().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BejiWithWorld {
+    return new BejiWithWorld().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BejiWithWorld | PlainMessage<BejiWithWorld> | undefined, b: BejiWithWorld | PlainMessage<BejiWithWorld> | undefined): boolean {
+    return proto3.util.equals(BejiWithWorld, a, b);
+  }
+}
+
+/**
+ * Summary of a world (subset of world data)
+ *
+ * @generated from message player.v1.WorldSummary
+ */
+export class WorldSummary extends Message<WorldSummary> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string main_beji_id = 2;
+   */
+  mainBejiId = "";
+
+  /**
+   * @generated from field: int64 created_at = 3;
+   */
+  createdAt = protoInt64.zero;
+
+  constructor(data?: PartialMessage<WorldSummary>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "player.v1.WorldSummary";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "main_beji_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "created_at", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WorldSummary {
+    return new WorldSummary().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WorldSummary {
+    return new WorldSummary().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WorldSummary {
+    return new WorldSummary().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WorldSummary | PlainMessage<WorldSummary> | undefined, b: WorldSummary | PlainMessage<WorldSummary> | undefined): boolean {
+    return proto3.util.equals(WorldSummary, a, b);
   }
 }
 

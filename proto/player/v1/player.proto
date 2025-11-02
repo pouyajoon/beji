@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package player.v1;
 
+import "beji/v1/beji.proto";
+
 option go_package = "github.com/pouyajoon/beji/player/v1";
 
 // Player service for managing player entities
@@ -64,5 +66,28 @@ message Player {
   repeated int32 emoji_codepoints = 3;
   repeated string beji_ids = 4;
   int64 created_at = 5;
+}
+
+// Request to get all bejis for a user
+message GetUserBejisRequest {
+  string user_id = 1;
+}
+
+// Response containing bejis with their world information
+message GetUserBejisResponse {
+  repeated BejiWithWorld bejis = 1;
+}
+
+// Beji with associated world summary
+message BejiWithWorld {
+  beji.v1.Beji beji = 1;
+  WorldSummary world = 2;
+}
+
+// Summary of a world (subset of world data)
+message WorldSummary {
+  string id = 1;
+  string main_beji_id = 2;
+  int64 created_at = 3;
 }
 
