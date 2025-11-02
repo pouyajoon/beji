@@ -22,7 +22,6 @@ import { CreateBejiForm } from "./start/CreateBejiForm";
 import { BejisLoader } from "./start/BejisLoader";
 import { createWorld } from "../src/lib/rpc/worldClient";
 import type { StaticBeji as ProtoStaticBeji } from "../src/proto/staticbeji/v1/staticbeji_pb";
-import type { PlainMessage } from "@bufbuild/protobuf";
 
 // Use shared generateRandomEmojiSet based on Emoji_Presentation allowlist
 
@@ -93,7 +92,7 @@ export function StartPage() {
                 createdAt: Number(worldData.world!.createdAt),
             };
 
-            const staticBejis: StaticBeji[] = worldData.staticBeji.map((sb: PlainMessage<ProtoStaticBeji>) => ({
+            const staticBejis: StaticBeji[] = worldData.staticBeji.map((sb: ProtoStaticBeji) => ({
                 id: sb.id,
                 worldId: sb.worldId,
                 emojiCodepoint: sb.emojiCodepoint,

@@ -1,5 +1,5 @@
 import type { Handler } from '@netlify/functions';
-import {
+import type {
   CreateWorldRequest,
   CreateWorldResponse,
   GetWorldRequest,
@@ -7,11 +7,23 @@ import {
   WorldData,
   World,
 } from '../../src/proto/world/v1/world_pb';
-import { Player } from '../../src/proto/player/v1/player_pb';
-import { Beji } from '../../src/proto/beji/v1/beji_pb';
-import { StaticBeji } from '../../src/proto/staticbeji/v1/staticbeji_pb';
-import { Position } from '../../src/proto/common/v1/common_pb';
-import { protoInt64 } from '@bufbuild/protobuf';
+import {
+  CreateWorldRequestSchema,
+  CreateWorldResponseSchema,
+  GetWorldRequestSchema,
+  GetWorldResponseSchema,
+  WorldDataSchema,
+  WorldSchema,
+} from '../../src/proto/world/v1/world_pb';
+import type { Player } from '../../src/proto/player/v1/player_pb';
+import { PlayerSchema } from '../../src/proto/player/v1/player_pb';
+import type { Beji } from '../../src/proto/beji/v1/beji_pb';
+import { BejiSchema } from '../../src/proto/beji/v1/beji_pb';
+import type { StaticBeji } from '../../src/proto/staticbeji/v1/staticbeji_pb';
+import { StaticBejiSchema } from '../../src/proto/staticbeji/v1/staticbeji_pb';
+import type { Position } from '../../src/proto/common/v1/common_pb';
+import { PositionSchema } from '../../src/proto/common/v1/common_pb';
+import { create, fromJson, toJson, protoInt64 } from '@bufbuild/protobuf';
 import { codepointsToEmoji } from '../../components/emoji';
 import {
   savePlayer,
@@ -36,41 +48,41 @@ function convertAppToProto(
   beji: BejiType,
   staticBeji: StaticBejiType[]
 ): WorldData {
-  return new WorldData({
-    world: new World({
+  return create(WorldDataSchema, {
+    world: create(WorldSchema, {
       id: world.id,
       mainBejiId: world.mainBejiId,
       staticBejiIds: world.staticBejiIds,
       createdAt: protoInt64.parse(world.createdAt.toString()),
     }),
-    player: new Player({
+    player: create(PlayerSchema, {
       id: player.id,
       emoji: player.emoji,
       emojiCodepoints: player.emojiCodepoints,
       bejiIds: player.bejiIds,
       createdAt: protoInt64.parse(player.createdAt.toString()),
     }),
-    beji: new Beji({
+    beji: create(BejiSchema, {
       id: beji.id,
       playerId: beji.playerId,
       worldId: beji.worldId,
       emoji: beji.emoji,
       name: beji.name,
-      position: new Position({ x: beji.position.x, y: beji.position.y }),
+      position: create(PositionSchema, { x: beji.position.x, y: beji.position.y }),
       target: beji.target
-        ? new Position({ x: beji.target.x, y: beji.target.y })
+        ? create(PositionSchema, { x: beji.target.x, y: beji.target.y })
         : undefined,
       walk: beji.walk,
       createdAt: protoInt64.parse(beji.createdAt.toString()),
     }),
     staticBeji: staticBeji.map(
       (sb) =>
-        new StaticBeji({
+        create(StaticBejiSchema, {
           id: sb.id,
           worldId: sb.worldId,
           emojiCodepoint: sb.emojiCodepoint,
           emoji: sb.emoji,
-          position: new Position({ x: sb.position.x, y: sb.position.y }),
+          position: create(PositionSchema, { x: sb.position.x, y: sb.position.y }),
           harvested: sb.harvested,
         })
     ),
@@ -90,7 +102,7 @@ export const handler: Handler = async (event, context) => {
     const { method, params } = body;
 
     if (method === 'CreateWorld') {
-      const req = CreateWorldRequest.fromJson(params);
+      const req = fromJson(CreateWorldRequestSchema, params);
 
       if (
         !req.bejiName ||
@@ -178,17 +190,17 @@ export const handler: Handler = async (event, context) => {
       ]);
 
       const worldData = convertAppToProto(newWorld, newPlayer, newBeji, staticBejis);
-      const response = new CreateWorldResponse({ world: worldData });
+      const response = create(CreateWorldResponseSchema, { world: worldData });
 
       return {
         statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(response.toJson()),
+        body: JSON.stringify(toJson(CreateWorldResponseSchema, response)),
       };
     } else if (method === 'GetWorld') {
-      const req = GetWorldRequest.fromJson(params);
+      const req = fromJson(GetWorldRequestSchema, params);
 
       if (!req.worldId) {
         return {
@@ -236,14 +248,14 @@ export const handler: Handler = async (event, context) => {
       const staticBeji = await getStaticBejiForWorld(world.id);
       // Import helper function or inline conversion
       const worldData = convertAppToProto(world, player, beji, staticBeji);
-      const response = new GetWorldResponse({ world: worldData });
+      const response = create(GetWorldResponseSchema, { world: worldData });
 
       return {
         statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(response.toJson()),
+        body: JSON.stringify(toJson(GetWorldResponseSchema, response)),
       };
     }
 
