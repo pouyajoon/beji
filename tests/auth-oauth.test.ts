@@ -23,7 +23,7 @@ describe("Google OAuth Authentication", () => {
             NODE_ENV: "test",
         };
         global.fetch = vi.fn();
-        
+
         return createTestFastifyWithRoutes().then(f => {
             fastify = f;
             return fastify.ready();
@@ -43,10 +43,14 @@ describe("Google OAuth Authentication", () => {
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/authentication/oauth/google?error=access_denied',
+                headers: {
+                    host: 'localhost:3000',
+                },
             });
 
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.pathname).toBe("/");
             expect(redirectUrl.searchParams.get("error")).toBe("oauth_failed");
         });
@@ -55,10 +59,14 @@ describe("Google OAuth Authentication", () => {
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/authentication/oauth/google',
+                headers: {
+                    host: 'localhost:3000',
+                },
             });
 
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.pathname).toBe("/");
             expect(redirectUrl.searchParams.get("error")).toBe("no_code");
         });
@@ -72,10 +80,14 @@ describe("Google OAuth Authentication", () => {
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/authentication/oauth/google?code=test-code',
+                headers: {
+                    host: 'localhost:3000',
+                },
             });
 
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.searchParams.get("error")).toBe("token_exchange_failed");
             expect(global.fetch).toHaveBeenCalledWith(
                 "https://oauth2.googleapis.com/token",
@@ -97,10 +109,14 @@ describe("Google OAuth Authentication", () => {
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/authentication/oauth/google?code=test-code',
+                headers: {
+                    host: 'localhost:3000',
+                },
             });
 
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.searchParams.get("error")).toBe("no_access_token");
         });
 
@@ -120,10 +136,14 @@ describe("Google OAuth Authentication", () => {
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/authentication/oauth/google?code=test-code',
+                headers: {
+                    host: 'localhost:3000',
+                },
             });
 
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.searchParams.get("error")).toBe("userinfo_failed");
         });
 
@@ -194,9 +214,10 @@ describe("Google OAuth Authentication", () => {
 
             // Verify redirect to /en
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.pathname).toBe("/en");
-            
+
             // Verify cookie is set in response headers
             const setCookieHeader = response.headers['set-cookie'];
             expect(setCookieHeader).toBeDefined();
@@ -209,7 +230,7 @@ describe("Google OAuth Authentication", () => {
 
         test("sets secure cookie in production", async () => {
             process.env.NODE_ENV = "production";
-            
+
             const mockUserInfo = {
                 id: "google-user-123",
                 email: "user@example.com",
@@ -250,10 +271,14 @@ describe("Google OAuth Authentication", () => {
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/authentication/oauth/google?code=test-code',
+                headers: {
+                    host: 'localhost:3000',
+                },
             });
 
             expect(response.statusCode).toBe(302);
-            const redirectUrl = new URL(response.headers.location!);
+            const location = response.headers.location!;
+            const redirectUrl = location.startsWith('http') ? new URL(location) : new URL(location, 'http://localhost:3000');
             expect(redirectUrl.searchParams.get("error")).toBe("callback_error");
         });
 
@@ -281,6 +306,7 @@ describe("Google OAuth Authentication", () => {
                 url: '/authentication/oauth/google?code=test-code',
                 headers: {
                     host: 'example.com',
+                    origin: 'https://example.com',
                     'x-forwarded-proto': 'https',
                 },
             });
@@ -294,8 +320,8 @@ describe("Google OAuth Authentication", () => {
             const body = tokenExchangeCall![1]?.body as URLSearchParams | string;
             const bodyString = body instanceof URLSearchParams ? body.toString() : String(body);
             const redirectUriMatch = bodyString.match(/redirect_uri=([^&]+)/);
-            const redirectUri = redirectUriMatch && redirectUriMatch[1] 
-                ? decodeURIComponent(redirectUriMatch[1]) 
+            const redirectUri = redirectUriMatch && redirectUriMatch[1]
+                ? decodeURIComponent(redirectUriMatch[1])
                 : undefined;
 
             expect(redirectUri).toBeDefined();
@@ -307,8 +333,6 @@ describe("Google OAuth Authentication", () => {
 
     describe("Get Token Route", () => {
         test("returns 401 when no token cookie exists", async () => {
-            mockVerifyJWT.mockResolvedValueOnce(null);
-
             const response = await fastify.inject({
                 method: 'GET',
                 url: '/api/authentication/get-token',

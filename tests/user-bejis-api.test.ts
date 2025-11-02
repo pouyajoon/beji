@@ -39,8 +39,6 @@ describe("User Bejis API Route", () => {
     });
 
     it("returns 401 when no auth token exists", async () => {
-        mockVerifyJWT.mockResolvedValueOnce(null);
-
         const response = await fastify.inject({
             method: 'GET',
             url: '/api/users/user123/bejis',

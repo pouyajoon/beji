@@ -22,7 +22,7 @@ export function BejisLoader({
         async function fetchUserAndBejis() {
             try {
                 // First, get user info
-                const userResponse = await fetch("/authentication/oauth/get-token");
+                const userResponse = await fetch("/api/authentication/get-token");
                 if (userResponse.ok) {
                     const userData = await userResponse.json();
                     const currentUserId = userData.userId;
