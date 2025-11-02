@@ -44,15 +44,3 @@ export function detectLanguage(): AppLocale {
     return defaultLocale;
 }
 
-/**
- * Get stored language from localStorage or null if not set
- */
-export function getStoredLanguage(): AppLocale | null {
-    if (typeof window === 'undefined') return null;
-    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (stored && (locales as readonly string[]).includes(stored)) {
-        return stored as AppLocale;
-    }
-    return null;
-}
-
