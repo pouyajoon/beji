@@ -32,7 +32,6 @@ export function BejisLoader({
                     // Then fetch bejis for this user via RPC
                     try {
                         const bejisData = await getUserBejis(currentUserId);
-                        console.log("Fetched bejis:", bejisData.bejis);
 
                         // Convert RPC response to app format
                         const convertedBejis = (bejisData.bejis || []).map((bw: any) => {

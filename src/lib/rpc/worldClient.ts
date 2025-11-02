@@ -57,7 +57,6 @@ export async function getWorld(worldId: string): Promise<any> {
         request
     );
 
-    console.log("response", response);
     return response;
 }
 
