@@ -384,13 +384,16 @@ export function CanvasMap() {
 
             // Update camera target from physics position (for smooth following)
             // Don't update camera when beji is walking to prevent scrolling
-            const focus = currentPlayerId ? bejiRef.current.find((b) => b.playerId === currentPlayerId) : bejiRef.current[0];
-            if (focus && !focus.walk) {
-                const physicsPos = physicsPositionsRef.current.get(focus.id);
-                if (physicsPos) {
-                    cameraTargetRef.current = { x: physicsPos.x, y: physicsPos.y };
-                } else {
-                    cameraTargetRef.current = { x: focus.position.x, y: focus.position.y };
+            // Also don't update when user is dragging to pan the view
+            if (!mouseHandlers.isDraggingRef.current) {
+                const focus = currentPlayerId ? bejiRef.current.find((b) => b.playerId === currentPlayerId) : bejiRef.current[0];
+                if (focus && !focus.walk) {
+                    const physicsPos = physicsPositionsRef.current.get(focus.id);
+                    if (physicsPos) {
+                        cameraTargetRef.current = { x: physicsPos.x, y: physicsPos.y };
+                    } else {
+                        cameraTargetRef.current = { x: focus.position.x, y: focus.position.y };
+                    }
                 }
             }
 

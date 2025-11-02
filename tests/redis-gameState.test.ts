@@ -23,53 +23,18 @@ describe('Redis Game State Operations', () => {
         vi.clearAllMocks();
     });
 
-    describe('Game State', () => {
-        it('gets game state from Redis', async () => {
-            const gameState: GameState = {
-                players: [],
-                worlds: [],
-                beji: [],
-                staticBeji: [],
-                inventory: {},
-            };
-            
-            mockRedis.get.mockResolvedValue(JSON.stringify(gameState));
-            
-            const { getGameState } = await import('../src/lib/redis/gameState');
-            const result = await getGameState();
-            
-            expect(mockRedis.get).toHaveBeenCalledWith('beji:gameState');
-            expect(result).toEqual(gameState);
+    // Note: getGameState and saveGameState were removed during code pruning
+    describe.skip('Game State', () => {
+        it.skip('gets game state from Redis', async () => {
+            // getGameState removed - test skipped
         });
 
-        it('returns null when game state does not exist', async () => {
-            mockRedis.get.mockResolvedValue(null);
-            
-            const { getGameState } = await import('../src/lib/redis/gameState');
-            const result = await getGameState();
-            
-            expect(result).toBeNull();
+        it.skip('returns null when game state does not exist', async () => {
+            // getGameState removed - test skipped
         });
 
-        it('saves game state to Redis', async () => {
-            const gameState: GameState = {
-                players: [{ id: 'p1', emoji: '😀', emojiCodepoints: [0x1f600], bejiIds: [], createdAt: Date.now() }],
-                worlds: [],
-                beji: [],
-                staticBeji: [],
-                inventory: {},
-            };
-            
-            mockRedis.set.mockResolvedValue('OK');
-            
-            const { saveGameState } = await import('../src/lib/redis/gameState');
-            const result = await saveGameState(gameState);
-            
-            expect(mockRedis.set).toHaveBeenCalledWith(
-                'beji:gameState',
-                JSON.stringify(gameState)
-            );
-            expect(result).toBe(true);
+        it.skip('saves game state to Redis', async () => {
+            // saveGameState removed - test skipped
         });
     });
 
@@ -119,23 +84,9 @@ describe('Redis Game State Operations', () => {
             expect(result).toEqual(player);
         });
 
-        it('gets all players from Redis', async () => {
-            const playerIds = ['player1', 'player2'];
-            const players: Player[] = [
-                { id: 'player1', emoji: '😀', emojiCodepoints: [0x1f600], bejiIds: [], createdAt: Date.now() },
-                { id: 'player2', emoji: '😁', emojiCodepoints: [0x1f601], bejiIds: [], createdAt: Date.now() },
-            ];
-            
-            mockRedis.sMembers.mockResolvedValue(playerIds);
-            mockRedis.get
-                .mockResolvedValueOnce(JSON.stringify(players[0]))
-                .mockResolvedValueOnce(JSON.stringify(players[1]));
-            
-            const { getAllPlayers } = await import('../src/lib/redis/gameState');
-            const result = await getAllPlayers();
-            
-            expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:players');
-            expect(result).toEqual(players);
+        // Note: getAllPlayers was removed during code pruning
+        it.skip('gets all players from Redis', async () => {
+            // getAllPlayers removed - test skipped
         });
     });
 
@@ -217,64 +168,18 @@ describe('Redis Game State Operations', () => {
         });
     });
 
-    describe('Inventory', () => {
-        it('saves inventory for a player', async () => {
-            const inventory: Record<number, number> = {
-                0x1f600: 5,
-                0x1f601: 3,
-            };
-            
-            mockRedis.set.mockResolvedValue('OK');
-            
-            const { saveInventory } = await import('../src/lib/redis/gameState');
-            const result = await saveInventory('player1', inventory);
-            
-            expect(mockRedis.set).toHaveBeenCalledWith(
-                'beji:inventory:player1',
-                JSON.stringify(inventory)
-            );
-            expect(result).toBe(true);
+    // Note: saveInventory and updateInventoryItem were removed during code pruning
+    describe.skip('Inventory', () => {
+        it.skip('saves inventory for a player', async () => {
+            // saveInventory removed - test skipped
         });
 
-        it('updates inventory item count', async () => {
-            const initialInventory: Record<number, number> = {
-                0x1f600: 5,
-            };
-            const updatedInventory: Record<number, number> = {
-                0x1f600: 7,
-            };
-            
-            mockRedis.get.mockResolvedValue(JSON.stringify(initialInventory));
-            mockRedis.set.mockResolvedValue('OK');
-            
-            const { updateInventoryItem } = await import('../src/lib/redis/gameState');
-            const result = await updateInventoryItem('player1', 0x1f600, 2);
-            
-            expect(mockRedis.get).toHaveBeenCalledWith('beji:inventory:player1');
-            expect(mockRedis.set).toHaveBeenCalledWith(
-                'beji:inventory:player1',
-                JSON.stringify(updatedInventory)
-            );
-            expect(result).toBe(true);
+        it.skip('updates inventory item count', async () => {
+            // updateInventoryItem removed - test skipped
         });
 
-        it('removes inventory item when count reaches zero', async () => {
-            const initialInventory: Record<number, number> = {
-                0x1f600: 1,
-            };
-            const updatedInventory: Record<number, number> = {};
-            
-            mockRedis.get.mockResolvedValue(JSON.stringify(initialInventory));
-            mockRedis.set.mockResolvedValue('OK');
-            
-            const { updateInventoryItem } = await import('../src/lib/redis/gameState');
-            const result = await updateInventoryItem('player1', 0x1f600, -1);
-            
-            expect(mockRedis.set).toHaveBeenCalledWith(
-                'beji:inventory:player1',
-                JSON.stringify(updatedInventory)
-            );
-            expect(result).toBe(true);
+        it.skip('removes inventory item when count reaches zero', async () => {
+            // updateInventoryItem removed - test skipped
         });
     });
 
@@ -396,65 +301,13 @@ describe('Redis Game State Operations', () => {
             expect(result).toEqual(world);
         });
 
-        it('gets all worlds from Redis', async () => {
-            const worldIds = ['world1', 'world2'];
-            const timestamp = Date.now();
-            const worlds: World[] = [
-                {
-                    id: 'world1',
-                    mainBejiId: 'beji1',
-                    staticBejiIds: ['static1'],
-                    createdAt: timestamp,
-                },
-                {
-                    id: 'world2',
-                    mainBejiId: 'beji2',
-                    staticBejiIds: ['static2'],
-                    createdAt: timestamp,
-                },
-            ];
-
-            mockRedis.sMembers.mockResolvedValue(worldIds);
-            mockRedis.get
-                .mockResolvedValueOnce(JSON.stringify(worlds[0]))
-                .mockResolvedValueOnce(JSON.stringify(worlds[1]));
-
-            const { getAllWorlds } = await import('../src/lib/redis/gameState');
-            const result = await getAllWorlds();
-
-            expect(mockRedis.sMembers).toHaveBeenCalledWith('beji:worlds');
-            expect(result).toEqual(worlds);
+        // Note: getAllWorlds and getWorldForBeji were removed during code pruning
+        it.skip('gets all worlds from Redis', async () => {
+            // getAllWorlds removed - test skipped
         });
 
-        it('gets world for a specific beji', async () => {
-            const beji: Beji = {
-                id: 'beji1',
-                playerId: 'player1',
-                worldId: 'world1',
-                emoji: '😀',
-                name: 'Test Beji',
-                position: { x: 0, y: 0 },
-                target: { x: 0, y: 0 },
-                walk: false,
-                createdAt: Date.now(),
-            };
-            const world: World = {
-                id: 'world1',
-                mainBejiId: 'beji1',
-                staticBejiIds: [],
-                createdAt: Date.now(),
-            };
-
-            mockRedis.get
-                .mockResolvedValueOnce(JSON.stringify(beji))
-                .mockResolvedValueOnce(JSON.stringify(world));
-
-            const { getWorldForBeji } = await import('../src/lib/redis/gameState');
-            const result = await getWorldForBeji('beji1');
-
-            expect(mockRedis.get).toHaveBeenCalledWith('beji:beji:beji1');
-            expect(mockRedis.get).toHaveBeenCalledWith('beji:world:world1');
-            expect(result).toEqual(world);
+        it.skip('gets world for a specific beji', async () => {
+            // getWorldForBeji removed - test skipped
         });
     });
 });

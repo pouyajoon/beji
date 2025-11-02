@@ -1,11 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { config } from "dotenv";
 import { resolve } from "path";
-import { getRedisClient, closeRedisClient } from "../src/lib/redis/client";
+import { getRedisClient } from "../src/lib/redis/client";
 import {
     getPlayerIdForUser,
-    linkUserToPlayer,
-    getOrCreatePlayerForUser,
     getPlayer,
     savePlayer,
     getBejiForPlayer,
@@ -70,36 +68,17 @@ describe("User Registration in Redis", () => {
                 console.warn("Error cleaning up test data:", error);
             }
         }
-        closeRedisClient();
+        // Note: closeRedisClient was removed during code pruning
     });
 
-    it("should link a user to a player", async () => {
-        if (!isConnected) {
-            return;
-        }
-
-        const userId = `${testPrefix}user1`;
-        const playerId = `${testPrefix}player-${Date.now()}`;
-
-        const result = await linkUserToPlayer(userId, playerId);
-        expect(result).toBe(true);
-
-        const retrievedPlayerId = await getPlayerIdForUser(userId);
-        expect(retrievedPlayerId).toBe(playerId);
+    // Note: linkUserToPlayer was removed during code pruning
+    // These tests are skipped as the functionality no longer exists
+    it.skip("should link a user to a player", async () => {
+        // linkUserToPlayer removed - test skipped
     });
 
-    it("should get player ID for a linked user", async () => {
-        if (!isConnected) {
-            return;
-        }
-
-        const userId = `${testPrefix}user2`;
-        const playerId = `${testPrefix}player-${Date.now()}`;
-
-        await linkUserToPlayer(userId, playerId);
-        const retrieved = await getPlayerIdForUser(userId);
-
-        expect(retrieved).toBe(playerId);
+    it.skip("should get player ID for a linked user", async () => {
+        // linkUserToPlayer removed - test skipped
     });
 
     it("should return null for unlinked user", async () => {
@@ -113,61 +92,17 @@ describe("User Registration in Redis", () => {
         expect(playerId).toBeNull();
     });
 
-    it("should get or create a player for a new user", async () => {
-        if (!isConnected) {
-            return;
-        }
-
-        const userId = `${testPrefix}user3`;
-        const emojiCodepoints = [0x1f600]; // 😀
-
-        const player = await getOrCreatePlayerForUser(userId, emojiCodepoints);
-
-        expect(player).toBeDefined();
-        expect(player.id).toBeDefined();
-        expect(player.emojiCodepoints).toEqual(emojiCodepoints);
-        expect(player.emoji).toBe(codepointsToEmoji(emojiCodepoints));
-        expect(player.bejiIds).toEqual([]);
-        expect(player.createdAt).toBeGreaterThan(0);
-
-        // Verify user is linked
-        const linkedPlayerId = await getPlayerIdForUser(userId);
-        expect(linkedPlayerId).toBe(player.id);
+    // Note: getOrCreatePlayerForUser was removed during code pruning
+    it.skip("should get or create a player for a new user", async () => {
+        // getOrCreatePlayerForUser removed - test skipped
     });
 
-    it("should return existing player for user who already has one", async () => {
-        if (!isConnected) {
-            return;
-        }
-
-        const userId = `${testPrefix}user3`;
-        const emojiCodepoints1 = [0x1f600]; // 😀
-        const emojiCodepoints2 = [0x1f601]; // 😁
-
-        // Create first player
-        const player1 = await getOrCreatePlayerForUser(userId, emojiCodepoints1);
-        const player1Id = player1.id;
-
-        // Try to get or create with different emoji (should return existing)
-        const player2 = await getOrCreatePlayerForUser(userId, emojiCodepoints2);
-
-        expect(player2.id).toBe(player1Id);
-        expect(player2.emojiCodepoints).toEqual(emojiCodepoints1); // Should keep original
+    it.skip("should return existing player for user who already has one", async () => {
+        // getOrCreatePlayerForUser removed - test skipped
     });
 
-    it("should handle multiple bejis per player", async () => {
-        if (!isConnected) {
-            return;
-        }
-
-        const userId = `${testPrefix}user3`;
-        const emojiCodepoints = [0x1f600];
-        
-        const player = await getOrCreatePlayerForUser(userId, emojiCodepoints);
-        
-        // Create some bejis for this player (simulate)
-        const bejiIds = await getBejiForPlayer(player.id);
-        expect(Array.isArray(bejiIds)).toBe(true);
+    it.skip("should handle multiple bejis per player", async () => {
+        // getOrCreatePlayerForUser removed - test skipped
     });
 });
 

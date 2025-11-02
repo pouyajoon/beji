@@ -189,14 +189,8 @@ describe('Redis Client', () => {
         expect(client1).toBe(client2);
     });
 
-    it('closes Redis client connection', async () => {
-        const { getRedisClient, closeRedisClient } = await import('../src/lib/redis/client');
-
-        const client = getRedisClient();
-        // Set isOpen to true so quit() is called
-        mockRedisInstance.isOpen = true;
-        await closeRedisClient();
-
-        expect(mockRedisInstance.quit).toHaveBeenCalled();
+    // Note: closeRedisClient was removed during code pruning
+    it.skip('closes Redis client connection', async () => {
+        // closeRedisClient removed - test skipped
     });
 });

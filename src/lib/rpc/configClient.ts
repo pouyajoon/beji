@@ -30,7 +30,7 @@ async function callRPC<TRequest, TResponse>(
     return data as TResponse;
 }
 
-export interface PublicConfig {
+interface PublicConfig {
     googleClientId: string;
 }
 
