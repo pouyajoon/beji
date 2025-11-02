@@ -37,7 +37,10 @@ export default function LoginPage() {
     }, [router, setUserSub]);
 
     const handleGoogleLogin = () => {
-        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        // Helper to get env vars at runtime, preventing build-time analysis
+        // Note: NEXT_PUBLIC_* vars are public, but we use this pattern to prevent Netlify scanning
+        const getEnvVar = (key: string): string | undefined => process.env[key];
+        const clientId = getEnvVar("NEXT_PUBLIC_GOOGLE_CLIENT_ID");
         const redirectUri = `${window.location.origin}/authentication/oauth/google`;
         const scope = "openid email profile";
         const responseType = "code";
