@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 import type { Player, Beji, StaticBeji, World } from '../components/atoms';
 
 // Mock Redis functions
@@ -47,7 +48,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -100,7 +101,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -123,7 +124,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -147,7 +148,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -234,7 +235,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -268,7 +269,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -305,7 +306,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -356,7 +357,7 @@ describe('World RPC API', () => {
                 },
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -377,7 +378,7 @@ describe('World RPC API', () => {
                 params: {},
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),
@@ -397,7 +398,7 @@ describe('World RPC API', () => {
                 params: {},
             };
 
-            const request = new Request('http://localhost/api/rpc/world/v1', {
+            const request = new NextRequest('http://localhost/api/rpc/world/v1', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody),

@@ -44,11 +44,12 @@ describe('Redis Integration Test', () => {
             try {
                 // Clean up test keys - get all keys matching pattern
                 const keys: string[] = [];
-                for await (const key of redis.scanIterator({
+                for await (const keyBatch of redis.scanIterator({
                     MATCH: `${testPrefix}*`,
                     COUNT: 100,
                 })) {
-                    keys.push(key);
+                    const keyArray = Array.isArray(keyBatch) ? keyBatch : [keyBatch];
+                    keys.push(...keyArray.filter((k): k is string => typeof k === 'string'));
                 }
                 if (keys.length > 0) {
                     // Delete keys individually to avoid TypeScript/Redis API issues

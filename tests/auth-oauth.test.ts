@@ -215,7 +215,12 @@ describe("Google OAuth Authentication", () => {
         });
 
         test("sets secure cookie in production", async () => {
-            process.env.NODE_ENV = "production";
+            // Use Object.defineProperty to set NODE_ENV for testing
+            Object.defineProperty(process.env, "NODE_ENV", {
+                value: "production",
+                writable: true,
+                configurable: true,
+            });
             const url = new URL("http://localhost:3000/authentication/oauth/google?code=test-code");
             const request = new NextRequest(url);
 
@@ -296,9 +301,14 @@ describe("Google OAuth Authentication", () => {
             const body = tokenExchangeCall![1]?.body as URLSearchParams | string;
             const bodyString = body instanceof URLSearchParams ? body.toString() : String(body);
             const redirectUriMatch = bodyString.match(/redirect_uri=([^&]+)/);
-            const redirectUri = redirectUriMatch ? decodeURIComponent(redirectUriMatch[1]) : null;
+            const redirectUri = redirectUriMatch && redirectUriMatch[1] 
+                ? decodeURIComponent(redirectUriMatch[1]) 
+                : undefined;
 
-            expect(redirectUri).toBe("https://example.com/authentication/oauth/google");
+            expect(redirectUri).toBeDefined();
+            if (redirectUri) {
+                expect(redirectUri).toBe("https://example.com/authentication/oauth/google");
+            }
         });
     });
 

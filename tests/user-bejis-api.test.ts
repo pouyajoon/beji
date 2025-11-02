@@ -52,7 +52,7 @@ describe("User Bejis API Route", () => {
 
         mockCookieStore.get.mockReturnValueOnce(undefined);
 
-        const response = await GET(request, { params: { userId: "user123" } });
+        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
         const data = await response.json();
 
         expect(response.status).toBe(401);
@@ -72,7 +72,7 @@ describe("User Bejis API Route", () => {
         mockCookieStore.get.mockReturnValueOnce({ value: "valid-token" });
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
 
-        const response = await GET(request, { params: { userId: "user123" } });
+        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
         const data = await response.json();
 
         expect(response.status).toBe(403);
@@ -92,7 +92,7 @@ describe("User Bejis API Route", () => {
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
         mockGetPlayerIdForUser.mockResolvedValueOnce(null);
 
-        const response = await GET(request, { params: { userId: "user123" } });
+        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -157,7 +157,7 @@ describe("User Bejis API Route", () => {
             .mockResolvedValueOnce(mockWorld1)
             .mockResolvedValueOnce(mockWorld2);
 
-        const response = await GET(request, { params: { userId: "user123" } });
+        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -210,7 +210,7 @@ describe("User Bejis API Route", () => {
         mockGetBejiForPlayer.mockResolvedValueOnce(mockBejis);
         mockGetWorld.mockResolvedValueOnce(null);
 
-        const response = await GET(request, { params: { userId: "user123" } });
+        const response = await GET(request, { params: Promise.resolve({ userId: "user123" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);

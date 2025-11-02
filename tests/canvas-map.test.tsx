@@ -63,9 +63,7 @@ describe('CanvasMap - Initialization Order', () => {
         
         expect(() => {
             const html = renderToString(
-                React.createElement(JotaiProvider, {},
-                    React.createElement(Map)
-                )
+                React.createElement(JotaiProvider, { children: React.createElement(Map) })
             );
         }).not.toThrow(ReferenceError);
     });
@@ -78,9 +76,7 @@ describe('CanvasMap - Initialization Order', () => {
         let error: Error | null = null;
         try {
             const html = renderToString(
-                React.createElement(JotaiProvider, {},
-                    React.createElement(Map)
-                )
+                React.createElement(JotaiProvider, { children: React.createElement(Map) })
             );
         } catch (e) {
             error = e as Error;
@@ -113,9 +109,7 @@ describe('CanvasMap - Initialization Order', () => {
         
         try {
             const html = renderToString(
-                React.createElement(JotaiProvider, {},
-                    React.createElement(Map)
-                )
+                React.createElement(JotaiProvider, { children: React.createElement(Map) })
             );
         } catch (e) {
             const error = e as Error;

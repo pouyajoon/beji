@@ -163,18 +163,6 @@ app.prepare().then(() => {
         }
     });
 
-    server.on("upgrade", (request, socket, head) => {
-        const { pathname } = parse(request.url || "");
-
-        if (pathname === "/api/ws/beji-sync") {
-            wss.handleUpgrade(request, socket, head, (ws) => {
-                wss.emit("connection", ws, request);
-            });
-        } else {
-            socket.destroy();
-        }
-    });
-
     server.listen(port, () => {
         console.log(`> Ready on http://${hostname}:${port}`);
         console.log(`> WebSocket server ready on ws://${hostname}:${port}/api/ws/beji-sync`);
