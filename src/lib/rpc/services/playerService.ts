@@ -1,6 +1,6 @@
 import type { ConnectRouter, HandlerContext, ServiceImpl } from '@connectrpc/connect';
 import { createContextKey } from '@connectrpc/connect';
-import type { DescService, Message } from '@bufbuild/protobuf';
+import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
 import { PlayerService } from '../../../proto/player/v1/player_connect';
 import {
@@ -15,7 +15,7 @@ import type { Beji as BejiType, World as WorldType } from '../../../../component
 
 // Helper function to create proto messages (compatible with v1 API)
 function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
-  return new MessageClass(data);
+    return new MessageClass(data);
 }
 import {
     getPlayerIdForUser,
@@ -56,7 +56,7 @@ function convertWorldToSummary(world: WorldType | null): WorldSummary | null {
 
 export function registerPlayerService(router: ConnectRouter) {
     router.service(
-        PlayerService as unknown as DescService,
+        PlayerService,
         {
             async getUserBejis(req: GetUserBejisRequest, context: HandlerContext): Promise<GetUserBejisResponse> {
                 try {
@@ -103,7 +103,7 @@ export function registerPlayerService(router: ConnectRouter) {
                     throw error;
                 }
             },
-        } as unknown as Partial<ServiceImpl<DescService>>
+        }
     );
 }
 
