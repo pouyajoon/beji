@@ -322,5 +322,15 @@ export declare const PlayerService: GenService<{
     input: typeof UpdatePlayerRequestSchema;
     output: typeof UpdatePlayerResponseSchema;
   },
+  /**
+   * GetUserBejis retrieves all bejis for a user with their world information
+   *
+   * @generated from rpc player.v1.PlayerService.GetUserBejis
+   */
+  getUserBejis: {
+    methodKind: "unary";
+    input: typeof GetUserBejisRequestSchema;
+    output: typeof GetUserBejisResponseSchema;
+  },
 }>;
 

@@ -19,6 +19,9 @@ service PlayerService {
   
   // UpdatePlayer updates an existing player
   rpc UpdatePlayer (UpdatePlayerRequest) returns (UpdatePlayerResponse);
+  
+  // GetUserBejis retrieves all bejis for a user with their world information
+  rpc GetUserBejis (GetUserBejisRequest) returns (GetUserBejisResponse);
 }
 
 // Request to get a player by ID

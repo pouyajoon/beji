@@ -14,6 +14,9 @@ importers:
       '@connectrpc/connect':
         specifier: ^2.1.0
         version: 2.1.0(@bufbuild/protobuf@2.10.0)
+      '@connectrpc/connect-fastify':
+        specifier: ^2.1.0
+        version: 2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect-node@2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0)))(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))(fastify@5.6.1)
       '@connectrpc/connect-web':
         specifier: 2.1.0
         version: 2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))
@@ -349,6 +352,22 @@ packages:
   '@commitlint/types@20.0.0':
     resolution: {integrity: sha512-bVUNBqG6aznYcYjTjnc3+Cat/iBgbgpflxbIBTnsHTX0YVpnmINPEkSRWymT2Q8aSH3Y7aKnEbunilkYe8TybA==}
     engines: {node: '>=v18'}
+
+  '@connectrpc/connect-fastify@2.1.0':
+    resolution: {integrity: sha512-5xPxUGQnawXgw0ZmgMGtEUN81aIJZOvgHw/j9USERffRDOUNcqMNcVCQ5ay+grc1XlkkC3AdQLWV2yctAzWg9g==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.7.0
+      '@connectrpc/connect': 2.1.0
+      '@connectrpc/connect-node': 2.1.0
+      fastify: ^4.22.1 || ^5.1.0
+
+  '@connectrpc/connect-node@2.1.0':
+    resolution: {integrity: sha512-6akCXZSX5uWHLR654ne9Tnq7AnPUkLS65NvgsI5885xBkcuVy2APBd8sA4sLqaplUt84cVEr6LhjEFNx6W1KtQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.7.0
+      '@connectrpc/connect': 2.1.0
 
   '@connectrpc/connect-web@2.1.0':
     resolution: {integrity: sha512-4IBFeMeXS1RVtmmFE/MwH+vWq/5vDRKys70va+DAaWDh83Rdy0iUQOJbITUDzvonlY5as3vwfs5yy9Yp2miHSw==}
@@ -3329,6 +3348,18 @@ snapshots:
     dependencies:
       '@types/conventional-commits-parser': 5.0.2
       chalk: 5.6.2
+
+  '@connectrpc/connect-fastify@2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect-node@2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0)))(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))(fastify@5.6.1)':
+    dependencies:
+      '@bufbuild/protobuf': 2.10.0
+      '@connectrpc/connect': 2.1.0(@bufbuild/protobuf@2.10.0)
+      '@connectrpc/connect-node': 2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))
+      fastify: 5.6.1
+
+  '@connectrpc/connect-node@2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))':
+    dependencies:
+      '@bufbuild/protobuf': 2.10.0
+      '@connectrpc/connect': 2.1.0(@bufbuild/protobuf@2.10.0)
 
   '@connectrpc/connect-web@2.1.0(@bufbuild/protobuf@2.10.0)(@connectrpc/connect@2.1.0(@bufbuild/protobuf@2.10.0))':
     dependencies:

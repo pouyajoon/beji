@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreatePlayerRequest, CreatePlayerResponse, GetAllPlayersRequest, GetAllPlayersResponse, GetPlayerRequest, GetPlayerResponse, UpdatePlayerRequest, UpdatePlayerResponse } from "./player_pb";
+import { CreatePlayerRequest, CreatePlayerResponse, GetAllPlayersRequest, GetAllPlayersResponse, GetPlayerRequest, GetPlayerResponse, GetUserBejisRequest, GetUserBejisResponse, UpdatePlayerRequest, UpdatePlayerResponse } from "./player_pb";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -56,6 +56,17 @@ export declare const PlayerService: {
       readonly name: "UpdatePlayer",
       readonly I: typeof UpdatePlayerRequest,
       readonly O: typeof UpdatePlayerResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * GetUserBejis retrieves all bejis for a user with their world information
+     *
+     * @generated from rpc player.v1.PlayerService.GetUserBejis
+     */
+    readonly getUserBejis: {
+      readonly name: "GetUserBejis",
+      readonly I: typeof GetUserBejisRequest,
+      readonly O: typeof GetUserBejisResponse,
       readonly kind: MethodKind.Unary,
     },
   }
