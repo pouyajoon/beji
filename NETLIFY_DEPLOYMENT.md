@@ -102,7 +102,7 @@ import fastifyCors from '@fastify/cors';
 
 await fastify.register(fastifyCors, {
   origin: [
-    'http://localhost:5173',
+    'http://localhost:3000',
     'https://your-netlify-site.netlify.app',
     'https://your-custom-domain.com',
   ],
@@ -110,14 +110,13 @@ await fastify.register(fastifyCors, {
 });
 ```
 
+The CORS configuration automatically allows localhost in development mode.
+
 ## Testing Locally
 
 ```bash
-# Frontend
-pnpm dev:client
-
-# Backend (separate terminal)
-pnpm dev:server
+# Start unified dev server (frontend + backend on port 3000)
+pnpm dev
 ```
 
 ## Production Flow

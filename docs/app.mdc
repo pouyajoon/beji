@@ -1,21 +1,26 @@
 ---
 alwaysApply: true
-title: App Directory
+title: Application Structure
 ---
 
-# `app/` Directory
+# Application Structure
 
-## Structure
-- `app/layout.tsx`: Root layout, metadata, viewport; applies global styles.
-- `app/page.tsx`: Home page; demonstrates responsive layout and realtime status.
-- `app/globals.css`: Tailwind entry and small mobile-first tweaks.
+## Pages (`src/pages/`)
+- `HomePage.tsx`: Main entry point with language support and beji management
+- `LoginPage.tsx`: Authentication page with Google OAuth
+- `WorldPage.tsx`: Game world with canvas map and real-time beji sync
 
-## Server vs Client components
-- Default to Server Components in `app/` for data/render efficiency.
-- Mark interactive pieces as Client Components using `'use client'`.
-- Prefer lifting side-effects into client components only where necessary.
+## Root (`src/`)
+- `App.tsx`: Root component with React Router setup and providers
+- `main.tsx`: Application entry point
 
 ## Styling
-- Tailwind utilities; use `container`, `grid`, `flex` responsive breakpoints.
-- Keep layout logic in app-level components; keep reusable UI in `components/`.
+- `app/globals.css`: Tailwind entry and small mobile-first tweaks
+- Tailwind utilities; use `container`, `grid`, `flex` responsive breakpoints
+- Keep layout logic in page components; keep reusable UI in `components/`
+
+## Routing
+- React Router v7 handles client-side routing
+- Language routing via `/:locale` pattern
+- Protected routes for authenticated pages
 
