@@ -62,6 +62,7 @@ export function useMouseHandlers({
 
     // Drag-to-pan state
     const [isDragging, setIsDragging] = useState(false);
+    const isDraggingRef = useRef(false);
     const dragStartRef = useRef<{
         clientX: number;
         clientY: number;
@@ -117,7 +118,7 @@ export function useMouseHandlers({
                 }
                 
                 const dxWorld = (dxPx / Math.max(1, canvas.width)) * dragStartRef.current.viewWidth;
-                const dyWorld = (dxPx / Math.max(1, canvas.height)) * dragStartRef.current.viewHeight;
+                const dyWorld = (dyPx / Math.max(1, canvas.height)) * dragStartRef.current.viewHeight;
 
                 // Dragging right moves map right with cursor (content follows), so offset decreases
                 let nextOffsetX = dragStartRef.current.offsetX - dxWorld;
@@ -213,6 +214,7 @@ export function useMouseHandlers({
         }
 
         setIsDragging(true);
+        isDraggingRef.current = true;
         hasDraggedRef.current = false; // Reset drag tracking for new drag
         dragStartRef.current = {
             clientX: e.clientX,
@@ -226,6 +228,7 @@ export function useMouseHandlers({
 
     const endDrag = () => {
         setIsDragging(false);
+        isDraggingRef.current = false;
         // If we actually dragged (not just clicked), store the end position
         if (hasDraggedRef.current && lastPointerClientRef.current) {
             dragEndPositionRef.current = {
@@ -303,6 +306,7 @@ export function useMouseHandlers({
         endDrag,
         handleWheel,
         isDragging,
+        isDraggingRef,
         mouseWorldRef,
         lastPointerClientRef,
         clientToWorld,

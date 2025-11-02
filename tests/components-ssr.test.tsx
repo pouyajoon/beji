@@ -4,7 +4,6 @@ import { renderToString } from 'react-dom/server';
 
 // Import all components
 import { Map } from '../components/Map';
-import { MapGrid } from '../components/MapGrid';
 import { StartPage } from '../components/StartPage';
 import LocaleSwitcher from '../components/LocaleSwitcher';
 import { Tooltip } from '../components/Tooltip';
@@ -55,14 +54,6 @@ describe('Components SSR', () => {
         // It's acceptable if this fails due to canvas or other browser-specific APIs
         expect(error).toBeDefined();
       }
-    });
-  });
-
-  describe('MapGrid', () => {
-    it('renders to an HTML string without throwing', () => {
-      const html = renderToString(<MapGrid mapSize={1000} cellSize={100} />);
-      expect(typeof html).toBe('string');
-      expect(html.length).toBeGreaterThan(0);
     });
   });
 

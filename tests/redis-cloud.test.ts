@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { getRedisClient, closeRedisClient } from '../src/lib/redis/client';
+import { getRedisClient } from '../src/lib/redis/client';
 import type { RedisClientType } from 'redis';
 
 // Load .env.local for integration tests
@@ -136,7 +136,7 @@ describe('Redis Cloud Connection Test', () => {
                 console.warn('Error cleaning up test keys:', error);
             }
         }
-        closeRedisClient();
+        // Note: closeRedisClient was removed during code pruning
     });
 
     it('should connect to Redis Cloud successfully', async () => {

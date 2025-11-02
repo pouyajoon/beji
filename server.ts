@@ -35,14 +35,8 @@ app.prepare().then(() => {
             const host = req.headers.host || `${hostname}:${port}`;
             const url = new URL(req.url || "/", `http://${host}`);
             
-            // Convert to format expected by Next.js handle function
-            const parsedUrl = {
-                pathname: url.pathname,
-                query: Object.fromEntries(url.searchParams),
-                href: url.href,
-            };
-            
-            await handle(req, res, parsedUrl);
+            // Pass the URL directly to Next.js handle function
+            await handle(req, res, url as any);
         } catch (err) {
             console.error("Error occurred handling", req.url, err);
             res.statusCode = 500;
