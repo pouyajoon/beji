@@ -1,7 +1,4 @@
-"use client";
-
 import React from "react";
-import type { Route } from "next";
 import type { Beji, World } from "../atoms";
 import { useMessages } from "../../i18n/DictionaryProvider";
 
@@ -15,7 +12,7 @@ export function ExistingBejisList({ bejis, onCreateNew }: ExistingBejisListProps
 
     return (
         <>
-            <style jsx>{`
+            <style>{`
                 .existing-bejis-item {
                     --border-color: #e5e5e5;
                     --text-color: #000000;
@@ -85,7 +82,7 @@ export function ExistingBejisList({ bejis, onCreateNew }: ExistingBejisListProps
                         return (
                             <a
                                 key={beji.id}
-                                href={`/world/${beji.worldId}` as Route}
+                                href={`/world/${beji.worldId}`}
                                 className="existing-bejis-item"
                                 style={{
                                     padding: "12px 16px",

@@ -50,9 +50,17 @@ class BejiSyncClientImpl implements BejiSyncClient {
 
         return new Promise((resolve, reject) => {
             try {
-                // Determine WebSocket URL - for development, use ws://, for production use wss://
-                const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-                const wsUrl = `${protocol}//${window.location.host}/api/ws/beji-sync`;
+                // Use environment variable for WebSocket URL, fallback to same host
+                const wsBaseUrl = import.meta.env.VITE_WS_URL;
+                let wsUrl: string;
+                
+                if (wsBaseUrl) {
+                    wsUrl = `${wsBaseUrl}/api/ws/beji-sync`;
+                } else {
+                    // Fallback to same host (for local development or same-domain deployment)
+                    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                    wsUrl = `${protocol}//${window.location.host}/api/ws/beji-sync`;
+                }
 
                 console.log(`Establishing WebSocket connection to ${wsUrl} for beji ${this.bejiId}`);
                 this.ws = new WebSocket(wsUrl);

@@ -1,8 +1,6 @@
 [build]
-  command = "pnpm build"
-  # With the Next.js plugin, the publish directory is managed automatically.
-  # Setting it explicitly is fine and future-proof for static assets.
-  publish = ".next"
+  command = "pnpm build:client"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
@@ -11,7 +9,8 @@
   # may detect them in server-side build artifacts. Configure it to ignore them.
   SECRETS_SCAN_OMIT_KEYS = "REDIS_URL,REDIS_HOST,REDIS_PORT,REDIS_USERNAME,REDIS_PASSWORD,REDIS_TLS,JWT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-
+# SPA routing - redirect all routes to index.html for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

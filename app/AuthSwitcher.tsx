@@ -1,5 +1,3 @@
-"use client";
-
 import { useAtomValue } from '../lib/jotai';
 import LocaleSwitcher from '../components/LocaleSwitcher';
 import UserMenu from '../components/UserMenu';
