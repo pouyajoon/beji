@@ -181,6 +181,8 @@ await fastify.register(fastifyConnectPlugin, {
   },
   // Apply auth interceptor to all routes, but it only processes PlayerService
   interceptors: [authInterceptor],
+  // Connect RPC uses binary protocol buffers (application/connect+proto) by default
+  // This ensures efficient binary serialization of proto messages
 });
 
 // Authentication routes
