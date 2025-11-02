@@ -27,6 +27,24 @@ pnpm prune
 npx ts-prune
 ```
 
+**Configuration:**
+
+We use `.ts-prunerc.json` to configure ts-prune behavior:
+
+- **`skip`**: Regex pattern that tells ts-prune to ignore imports from matching files when determining if code is used
+  - Files matching this pattern are still scanned, but their imports don't count as "usage"
+  - This means code that is **only used in test files** will be flagged as unused
+  - Our pattern skips: `tests/**`, `*.test.ts`, and `*.test.tsx` files
+
+- **`project`**: Path to the TypeScript configuration file to use
+
+**How Test Files Are Handled:**
+
+By default, ts-prune would consider test file imports as valid usage. With our configuration:
+- Code that is **only imported/used in test files** will be marked as unused
+- This helps identify code that has no real production value
+- If you want to keep test-only utilities, you can add them to the ignore patterns or document why they're kept
+
 ## How to Prune
 
 ### 1. Run Prune Analysis
