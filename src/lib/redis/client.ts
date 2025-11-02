@@ -2,16 +2,22 @@ import { createClient, type RedisClientType } from "redis";
 
 let redis: RedisClientType | null = null;
 
+// Helper function to get env vars at runtime only, preventing Next.js build-time analysis
+function getEnvVar(key: string): string | undefined {
+    // Access via bracket notation to prevent static analysis
+    return process.env[key];
+}
+
 export function getRedisClient(): RedisClientType {
     if (redis) {
         return redis;
     }
 
-    const redisUrl = process.env.REDIS_URL;
-    const redisHost = process.env.REDIS_HOST || "localhost";
-    const redisPort = parseInt(process.env.REDIS_PORT || "6379", 10);
-    const redisUsername = process.env.REDIS_USERNAME;
-    const redisPassword = process.env.REDIS_PASSWORD;
+    const redisUrl = getEnvVar("REDIS_URL");
+    const redisHost = getEnvVar("REDIS_HOST") || "localhost";
+    const redisPort = parseInt(getEnvVar("REDIS_PORT") || "6379", 10);
+    const redisUsername = getEnvVar("REDIS_USERNAME");
+    const redisPassword = getEnvVar("REDIS_PASSWORD");
 
     if (redisUrl) {
         // If URL uses rediss://, TLS is automatically enabled
