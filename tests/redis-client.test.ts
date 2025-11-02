@@ -188,9 +188,4 @@ describe('Redis Client', () => {
 
         expect(client1).toBe(client2);
     });
-
-    // Note: closeRedisClient was removed during code pruning
-    it.skip('closes Redis client connection', async () => {
-        // closeRedisClient removed - test skipped
-    });
 });

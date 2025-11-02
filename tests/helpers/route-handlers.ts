@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import '@fastify/cookie';
 import type { JsonValue } from '@bufbuild/protobuf';
 import { create, fromJson, toJson } from '@bufbuild/protobuf';
 import { verifyJWT, signJWT, type JWTPayload } from '../../src/lib/auth/jwt';

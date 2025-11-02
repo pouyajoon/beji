@@ -480,10 +480,5 @@ describe('Redis Beji and World Integration Test', () => {
             console.warn('Error cleaning up complete test data:', error);
         }
     });
-
-    // Note: getAllBeji and getAllWorlds were removed during code pruning
-    it.skip('should verify Redis keys and sets are correctly maintained', async () => {
-        // getAllBeji and getAllWorlds removed - test skipped
-    });
 });
 
