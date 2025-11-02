@@ -24,10 +24,10 @@
     "prune": "ts-prune"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.10.0",
-    "@connectrpc/connect": "^2.1.0",
-    "@connectrpc/connect-fastify": "^2.1.0",
-    "@connectrpc/connect-web": "^2.1.0",
+    "@bufbuild/protobuf": "^1.10.1",
+    "@connectrpc/connect": "^1.7.0",
+    "@connectrpc/connect-fastify": "^1.7.0",
+    "@connectrpc/connect-web": "^1.7.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",
     "@fastify/middie": "^9.0.3",
@@ -46,7 +46,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@bufbuild/protoc-gen-es": "^2.10.0",
+    "@bufbuild/protoc-gen-es": "^1.10.1",
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
     "@connectrpc/protoc-gen-connect-es": "^1.7.0",
@@ -61,8 +61,9 @@
     "@vitest/coverage-v8": "^4.0.6",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
-    "eslint": "^9.39.0",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-unused-imports": "^4.3.0",
     "get-port": "^7.1.0",

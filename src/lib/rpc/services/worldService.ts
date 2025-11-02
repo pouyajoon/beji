@@ -1,5 +1,5 @@
 import type { ConnectRouter, ServiceImpl } from '@connectrpc/connect';
-import type { DescService, Message } from '@bufbuild/protobuf';
+import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
 import { WorldService } from '../../../proto/world/v1/world_connect';
 import {
@@ -85,7 +85,7 @@ function convertAppToProto(
 
 export function registerWorldService(router: ConnectRouter) {
   router.service(
-    WorldService as unknown as DescService,
+    WorldService,
     {
       async createWorld(req: CreateWorldRequest): Promise<CreateWorldResponse> {
         try {
@@ -206,7 +206,7 @@ export function registerWorldService(router: ConnectRouter) {
           throw error;
         }
       },
-    } as unknown as Partial<ServiceImpl<DescService>>
+    }
   );
 }
 

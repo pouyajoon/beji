@@ -1,5 +1,5 @@
 import type { ConnectRouter, ServiceImpl } from '@connectrpc/connect';
-import type { DescService, Message } from '@bufbuild/protobuf';
+import type { Message } from '@bufbuild/protobuf';
 
 // Helper function to create proto messages (compatible with v1 API)
 function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
@@ -14,7 +14,7 @@ function getEnvVar(key: string): string | undefined {
 
 export function registerConfigService(router: ConnectRouter) {
   router.service(
-    ConfigService as unknown as DescService,
+    ConfigService,
     {
       async getPublicConfig(_req): Promise<GetPublicConfigResponse> {
         try {
@@ -30,7 +30,7 @@ export function registerConfigService(router: ConnectRouter) {
           throw error;
         }
       },
-    } as unknown as Partial<ServiceImpl<DescService>>
+    }
   );
 }
 
