@@ -1,63 +1,38 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-const RPC_BASE_URL = `${API_BASE_URL}/api/rpc/world/v1`;
+import { createClient } from '@connectrpc/connect';
+import { WorldService } from '../../proto/world/v1/world_connect';
+import type {
+    CreateWorldRequest,
+    CreateWorldResponse,
+    GetWorldRequest,
+    GetWorldResponse,
+} from '../../proto/world/v1/world_pb';
+import { create } from '@bufbuild/protobuf';
+import {
+    CreateWorldRequestSchema,
+    GetWorldRequestSchema,
+} from '../../proto/world/v1/world_pb';
+import { transport } from './transport';
 
-async function callRPC<TRequest, TResponse>(
-    method: string,
-    request: TRequest
-): Promise<TResponse> {
-    const response = await fetch(RPC_BASE_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-            method,
-            params: request,
-        }),
-    });
-
-    if (!response.ok) {
-        let errorMessage = `RPC call failed: ${response.statusText}`;
-        try {
-            const error = await response.json();
-            errorMessage = error?.error || errorMessage;
-        } catch {
-            // Response body is not JSON or is empty, use default error message
-        }
-        throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    return data as TResponse;
-}
+const client = createClient(WorldService as any, transport);
 
 export async function createWorld(
     bejiName: string,
     emojiCodepoints: number[]
-): Promise<any> {
-    const request = {
+): Promise<CreateWorldResponse> {
+    const request = create(CreateWorldRequestSchema, {
         bejiName,
         emojiCodepoints,
-    };
+    });
 
-    const response = await callRPC<any, any>(
-        "CreateWorld",
-        request
-    );
-
-    return response;
+    const response = await (client as any).createWorld(request);
+    return response as CreateWorldResponse;
 }
 
-export async function getWorld(worldId: string): Promise<any> {
-    const request = {
+export async function getWorld(worldId: string): Promise<GetWorldResponse> {
+    const request = create(GetWorldRequestSchema, {
         worldId,
-    };
+    });
 
-    const response = await callRPC<any, any>(
-        "GetWorld",
-        request
-    );
-
-    return response;
+    const response = await (client as any).getWorld(request);
+    return response as GetWorldResponse;
 }
