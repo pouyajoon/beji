@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: beji
+    env: node
+    region: oregon
+    plan: starter
+    buildCommand: pnpm install && pnpm build:client
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Authentication - Set these in Render dashboard
+      # - key: GOOGLE_CLIENT_ID
+      #   sync: false
+      # - key: GOOGLE_CLIENT_SECRET
+      #   sync: false
+      # - key: JWT_SECRET
+      #   sync: false
+      # Redis - Set this in Render dashboard (use Redis service URL)
+      # - key: REDIS_URL
+      #   sync: false
+      # Optional: CORS origins
+      # - key: ALLOWED_ORIGINS
+      #   value: https://your-domain.com
+
+# Optional: Redis service (uncomment if using Render Redis)
+# databases:
+#   - name: beji-redis
+#     plan: starter
+#     maxmemoryPolicy: allkeys-lru
+
