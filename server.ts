@@ -45,7 +45,8 @@ import {
 // __filename and __dirname already defined above for dotenv config
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = process.env.HOSTNAME || 'localhost';
+// Render requires binding to 0.0.0.0, default Fastify behavior is 0.0.0.0 if host not specified
+const hostname = process.env.HOSTNAME || (dev ? 'localhost' : '0.0.0.0');
 const port = parseInt(process.env.PORT || '3000', 10);
 
 const fastify = Fastify({

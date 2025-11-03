@@ -62,18 +62,24 @@ Users must sign in with Google before accessing the game. JWT tokens are stored 
 
 ## Production Deployment
 
-### Option 1: Self-hosted (Fastify server)
+### Option 1: Render (Recommended)
+
+Render hosts your full-stack application (Fastify server serving both frontend and backend).
+
+See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed instructions.
+
+**Features:**
+- Single unified server (frontend + backend)
+- Full WebSocket support
+- Automatic deployments
+- Free SSL with custom domains
+
+### Option 2: Self-hosted (Fastify server)
 
 1. Build the frontend: `pnpm build:client`
 2. The built files are in `dist/`
 3. The Fastify server serves static files from `dist/` in production
 4. Start the server: `NODE_ENV=production pnpm start`
-
-### Option 2: Netlify (Serverless Functions)
-
-See [NETLIFY_DEPLOYMENT.md](./NETLIFY_DEPLOYMENT.md) for detailed instructions.
-
-**Note:** WebSockets are not supported on Netlify Functions. You'll need a separate WebSocket server for real-time features.
 
 ## Project Structure
 
