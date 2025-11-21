@@ -1,48 +1,41 @@
 // Load environment variables from .env.local (before other imports)
+
+import { Interceptor } from '@connectrpc/connect';
+import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
+import fastifyCookiePlugin from '@fastify/cookie';
+import fastifyCorsPlugin from '@fastify/cors';
+import fastifyMiddiePlugin from '@fastify/middie';
+import fastifyStaticPlugin from '@fastify/static';
+import fastifyWebsocketPlugin from '@fastify/websocket';
 import { config } from 'dotenv';
+import Fastify from 'fastify';
+import type { IncomingMessage, ServerResponse } from 'http';
 import path, { resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { WebSocket } from 'ws';
+
+import { verifyJWT, signJWT, type JWTPayload } from './src/lib/auth/jwt';
+import {
+  getPlayerIdForUser,
+  updateBejiPosition,
+  getBeji,
+  getWorld as getWorldFromRedis,
+  getBejiForPlayer as getBejiForPlayerRedis,
+} from './src/lib/redis/gameState';
+import {
+  registerPublicRoutes,
+  registerAuthenticatedRoutes,
+} from './src/lib/rpc/routes';
+import { AUTH_CONTEXT_KEY } from './src/lib/rpc/services/playerService';
+// Proto imports removed - now handled by service implementations
+
+// __filename and __dirname already defined above for dotenv config
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load .env.local file
 config({ path: resolve(__dirname, '.env.local') });
-
-import Fastify from 'fastify';
-import fastifyCookie from '@fastify/cookie';
-import fastifyStatic from '@fastify/static';
-import fastifyWebsocket from '@fastify/websocket';
-import fastifyCors from '@fastify/cors';
-import fastifyMiddie from '@fastify/middie';
-import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
-import { createConnectRouter } from '@connectrpc/connect';
-import { Interceptor } from '@connectrpc/connect';
-import { WebSocket } from 'ws';
-import { protoInt64 } from '@bufbuild/protobuf';
-import { verifyJWT, signJWT, type JWTPayload } from './src/lib/auth/jwt';
-import {
-  registerPublicRoutes,
-  registerAuthenticatedRoutes,
-} from './src/lib/rpc/routes';
-import { AUTH_CONTEXT_KEY } from './src/lib/rpc/services/playerService';
-import {
-  getPlayerIdForUser,
-  updateBejiPosition,
-  getBeji,
-  getBejiForPlayer,
-  getWorld as getWorldFromRedis,
-  getBejiForPlayer as getBejiForPlayerRedis,
-  getPlayer,
-  getStaticBejiForWorld,
-  savePlayer,
-  saveBeji,
-  saveStaticBeji,
-  saveWorld,
-} from './src/lib/redis/gameState';
-// Proto imports removed - now handled by service implementations
-
-// __filename and __dirname already defined above for dotenv config
 
 const dev = process.env.NODE_ENV !== 'production';
 // Render requires binding to 0.0.0.0, default Fastify behavior is 0.0.0.0 if host not specified
@@ -100,7 +93,7 @@ async function authenticateRequest(request: { headers: { cookie?: string } }): P
 
     const payload = await verifyJWT(token);
     return payload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -108,7 +101,7 @@ async function authenticateRequest(request: { headers: { cookie?: string } }): P
 // Conversion functions removed - now handled by service implementations
 
 // Register CORS plugin
-await fastify.register(fastifyCors, {
+await fastify.register(fastifyCorsPlugin, {
   origin: (origin, cb) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return cb(null, true);
@@ -131,13 +124,13 @@ await fastify.register(fastifyCors, {
 });
 
 // Register WebSocket plugin
-await fastify.register(fastifyWebsocket);
+await fastify.register(fastifyWebsocketPlugin);
 
 // Register middie plugin for Vite middleware integration
-await fastify.register(fastifyMiddie);
+await fastify.register(fastifyMiddiePlugin);
 
 // Register cookie plugin
-await fastify.register(fastifyCookie);
+await fastify.register(fastifyCookiePlugin);
 
 // Authentication interceptor for Connect RPC
 // Only applies to authenticated routes (PlayerService)
@@ -393,7 +386,7 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
         return;
       }
 
-      console.log(`WebSocket connected: ${connectionId} (user: ${userId}, player: ${playerId})`);
+      fastify.log.info(`WebSocket connected: ${connectionId} (user: ${userId}, player: ${playerId})`);
 
       socket.on('message', async (data: Buffer) => {
         try {
@@ -417,7 +410,7 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
             }
 
             bejiId = message.bejiId;
-            console.log(`Beji ${bejiId} connected via WebSocket ${connectionId}`);
+            fastify.log.info(`Beji ${bejiId} connected via WebSocket ${connectionId}`);
 
             socket.send(
               JSON.stringify({
@@ -477,7 +470,7 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
 
       socket.on('close', () => {
         clearInterval(pingInterval);
-        console.log(`WebSocket disconnected: ${connectionId}`);
+        fastify.log.info(`WebSocket disconnected: ${connectionId}`);
       });
 
       socket.on('error', (error: Error) => {
@@ -507,7 +500,11 @@ if (dev) {
   // This middleware only runs for unmatched routes, but we still need to exclude auth/API
   // from being passed to Vite (in case Fastify returns 404, we don't want Vite to serve SPA)
   const originalMiddleware = vite.middlewares;
-  const wrappedMiddleware = (req: any, res: any, next: any) => {
+  const wrappedMiddleware = (
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: (err?: unknown) => void,
+  ): void => {
     const url = req.url?.split('?')[0]; // Remove query string for route matching
     // Don't pass API/auth routes to Vite - Fastify handles these (or returns 404)
     if (url?.startsWith('/api/') || url?.startsWith('/authentication/')) {
@@ -522,7 +519,7 @@ if (dev) {
 
   await fastify.use(wrappedMiddleware);
 } else {
-  await fastify.register(fastifyStatic, {
+  await fastify.register(fastifyStaticPlugin, {
     root: path.join(__dirname, 'dist'),
     prefix: '/',
   });
@@ -541,8 +538,8 @@ if (!dev) {
 // Start server
 try {
   await fastify.listen({ port, host: hostname });
-  console.log(`> Fastify server ready on http://${hostname}:${port}`);
-  console.log(`> WebSocket server ready on ws://${hostname}:${port}/api/ws/beji-sync`);
+  fastify.log.info(`> Fastify server ready on http://${hostname}:${port}`);
+  fastify.log.info(`> WebSocket server ready on ws://${hostname}:${port}/api/ws/beji-sync`);
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);

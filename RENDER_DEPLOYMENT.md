@@ -39,7 +39,7 @@ Set these in Render dashboard under "Environment":
 
 ```
 NODE_ENV=production
-PORT=3000
+# PORT is automatically set by Render - do not define it manually
 
 # Authentication
 GOOGLE_CLIENT_ID=your_google_client_id
@@ -97,7 +97,7 @@ Use any Redis provider (Upstash, Redis Cloud, etc.) and set `REDIS_URL` environm
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NODE_ENV` | Yes | Set to `production` |
-| `PORT` | Auto | Automatically set by Render |
+| `PORT` | Auto | **Automatically set by Render** - Do NOT define manually |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth Client Secret |
 | `JWT_SECRET` | Yes | Secret key for JWT signing |
