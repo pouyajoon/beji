@@ -8,40 +8,27 @@ This project uses Redis for persistent game state storage in the MMORPG.
 
 ## Configuration
 
-Redis connection is configured via environment variables. Create a `.env.local` file (or set environment variables in your deployment):
+Redis connection is configured via the `REDIS_URL` environment variable. Create a `.env.local` file (or set environment variables in your deployment):
 
-### Option 1: Redis URL (Recommended)
 ```bash
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://red-d4g9n4hr0fns739f93vg:6379
 ```
 
-### Option 2: Individual Parameters
+### Optional: Authentication
+
+If credentials are not included in the URL, you can set `REDISCLI_AUTH`:
+
 ```bash
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_USERNAME=default  # Optional, required for Redis Cloud and some providers
-REDIS_PASSWORD=         # Optional, required for Redis Cloud and password-protected instances
+REDISCLI_AUTH=password
+# or
+REDISCLI_AUTH=username:password
 ```
 
-**Note:** All Redis connections use TLS by default. The client automatically enables TLS for all connections.
+**Note:** Render.com internal Redis uses `redis://` without TLS. The URL format is `redis://red-xxxxx:6379`.
 
-### Example: Redis Cloud Configuration
-```bash
-REDIS_HOST=redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com
-REDIS_PORT=12901
-REDIS_USERNAME=default
-REDIS_PASSWORD=your-password-here
-```
+## Redis Provider
 
-**Note:** TLS is automatically enabled for all connections. When using `REDIS_URL`, `redis://` URLs are automatically converted to `rediss://` (TLS).
-
-## Redis Providers
-
-For production, consider these managed Redis services:
-
-- **Upstash**: https://upstash.com (serverless Redis, free tier available)
-- **Railway**: https://railway.app (managed Redis)
-- **Redis Cloud**: https://redis.com/cloud (Redis Enterprise)
+This project uses **Render.com internal Redis** service. The Redis URL format is `redis://red-xxxxx:6379` and is provided by Render when you create a Redis service.
 
 ## Local Development
 

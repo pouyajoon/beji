@@ -175,12 +175,9 @@ describe('Redis Integration Test', () => {
         await redis.del(listKey);
     });
 
-    it('should verify Redis connection uses environment variables', () => {
-        // Check that environment variables are loaded (at least one should be set for real connection)
-        const hasRedisConfig =
-            process.env.REDIS_URL ||
-            process.env.REDIS_HOST ||
-            process.env.REDIS_PASSWORD;
+    it('should verify Redis connection uses REDIS_URL environment variable', () => {
+        // Check that REDIS_URL is set for real connection
+        const hasRedisConfig = !!process.env.REDIS_URL;
 
         // This test verifies that we're using actual Redis config, not mocks
         expect(redis).toBeDefined();

@@ -35,17 +35,17 @@ describe('Redis Client', () => {
         vi.restoreAllMocks();
     });
 
-    it('creates Redis client with URL when REDIS_URL is set (converts to TLS)', async () => {
+    it('creates Redis client with Render Redis URL (no TLS)', async () => {
         const originalEnv = process.env.REDIS_URL;
-        process.env.REDIS_URL = 'redis://localhost:6379';
+        process.env.REDIS_URL = 'redis://red-d4g9n4hr0fns739f93vg:6379';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
-        // Client converts redis:// to rediss:// for TLS
+        // Render Redis URLs are kept as redis:// (no TLS conversion)
         expect(mockCreateClient).toHaveBeenCalledWith({
-            url: 'rediss://localhost:6379',
+            url: 'redis://red-d4g9n4hr0fns739f93vg:6379',
         });
 
         process.env.REDIS_URL = originalEnv;
@@ -67,117 +67,59 @@ describe('Redis Client', () => {
         process.env.REDIS_URL = originalEnv;
     });
 
-    it('creates Redis client with individual parameters when URL is not set', async () => {
-        const originalUrl = process.env.REDIS_URL;
-        const originalHost = process.env.REDIS_HOST;
-        const originalPort = process.env.REDIS_PORT;
-        const originalUsername = process.env.REDIS_USERNAME;
-        const originalPassword = process.env.REDIS_PASSWORD;
-        const originalTls = process.env.REDIS_TLS;
-
+    it('throws error when REDIS_URL is not set', async () => {
+        const originalEnv = process.env.REDIS_URL;
         delete process.env.REDIS_URL;
-        process.env.REDIS_HOST = 'custom-host';
-        process.env.REDIS_PORT = '6380';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
-        getRedisClient();
+        expect(() => getRedisClient()).toThrow('REDIS_URL environment variable is required');
 
-        expect(mockCreateClient).toHaveBeenCalledWith({
-            socket: {
-                host: 'custom-host',
-                port: 6380,
-                tls: {
-                    rejectUnauthorized: false,
-                },
-            },
-            username: undefined,
-            password: undefined,
-        });
-
-        process.env.REDIS_URL = originalUrl;
-        process.env.REDIS_HOST = originalHost;
-        process.env.REDIS_PORT = originalPort;
-        process.env.REDIS_USERNAME = originalUsername;
-        process.env.REDIS_PASSWORD = originalPassword;
-        process.env.REDIS_TLS = originalTls;
+        process.env.REDIS_URL = originalEnv;
     });
 
-    it('creates Redis client with username, password, and TLS for secure connections', async () => {
+    it('adds credentials from REDISCLI_AUTH to URL when not in URL', async () => {
         const originalUrl = process.env.REDIS_URL;
-        const originalHost = process.env.REDIS_HOST;
-        const originalPort = process.env.REDIS_PORT;
-        const originalUsername = process.env.REDIS_USERNAME;
-        const originalPassword = process.env.REDIS_PASSWORD;
-        const originalTls = process.env.REDIS_TLS;
-
-        delete process.env.REDIS_URL;
-        process.env.REDIS_HOST = 'redis-cloud.example.com';
-        process.env.REDIS_PORT = '12901';
-        process.env.REDIS_USERNAME = 'default';
-        process.env.REDIS_PASSWORD = 'secure-password';
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDIS_URL = 'redis://red-xxxxx:6379';
+        process.env.REDISCLI_AUTH = 'mypassword';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
         expect(mockCreateClient).toHaveBeenCalledWith({
-            socket: {
-                host: 'redis-cloud.example.com',
-                port: 12901,
-                tls: {
-                    rejectUnauthorized: false,
-                },
-            },
-            username: 'default',
-            password: 'secure-password',
+            url: 'redis://:mypassword@red-xxxxx:6379',
         });
 
         process.env.REDIS_URL = originalUrl;
-        process.env.REDIS_HOST = originalHost;
-        process.env.REDIS_PORT = originalPort;
-        process.env.REDIS_USERNAME = originalUsername;
-        process.env.REDIS_PASSWORD = originalPassword;
-        process.env.REDIS_TLS = originalTls;
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
     });
 
-    it('uses default localhost:6379 when no env vars are set', async () => {
+    it('adds username:password from REDISCLI_AUTH to URL', async () => {
         const originalUrl = process.env.REDIS_URL;
-        const originalHost = process.env.REDIS_HOST;
-        const originalPort = process.env.REDIS_PORT;
-        const originalUsername = process.env.REDIS_USERNAME;
-        const originalPassword = process.env.REDIS_PASSWORD;
-        const originalTls = process.env.REDIS_TLS;
-
-        delete process.env.REDIS_URL;
-        delete process.env.REDIS_HOST;
-        delete process.env.REDIS_PORT;
-        delete process.env.REDIS_USERNAME;
-        delete process.env.REDIS_PASSWORD;
-        delete process.env.REDIS_TLS;
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDIS_URL = 'redis://red-xxxxx:6379';
+        process.env.REDISCLI_AUTH = 'username:mypassword';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
         expect(mockCreateClient).toHaveBeenCalledWith({
-            socket: {
-                host: 'localhost',
-                port: 6379,
-                tls: {
-                    rejectUnauthorized: false,
-                },
-            },
-            username: undefined,
-            password: undefined,
+            url: 'redis://username:mypassword@red-xxxxx:6379',
         });
 
         process.env.REDIS_URL = originalUrl;
-        process.env.REDIS_HOST = originalHost;
-        process.env.REDIS_PORT = originalPort;
-        process.env.REDIS_USERNAME = originalUsername;
-        process.env.REDIS_PASSWORD = originalPassword;
-        process.env.REDIS_TLS = originalTls;
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
     });
 
     it('returns same Redis client instance on subsequent calls', async () => {

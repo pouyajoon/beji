@@ -10,49 +10,26 @@ config({ path: resolve(process.cwd(), '.env.local') });
 /**
  * Redis Cloud Connection Test
  * 
- * This test verifies connection to Redis Cloud at:
- * redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com:12901
+ * This test verifies connection to Redis using REDIS_URL.
  * 
- * Required environment variables (set in .env.local):
- * - REDIS_HOST=redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com
- * - REDIS_PORT=12901
- * - REDIS_USERNAME=default (or your username)
- * - REDIS_PASSWORD=your-password
- * - REDIS_TLS=true
+ * Required environment variable (set in .env.local):
+ * - REDIS_URL=redis://host:port or rediss://host:port
  * 
- * Or use REDIS_URL with the full connection string including credentials
+ * Note: This test will be skipped if REDIS_URL is not set.
  */
 describe('Redis Cloud Connection Test', () => {
     let redis: RedisClientType;
     let isConnected = false;
     const testPrefix = 'test:cloud:';
-    const expectedHost = 'redis-12901.c328.europe-west3-1.gce.redns.redis-cloud.com';
-    const expectedPort = 12901;
 
     beforeAll(async () => {
-        redis = getRedisClient();
-
-        // Verify configuration
-        const redisHost = process.env.REDIS_HOST;
-        const redisPort = process.env.REDIS_PORT
-            ? parseInt(process.env.REDIS_PORT, 10)
-            : undefined;
-        const redisUsername = process.env.REDIS_USERNAME;
-        const redisPassword = process.env.REDIS_PASSWORD;
-
-        // Check if we're using the expected Redis Cloud instance
-        if (redisHost && redisPort) {
-            if (
-                redisHost !== expectedHost ||
-                redisPort !== expectedPort
-            ) {
-                console.warn(
-                    `Expected Redis Cloud at ${expectedHost}:${expectedPort}, ` +
-                    `but configured for ${redisHost}:${redisPort}. ` +
-                    'Test will proceed with configured values.'
-                );
-            }
+        // Skip if REDIS_URL is not set
+        if (!process.env.REDIS_URL) {
+            console.warn('REDIS_URL not set, skipping Redis connection test');
+            return;
         }
+
+        redis = getRedisClient();
 
         // Try to connect and verify Redis is accessible (always uses TLS)
         try {
@@ -82,24 +59,18 @@ describe('Redis Cloud Connection Test', () => {
                     isConnected = true;
                     console.log('✅ Redis Cloud connection verified (socket already open)');
                 } catch (pingError) {
-                    console.error('❌ Redis Cloud TLS connection failed:', errorMsg);
+                    console.error('❌ Redis connection failed:', errorMsg);
                     console.error('Connection details:', {
-                        host: redisHost,
-                        port: redisPort,
-                        hasUsername: !!redisUsername,
-                        hasPassword: !!redisPassword,
+                        redisUrl: process.env.REDIS_URL ? 'set' : 'not set',
                         isReady: redis.isReady,
                         isOpen: redis.isOpen,
                     });
                     isConnected = false;
                 }
             } else {
-                console.error('❌ Redis Cloud TLS connection failed:', errorMsg);
+                console.error('❌ Redis connection failed:', errorMsg);
                 console.error('Connection details:', {
-                    host: redisHost,
-                    port: redisPort,
-                    hasUsername: !!redisUsername,
-                    hasPassword: !!redisPassword,
+                    redisUrl: process.env.REDIS_URL ? 'set' : 'not set',
                     isReady: redis.isReady,
                     isOpen: redis.isOpen,
                 });
@@ -151,25 +122,14 @@ describe('Redis Cloud Connection Test', () => {
         expect(redis.isReady).toBe(true);
     });
 
-    it('should verify connection to the correct Redis Cloud instance', () => {
-        const redisHost = process.env.REDIS_HOST;
-        const redisPort = process.env.REDIS_PORT
-            ? parseInt(process.env.REDIS_PORT, 10)
-            : undefined;
-
-        if (redisHost && redisPort) {
-            // If host/port are configured, verify they match expected values
-            if (
-                redisHost === expectedHost &&
-                redisPort === expectedPort
-            ) {
-                expect(redisHost).toBe(expectedHost);
-                expect(redisPort).toBe(expectedPort);
-            }
+    it('should verify connection uses REDIS_URL', () => {
+        if (!isConnected) {
+            throw new Error('Redis not connected - cannot run test');
         }
 
-        // Verify TLS is always enabled (handled by client)
-        // All Redis connections use TLS by default
+        // Verify REDIS_URL is set
+        expect(process.env.REDIS_URL).toBeDefined();
+        expect(process.env.REDIS_URL).toBeTruthy();
     });
 
     it('should perform basic SET and GET operations', async () => {
