@@ -85,12 +85,18 @@ Update your Google OAuth redirect URIs to include:
 
 1. In Render dashboard, click "New +" → "Redis"
 2. Create a Redis instance
-3. Get the `Redis URL` from the Redis service dashboard
+3. Get the `Redis URL` from the Redis service dashboard (format: `redis://red-xxxxx:6379`)
 4. Add `REDIS_URL` environment variable to your web service
+5. **Note**: Render Redis internal service uses `redis://` without TLS. The code automatically detects Render Redis (URLs containing `red-`) and connects without TLS.
+
+**Important**: 
+- The Redis URL from Render should already include authentication credentials if required
+- If credentials are not in the URL, you can set `REDISCLI_AUTH` with the password (or `username:password` format)
+- The application client will automatically use `REDISCLI_AUTH` if the URL doesn't contain credentials
 
 ### Option 2: External Redis
 
-Use any Redis provider (Upstash, Redis Cloud, etc.) and set `REDIS_URL` environment variable.
+Use any Redis provider (Upstash, Redis Cloud, etc.) and set `REDIS_URL` environment variable. External providers typically use `rediss://` (with TLS) and TLS is automatically enabled for non-Render Redis URLs.
 
 ## Environment Variables Reference
 
@@ -101,7 +107,8 @@ Use any Redis provider (Upstash, Redis Cloud, etc.) and set `REDIS_URL` environm
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth Client Secret |
 | `JWT_SECRET` | Yes | Secret key for JWT signing |
-| `REDIS_URL` | Yes | Redis connection URL |
+| `REDIS_URL` | Yes | Redis connection URL (from Render Redis service) |
+| `REDISCLI_AUTH` | No | Optional: Redis password or `username:password` (used if credentials not in URL) |
 | `ALLOWED_ORIGINS` | No | Comma-separated list of allowed CORS origins |
 
 ## Server Architecture

@@ -14,37 +14,39 @@ export function getRedisClient(): RedisClientType {
     }
 
     const redisUrl = getEnvVar("REDIS_URL");
-    const redisHost = getEnvVar("REDIS_HOST") || "localhost";
-    const redisPort = parseInt(getEnvVar("REDIS_PORT") || "6379", 10);
-    const redisUsername = getEnvVar("REDIS_USERNAME");
-    const redisPassword = getEnvVar("REDIS_PASSWORD");
+    const redisCliAuth = getEnvVar("REDISCLI_AUTH"); // Optional: used by Render.com CLI, can contain password or username:password
 
-    if (redisUrl) {
-        // If URL uses rediss://, TLS is automatically enabled
-        // If URL uses redis://, we need to force TLS
-        const url = redisUrl.startsWith('rediss://')
-            ? redisUrl
-            : redisUrl.replace('redis://', 'rediss://');
-        redis = createClient({
-            url: url,
-        });
-    } else {
-        // TLS configuration for Redis Cloud
-        // Note: redis socket.tls is typed as boolean | undefined, but accepts TLS options object at runtime
-        // This is a known limitation of the redis package types
-        redis = createClient({
-            socket: {
-                host: redisHost,
-                port: redisPort,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                tls: {
-                    rejectUnauthorized: false, // For Redis Cloud TLS
-                } as any as boolean,
-            } as any,
-            username: redisUsername,
-            password: redisPassword,
-        });
+    if (!redisUrl) {
+        throw new Error("REDIS_URL environment variable is required");
     }
+
+    // Render.com internal Redis uses redis:// without TLS
+    // Keep the URL as-is (no TLS conversion needed for Render internal Redis)
+    let url = redisUrl;
+
+    // If URL doesn't contain credentials and REDISCLI_AUTH is provided, add credentials to URL
+    // REDISCLI_AUTH can be just password or username:password
+    if (redisCliAuth && !url.includes('@') && !url.includes('://:')) {
+        // Check if REDISCLI_AUTH contains username:password or just password
+        const authParts = redisCliAuth.includes(':') ? redisCliAuth.split(':') : [null, redisCliAuth];
+        const [authUsername, authPassword] = authParts;
+        
+        // Insert credentials into URL: redis://host:port -> redis://username:password@host:port
+        const urlMatch = url.match(/^(redis[s]?:\/\/)([^\/]+)$/);
+        if (urlMatch) {
+            const protocol = urlMatch[1];
+            const hostPort = urlMatch[2];
+            if (authUsername) {
+                url = `${protocol}${authUsername}:${authPassword}@${hostPort}`;
+            } else {
+                url = `${protocol}:${authPassword}@${hostPort}`;
+            }
+        }
+    }
+
+    redis = createClient({
+        url: url,
+    });
 
     redis.on("error", (err) => {
         console.error("Redis Client Error:", err);
