@@ -2,6 +2,7 @@ import type { ConnectRouter, HandlerContext, ServiceImpl } from '@connectrpc/con
 import { AUTH_CONTEXT_KEY } from './playerService';
 import type { JWTPayload } from '../../auth/jwt';
 import { ConnectError, Code } from '@connectrpc/connect';
+import { verifyJWT } from '../../auth/jwt';
 import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
 import { WorldService } from '../../../proto/world/v1/world_connect';
@@ -99,10 +100,38 @@ export function registerWorldService(router: ConnectRouter) {
           }
 
           // Get userId from auth context
-          const authPayload = context.values.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
+          let authPayload = context.values.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
+          
+          // Fallback: try to get auth from Authorization header if context is not set
+          if (!authPayload) {
+            const authHeader = context.requestHeader.get('authorization');
+            if (authHeader) {
+              const match = authHeader.match(/^Bearer\s+(.+)$/i);
+              const token = match ? match[1] : null;
+              
+              if (token) {
+                try {
+                  authPayload = await verifyJWT(token);
+                  // Store in context for future use
+                  context.values.set(AUTH_CONTEXT_KEY, authPayload);
+                } catch (error) {
+                  console.error('[WorldService.createWorld] JWT verification failed:', error);
+                }
+              }
+            }
+          }
+          
+          console.log('[WorldService.createWorld] Auth check:', {
+            hasAuthPayload: !!authPayload,
+            userId: authPayload?.userId,
+          });
+          
           if (!authPayload || !authPayload.userId) {
-            console.error('[WorldService.createWorld] Unauthorized: No auth payload or userId in context');
-            throw new ConnectError('Unauthorized', Code.Unauthenticated);
+            console.error('[WorldService.createWorld] Unauthorized: No auth payload or userId in context', {
+              hasAuthPayload: !!authPayload,
+              userId: authPayload?.userId,
+            });
+            throw new ConnectError('Unauthorized: Authentication required', Code.Unauthenticated);
           }
           const userId = authPayload.userId;
 

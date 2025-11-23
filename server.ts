@@ -40,7 +40,7 @@ config({ path: resolve(__dirname, '.env.local') });
 
 const dev = process.env.NODE_ENV !== 'production';
 // Render requires binding to 0.0.0.0, default Fastify behavior is 0.0.0.0 if host not specified
-const hostname = process.env.HOSTNAME || (dev ? 'localhost' : '0.0.0.0');
+const hostname = (dev ? 'localhost' : '0.0.0.0');
 const port = parseInt(process.env.PORT || '3000', 10);
 
 const fastify = Fastify({
@@ -82,11 +82,23 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
   return cookies;
 }
 
-// Auth helper
-async function authenticateRequest(request: { headers: { cookie?: string } }): Promise<JWTPayload | null> {
+// Auth helper - supports both Authorization header (Bearer token) and cookie (for backward compatibility)
+async function authenticateRequest(request: { headers: { authorization?: string; cookie?: string } }): Promise<JWTPayload | null> {
   try {
-    const cookies = parseCookies(request.headers.cookie);
-    const token = cookies.auth_token;
+    let token: string | null = null;
+
+    // Try Authorization header first (Bearer token)
+    const authHeader = request.headers.authorization;
+    if (authHeader) {
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      token = match && match[1] ? match[1] : null;
+    }
+
+    // Fallback to cookie for backward compatibility
+    if (!token) {
+      const cookies = parseCookies(request.headers.cookie);
+      token = cookies.auth_token || null;
+    }
 
     if (!token) {
       return null;
@@ -138,17 +150,18 @@ await fastify.register(fastifyCookiePlugin);
 // Access cookies from request headers (cookies are sent in Cookie header)
 const authInterceptor: Interceptor = (next) => async (req) => {
   // Require auth for PlayerService and WorldService
-  const isAuthenticatedService = 
-    req.service.typeName.includes('PlayerService') || 
+  const isAuthenticatedService =
+    req.service.typeName.includes('PlayerService') ||
     req.service.typeName.includes('WorldService');
 
   if (isAuthenticatedService) {
-    // Get cookie header from Connect request
-    const cookieHeader = req.header.get('cookie');
+    // Get Authorization header (Bearer token)
+    const authHeader = req.header.get('authorization');
 
-    if (cookieHeader) {
-      const cookies = parseCookies(cookieHeader);
-      const token = cookies.auth_token;
+    if (authHeader) {
+      // Extract Bearer token: "Bearer <token>"
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      const token = match ? match[1] : null;
 
       if (token) {
         try {
@@ -156,10 +169,16 @@ const authInterceptor: Interceptor = (next) => async (req) => {
           // Store auth payload in context for use by services
           // The context is available on the request as contextValues
           req.contextValues.set(AUTH_CONTEXT_KEY, payload);
-        } catch {
+          fastify.log.info(`[AuthInterceptor] Auth payload set for ${req.service.typeName}, userId: ${payload.userId}`);
+        } catch (error) {
           // Auth failed, but don't throw here - let services decide
+          fastify.log.warn(`[AuthInterceptor] JWT verification failed for ${req.service.typeName}: ${error instanceof Error ? error.message : String(error)}`);
         }
+      } else {
+        fastify.log.warn(`[AuthInterceptor] Invalid Authorization header format for ${req.service.typeName} (expected: Bearer <token>)`);
       }
+    } else {
+      fastify.log.warn(`[AuthInterceptor] No Authorization header found for ${req.service.typeName}`);
     }
   }
 
@@ -190,7 +209,23 @@ fastify.get('/api/authentication/get-token', async (request, reply) => {
     return reply.status(401).send({ error: 'Unauthorized' });
   }
 
-  return { userId: payload.userId, email: payload.email };
+  // Return token so client can store it and use it in Authorization header
+  let token: string | null = null;
+  const authHeader = request.headers.authorization;
+  if (authHeader) {
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    token = match ? match[1] : null;
+  }
+  if (!token) {
+    const cookies = parseCookies(request.headers.cookie);
+    token = cookies.auth_token;
+  }
+
+  return {
+    userId: payload.userId,
+    email: payload.email,
+    token: token || undefined, // Include token if available
+  };
 });
 
 fastify.post('/authentication/logout', async (request, reply) => {
@@ -292,6 +327,7 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       picture: userInfo.picture, // Include user's profile picture from Google
     });
 
+    // Store token in cookie for backward compatibility and for get-token endpoint
     reply.setCookie('auth_token', jwt, {
       httpOnly: true,
       secure: getEnvVar('NODE_ENV') === 'production',
@@ -300,8 +336,26 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       path: '/',
     });
 
-    fastify.log.info('[OAuth] Authentication successful, redirecting to root');
-    reply.redirect('/');
+    // Return HTML page that stores token in localStorage and redirects
+    // This allows the client to use the token in Authorization header
+    fastify.log.info('[OAuth] Authentication successful, returning token storage page');
+    reply.type('text/html').send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authenticating...</title>
+        </head>
+        <body>
+          <script>
+            // Store token in localStorage for use in Authorization header
+            localStorage.setItem('auth_token', ${JSON.stringify(jwt)});
+            // Redirect to home page
+            window.location.href = '/';
+          </script>
+          <p>Authenticating... Redirecting...</p>
+        </body>
+      </html>
+    `);
     return;
   } catch (error) {
     fastify.log.error({ msg: '[OAuth] Callback error', error: error instanceof Error ? error.message : String(error) });
@@ -368,8 +422,20 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
     const socket: WebSocket = connection.socket;
 
     try {
-      const cookies = parseCookies(req.headers.cookie || '');
-      const token = cookies.auth_token;
+      // Get token from Authorization header (Bearer token)
+      const authHeader = req.headers.authorization;
+      let token: string | null = null;
+
+      if (authHeader) {
+        const match = authHeader.match(/^Bearer\s+(.+)$/i);
+        token = match ? match[1] : null;
+      }
+
+      // Fallback to cookie for backward compatibility
+      if (!token) {
+        const cookies = parseCookies(req.headers.cookie || '');
+        token = cookies.auth_token;
+      }
 
       if (!token) {
         socket.close(1008, 'Unauthorized: No token');

@@ -22,10 +22,25 @@ export function BejisLoader({
         async function fetchUserAndBejis() {
             try {
                 // First, get user info
-                const userResponse = await fetch("/api/authentication/get-token");
+                const token = localStorage.getItem('auth_token');
+                const headers: HeadersInit = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const userResponse = await fetch("/api/authentication/get-token", {
+                    headers,
+                    credentials: 'include', // Include cookies for backward compatibility
+                });
                 if (userResponse.ok) {
                     const userData = await userResponse.json();
                     const currentUserId = userData.userId;
+                    
+                    // Store token if returned by server
+                    if (userData.token && !token) {
+                        localStorage.setItem('auth_token', userData.token);
+                    }
+                    
                     setUserId(currentUserId);
                     setUserSub(currentUserId);
 

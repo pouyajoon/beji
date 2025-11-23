@@ -1,4 +1,5 @@
 import type { IPosition } from "../../../components/atoms";
+import { getAuthToken } from "../auth/token";
 
 export interface BejiSyncClient {
     connect(bejiId: string): Promise<void>;
@@ -63,7 +64,14 @@ class BejiSyncClientImpl implements BejiSyncClient {
                 }
 
                 console.log(`Establishing WebSocket connection to ${wsUrl} for beji ${this.bejiId}`);
-                this.ws = new WebSocket(wsUrl);
+                
+                // Get auth token for Authorization header
+                const token = getAuthToken();
+                const wsUrlWithAuth = token ? `${wsUrl}?token=${encodeURIComponent(token)}` : wsUrl;
+                
+                // WebSocket doesn't support custom headers directly, so we'll use query param
+                // The server will check both query param and Authorization header
+                this.ws = new WebSocket(wsUrlWithAuth);
 
                 this.ws.onopen = () => {
                     this.isConnected = true;

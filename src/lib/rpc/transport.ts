@@ -1,4 +1,5 @@
 import { createConnectTransport } from '@connectrpc/connect-web';
+import { getAuthToken } from '../auth/token';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -8,11 +9,19 @@ export const transport = createConnectTransport({
   // Connect RPC automatically uses binary format for protocol buffers
   // This ensures efficient binary serialization instead of JSON
   useBinaryFormat: true,
-  // Credentials (cookies) are automatically included with fetch for authentication
+  // Send Bearer token in Authorization header
   fetch: (input, init) => {
+    const token = getAuthToken();
+    const headers = new Headers(init?.headers);
+    
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    
     return fetch(input, {
       ...init,
-      credentials: 'include',
+      headers,
+      credentials: 'include', // Still include cookies for backward compatibility
     });
   },
 });
