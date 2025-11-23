@@ -45,18 +45,17 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = (dev ? 'localhost' : '0.0.0.0');
 const port = parseInt(process.env.PORT || '3000', 10);
 
-// Generate or load SSL certificates for HTTPS in development
+// Generate or load SSL certificates for HTTPS (always use HTTPS)
 function getHttpsOptions(): ServerOptions | undefined {
-  if (!dev) {
-    return undefined; // No HTTPS in production (use reverse proxy)
-  }
-
   const certPath = resolve(__dirname, 'dev-cert.pem');
   const keyPath = resolve(__dirname, 'dev-key.pem');
 
   // Generate certificates if they don't exist
   if (!existsSync(certPath) || !existsSync(keyPath)) {
-    const attrs = [{ name: 'commonName', value: 'localhost' }];
+    // For self-signed certs, use localhost in dev, or a generic name in production
+    // The actual hostname doesn't matter much for self-signed certs
+    const commonName = dev ? 'localhost' : (process.env.HOSTNAME || 'server');
+    const attrs = [{ name: 'commonName', value: commonName }];
     const pems = generate(attrs, {
       days: 365,
       keySize: 2048,
@@ -276,9 +275,27 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       return;
     }
 
-    const protocol = dev ? 'https' : (request.headers['x-forwarded-proto'] || 'http');
-    const redirectUri = `${request.headers.origin || `${protocol}://${hostname}:${port}`}/authentication/oauth/google`;
-    fastify.log.info({ msg: '[OAuth] Exchanging code for token', redirectUri });
+    // Always use HTTPS - server always runs with HTTPS (self-signed in production)
+    // Construct redirect URI - must match exactly what's registered in Google Console
+    // Prefer origin header (set by browser) as it matches what client sent to Google
+    let redirectUri: string;
+    if (request.headers.origin) {
+      // Use origin header directly - this matches what the client sent
+      // Ensure it's HTTPS (replace http:// with https:// if needed)
+      redirectUri = request.headers.origin.replace(/^http:\/\//, 'https://') + '/authentication/oauth/google';
+    } else {
+      // Fallback: construct from host header, always use HTTPS
+      // request.headers.host includes hostname and port (if non-standard)
+      const host = request.headers.host || `${hostname}:${port}`;
+      redirectUri = `https://${host}/authentication/oauth/google`;
+    }
+
+    fastify.log.info({
+      msg: '[OAuth] Exchanging code for token',
+      redirectUri,
+      host: request.headers.host,
+      origin: request.headers.origin
+    });
 
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
