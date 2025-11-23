@@ -1,0 +1,198 @@
+---
+title: Authentication
+---
+
+# Authentication
+
+The app uses Google OAuth 2.0 with JWT tokens stored in httpOnly secure cookies for authentication.
+
+## Overview
+
+- **Authentication Method**: Google OAuth 2.0 (OpenID Connect)
+- **Token Storage**: JWT tokens in httpOnly, secure, sameSite strict cookies
+- **Token Lifetime**: 30 days
+- **Security**: Tokens are not accessible to JavaScript (XSS protection)
+
+## Authentication Flow
+
+### 1. User Initiates Login
+
+When a user visits the login page (`LoginPage.tsx`), they can click "Sign in with Google":
+
+1. Client fetches Google Client ID from the public config RPC endpoint (`ConfigService.getPublicConfig`)
+2. Client redirects to Google OAuth consent screen:
+   ```
+   https://accounts.google.com/o/oauth2/v2/auth?
+     client_id={GOOGLE_CLIENT_ID}&
+     redirect_uri={REDIRECT_URI}&
+     response_type=code&
+     scope=openid email profile&
+     access_type=offline&
+     prompt=consent
+   ```
+
+### 2. OAuth Callback (`/authentication/oauth/google`)
+
+After the user grants permission, Google redirects back to:
+- `GET /authentication/oauth/google?code={authorization_code}`
+
+The server:
+1. **Exchanges authorization code for access token**:
+   - POST to `https://oauth2.googleapis.com/token`
+   - Uses `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+   
+2. **Fetches user info**:
+   - GET `https://www.googleapis.com/oauth2/v2/userinfo`
+   - Uses the access token as Bearer token
+   - Gets user `id`, `email`, and `picture`
+
+3. **Creates JWT token**:
+   - Signs JWT with `userId`, `email`, and `picture` (optional)
+   - Uses `JWT_SECRET` from environment
+   - Sets expiration to 30 days
+
+4. **Sets httpOnly secure cookie**:
+   - Cookie name: `authorization`
+   - `httpOnly: true` - Not accessible to JavaScript (XSS protection)
+   - `secure: true` in production - Only sent over HTTPS
+   - `sameSite: 'strict'` - CSRF protection
+   - `maxAge: 30 days`
+   - `path: '/'`
+
+5. **Redirects to home page**:
+   - Returns HTML with JavaScript redirect to `/`
+   - Token is stored in cookie, not in URL or local storage
+
+### 3. Checking Authentication Status (`/api/authentication/get-token`)
+
+To check if a user is authenticated:
+
+```typescript
+const response = await fetch('/api/authentication/get-token', {
+  credentials: 'include', // Required to send cookies
+});
+```
+
+The server:
+1. Extracts `authorization` cookie from request
+2. Verifies JWT using `JWT_SECRET`
+3. Returns user info if valid: `{ userId, email, picture }`
+4. Returns `401 Unauthorized` if token is missing or invalid
+
+### 4. Authenticated RPC Requests
+
+For Connect RPC services (`PlayerService`, `WorldService`):
+
+1. **Auth Interceptor** (in `server.ts`):
+   - Intercepts all Connect RPC requests
+   - Checks if service requires authentication (PlayerService, WorldService)
+   - Extracts `authorization` cookie
+   - Verifies JWT and extracts payload
+   - Stores payload in request context under `AUTH_CONTEXT_KEY`
+   - Services can access user info via context
+
+2. **Service Implementation**:
+   ```typescript
+   const authPayload = req.contextValues.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
+   if (!authPayload) {
+     // Handle unauthenticated request
+   }
+   const userId = authPayload.userId;
+   ```
+
+### 5. WebSocket Authentication
+
+WebSocket connections authenticate using the `authorization` cookie:
+
+1. Client connects with cookies (automatically sent)
+2. Server extracts and verifies JWT from cookie
+3. If invalid, connection is closed with code `1008` (policy violation)
+4. If valid, connection proceeds with authenticated user context
+
+### 6. Logout (`POST /authentication/logout`)
+
+To log out:
+
+```typescript
+await fetch('/authentication/logout', {
+  method: 'POST',
+  credentials: 'include',
+});
+```
+
+The server clears the `authorization` cookie by setting:
+- `maxAge: 0` (immediately expires)
+- Other cookie attributes remain the same for proper deletion
+
+## Environment Variables
+
+Required environment variables (in `.env.local`):
+
+```bash
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+JWT_SECRET=your_jwt_secret_key  # Should be a strong random string
+```
+
+## Google OAuth Setup
+
+1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
+2. Enable Google+ API
+3. Create OAuth 2.0 credentials (OAuth client ID)
+4. Configure authorized redirect URIs:
+   - Development: `http://localhost:3000/authentication/oauth/google`
+   - Production: `https://your-domain.com/authentication/oauth/google`
+5. Copy Client ID and Client Secret to `.env.local`
+
+## Security Features
+
+### XSS Protection
+- Tokens stored in **httpOnly cookies** - not accessible via `document.cookie` or JavaScript
+- Even if XSS vulnerability exists, attacker cannot steal tokens
+
+### CSRF Protection
+- Cookies use `sameSite: 'strict'` - only sent with same-site requests
+- Cross-site requests cannot include authentication cookies
+
+### HTTPS in Production
+- Cookies use `secure: true` in production - only sent over HTTPS
+- Prevents token interception on unencrypted connections
+
+### Token Verification
+- JWT tokens are cryptographically signed with `JWT_SECRET`
+- Tokens cannot be tampered with without the secret
+- Expiration enforced (30 days)
+
+## Implementation Files
+
+- **JWT Functions**: `src/lib/auth/jwt.ts`
+  - `signJWT(payload)` - Create JWT token
+  - `verifyJWT(token)` - Verify and extract payload
+  
+- **Auth Helper**: `server.ts` (lines 86-100)
+  - `authenticateRequest(request)` - Extract and verify cookie token
+  
+- **OAuth Routes**: `server.ts` (lines 186-336)
+  - `GET /authentication/oauth/google` - OAuth callback
+  - `GET /api/authentication/get-token` - Check auth status
+  - `POST /authentication/logout` - Logout
+  
+- **Auth Interceptor**: `server.ts` (lines 136-168)
+  - Connect RPC interceptor for authenticated services
+  
+- **Login Page**: `src/pages/LoginPage.tsx`
+  - Client-side OAuth initiation
+  - Auth status checking
+
+## Testing
+
+Authentication is tested in:
+- `tests/auth-jwt.test.ts` - JWT signing and verification
+- `tests/auth-oauth.test.ts` - OAuth flow, callback, token exchange, error handling
+
+## Public Config Endpoint
+
+The Google Client ID is served via a public RPC endpoint (`ConfigService.getPublicConfig`), eliminating the need for `NEXT_PUBLIC_` environment variables. This allows:
+- Client-side code to get the client ID without exposing it in the bundle
+- Server-side control over configuration
+- Easy updates without client rebuilds

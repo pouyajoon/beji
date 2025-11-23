@@ -369,20 +369,3 @@ export async function saveWorld(world: World): Promise<boolean> {
 }
 
 
-
-/**
- * @deprecated Use getPlayerIdsForUser instead - users can have multiple players
- * Get the first player ID for a given user ID (for backward compatibility)
- */
-export async function getPlayerIdForUser(userId: string): Promise<string | null> {
-    try {
-        const playerIds = await getPlayerIdsForUser(userId);
-        const firstPlayerId = playerIds.length > 0 ? playerIds[0] : undefined;
-        return firstPlayerId ?? null;
-    } catch (error) {
-        console.error(`Error getting player ID for user ${userId} from Redis:`, error);
-        return null;
-    }
-}
-
-

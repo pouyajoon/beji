@@ -11,7 +11,7 @@ import type { Beji as BejiType, Player as PlayerType, StaticBeji as StaticBejiTy
 import { codepointsToEmoji } from '../../components/emoji';
 import { verifyJWT, signJWT, type JWTPayload } from '../../src/lib/auth/jwt';
 import {
-  getPlayerIdForUser,
+  getPlayerIdsForUser,
   getBeji,
   getWorld as getWorldFromRedis,
   getBejiForPlayer as getBejiForPlayerRedis,
@@ -60,7 +60,7 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
 // Helper to authenticate requests
 async function authenticateRequest(request: { headers: { cookie?: string } }): Promise<JWTPayload | null> {
   const cookies = parseCookies(request.headers.cookie);
-  const token = cookies.auth_token;
+  const token = cookies.authorization;
 
   if (!token) {
     return null;
@@ -144,7 +144,7 @@ export async function handleGoogleOAuth(request: FastifyRequest, reply: FastifyR
       email: userInfo.email,
     });
 
-    reply.setCookie('auth_token', jwt, {
+    reply.setCookie('authorization', jwt, {
       httpOnly: true,
       secure: getEnvVar('NODE_ENV') === 'production',
       sameSite: 'strict',
@@ -322,14 +322,18 @@ export async function handlePlayerRpc(request: FastifyRequest, reply: FastifyRep
       return reply.status(403).send({ error: 'Forbidden' });
     }
 
-    const playerId = await getPlayerIdForUser(req.userId);
+    const playerIds = await getPlayerIdsForUser(req.userId);
 
-    if (!playerId) {
+    if (playerIds.length === 0) {
       const response = create(GetUserBejisResponse, { bejis: [] });
       return response.toJson();
     }
 
-    const bejis = await getBejiForPlayerRedis(playerId);
+    // Get bejis for all players
+    const allBejis = await Promise.all(
+      playerIds.map(playerId => getBejiForPlayerRedis(playerId))
+    );
+    const bejis = allBejis.flat();
 
     const bejisWithWorlds = await Promise.all(
       bejis.map(async (beji) => {
@@ -363,13 +367,17 @@ export async function handleGetUserBejis(request: FastifyRequest, reply: Fastify
     return reply.status(403).send({ error: 'Forbidden' });
   }
 
-  const playerId = await getPlayerIdForUser(userId);
+  const playerIds = await getPlayerIdsForUser(userId);
 
-  if (!playerId) {
+  if (playerIds.length === 0) {
     return { bejis: [] };
   }
 
-  const bejis = await getBejiForPlayerRedis(playerId);
+  // Get bejis for all players
+  const allBejis = await Promise.all(
+    playerIds.map(playerId => getBejiForPlayerRedis(playerId))
+  );
+  const bejis = allBejis.flat();
 
   const bejisWithWorlds = await Promise.all(
     bejis.map(async (beji) => {

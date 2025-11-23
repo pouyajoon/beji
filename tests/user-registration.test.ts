@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 import { getRedisClient } from "../src/lib/redis/client";
 import {
-    getPlayerIdForUser,
+    getPlayerIdsForUser,
 } from "../src/lib/redis/gameState";
 
 // Load .env.local for integration tests
@@ -82,15 +82,15 @@ describe("User Registration in Redis", () => {
         // Note: closeRedisClient was removed during code pruning
     });
 
-    it("should return null for unlinked user", async () => {
+    it("should return empty array for unlinked user", async () => {
         if (!isConnected || !redis) {
             return;
         }
 
         const userId = `${testPrefix}nonexistent-user-${Date.now()}`;
-        const playerId = await getPlayerIdForUser(userId);
+        const playerIds = await getPlayerIdsForUser(userId);
 
-        expect(playerId).toBeNull();
+        expect(playerIds).toEqual([]);
     });
 });
 

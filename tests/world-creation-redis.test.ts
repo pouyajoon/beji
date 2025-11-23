@@ -271,17 +271,17 @@ describe('World Creation with Redis Integration Test', () => {
         // Verify sets contain the IDs
         if (createdWorldId) {
             const worldInSet = await redis.sIsMember('beji:worlds', createdWorldId);
-            expect(worldInSet).toBe(true);
+            expect(worldInSet).toBeTruthy();
         }
 
         if (createdPlayerId) {
             const playerInSet = await redis.sIsMember('beji:players', createdPlayerId);
-            expect(playerInSet).toBe(true);
+            expect(playerInSet).toBeTruthy();
         }
 
         if (createdBejiId) {
             const bejiInSet = await redis.sIsMember('beji:beji', createdBejiId);
-            expect(bejiInSet).toBe(true);
+            expect(bejiInSet).toBeTruthy();
         }
 
         console.log('✅ Verified all data is correctly stored in Redis');

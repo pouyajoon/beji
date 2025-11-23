@@ -131,7 +131,6 @@ The Fastify server handles:
 2. **API Routes**: 
    - Connect RPC endpoints (`/api/*`)
    - Authentication routes (`/authentication/*`)
-   - Legacy API routes (`/api/users/*`)
 3. **WebSocket**: Real-time beji sync (`/api/ws/beji-sync`)
 4. **SPA Routing**: Falls back to `index.html` for client-side routes
 

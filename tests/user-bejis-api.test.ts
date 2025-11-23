@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 
-const mockGetPlayerIdForUser = vi.fn();
+const mockGetPlayerIdsForUser = vi.fn();
 const mockGetBejiForPlayer = vi.fn();
 const mockGetWorld = vi.fn();
 
 vi.mock("../src/lib/redis/gameState", () => ({
-    getPlayerIdForUser: (...args: any[]) => mockGetPlayerIdForUser(...args),
+    getPlayerIdsForUser: (...args: any[]) => mockGetPlayerIdsForUser(...args),
     getBejiForPlayer: (...args: any[]) => mockGetBejiForPlayer(...args),
     getWorld: (...args: any[]) => mockGetWorld(...args),
 }));
@@ -67,7 +67,7 @@ describe("User Bejis API Route", () => {
             method: 'GET',
             url: '/api/users/user123/bejis',
             headers: {
-                cookie: 'auth_token=valid-token',
+                cookie: 'authorization=valid-token',
             },
         });
 
@@ -84,13 +84,13 @@ describe("User Bejis API Route", () => {
         };
 
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
-        mockGetPlayerIdForUser.mockResolvedValueOnce(null);
+        mockGetPlayerIdsForUser.mockResolvedValueOnce([]);
 
         const response = await fastify.inject({
             method: 'GET',
             url: '/api/users/user123/bejis',
             headers: {
-                cookie: 'auth_token=valid-token',
+                cookie: 'authorization=valid-token',
             },
         });
 
@@ -148,7 +148,7 @@ describe("User Bejis API Route", () => {
         };
 
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
-        mockGetPlayerIdForUser.mockResolvedValueOnce(mockPlayerId);
+        mockGetPlayerIdsForUser.mockResolvedValueOnce([mockPlayerId]);
         mockGetBejiForPlayer.mockResolvedValueOnce(mockBejis);
         mockGetWorld
             .mockResolvedValueOnce(mockWorld1)
@@ -158,7 +158,7 @@ describe("User Bejis API Route", () => {
             method: 'GET',
             url: '/api/users/user123/bejis',
             headers: {
-                cookie: 'auth_token=valid-token',
+                cookie: 'authorization=valid-token',
             },
         });
 
@@ -206,7 +206,7 @@ describe("User Bejis API Route", () => {
         ];
 
         mockVerifyJWT.mockResolvedValueOnce(mockPayload);
-        mockGetPlayerIdForUser.mockResolvedValueOnce(mockPlayerId);
+        mockGetPlayerIdsForUser.mockResolvedValueOnce([mockPlayerId]);
         mockGetBejiForPlayer.mockResolvedValueOnce(mockBejis);
         mockGetWorld.mockResolvedValueOnce(null);
 
@@ -214,7 +214,7 @@ describe("User Bejis API Route", () => {
             method: 'GET',
             url: '/api/users/user123/bejis',
             headers: {
-                cookie: 'auth_token=valid-token',
+                cookie: 'authorization=valid-token',
             },
         });
 

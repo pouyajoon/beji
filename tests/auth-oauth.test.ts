@@ -223,9 +223,9 @@ describe("Google OAuth Authentication", () => {
             const setCookieHeader = response.headers['set-cookie'];
             expect(setCookieHeader).toBeDefined();
             if (Array.isArray(setCookieHeader)) {
-                expect(setCookieHeader[0]).toContain("auth_token=mock-jwt-token");
+                expect(setCookieHeader[0]).toContain("authorization=mock-jwt-token");
             } else if (setCookieHeader) {
-                expect(setCookieHeader).toContain("auth_token=mock-jwt-token");
+                expect(setCookieHeader).toContain("authorization=mock-jwt-token");
             }
         });
 
@@ -362,7 +362,7 @@ describe("Google OAuth Authentication", () => {
                 method: 'GET',
                 url: '/api/authentication/get-token',
                 headers: {
-                    cookie: `auth_token=${mockToken}`,
+                    cookie: `authorization=${mockToken}`,
                 },
             });
 
@@ -382,7 +382,7 @@ describe("Google OAuth Authentication", () => {
                 method: 'GET',
                 url: '/api/authentication/get-token',
                 headers: {
-                    cookie: `auth_token=${mockToken}`,
+                    cookie: `authorization=${mockToken}`,
                 },
             });
 
@@ -401,7 +401,7 @@ describe("Google OAuth Authentication", () => {
                 method: 'GET',
                 url: '/api/authentication/get-token',
                 headers: {
-                    cookie: `auth_token=${mockToken}`,
+                    cookie: `authorization=${mockToken}`,
                 },
             });
 

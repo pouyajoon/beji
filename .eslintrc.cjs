@@ -11,10 +11,7 @@ module.exports = {
     "prettier"
   ],
   rules: {
-    "@typescript-eslint/explicit-function-return-type": [
-      "warn",
-      { allowExpressions: true, allowConciseArrowFunctionExpressionsStartingWithVoid: true }
-    ],
+    "@typescript-eslint/explicit-function-return-type": "off",
     "no-console": ["warn", { allow: ["warn", "error"] }],
     "import/order": [
       "warn",

@@ -9,8 +9,11 @@ import fastifyStaticPlugin from '@fastify/static';
 import fastifyWebsocketPlugin from '@fastify/websocket';
 import { config } from 'dotenv';
 import Fastify from 'fastify';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import type { IncomingMessage, ServerResponse } from 'http';
+import type { ServerOptions } from 'https';
 import path, { resolve } from 'path';
+import { generate } from 'selfsigned';
 import { fileURLToPath } from 'url';
 import { WebSocket } from 'ws';
 
@@ -42,7 +45,38 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = (dev ? 'localhost' : '0.0.0.0');
 const port = parseInt(process.env.PORT || '3000', 10);
 
+// Generate or load SSL certificates for HTTPS in development
+function getHttpsOptions(): ServerOptions | undefined {
+  if (!dev) {
+    return undefined; // No HTTPS in production (use reverse proxy)
+  }
+
+  const certPath = resolve(__dirname, 'dev-cert.pem');
+  const keyPath = resolve(__dirname, 'dev-key.pem');
+
+  // Generate certificates if they don't exist
+  if (!existsSync(certPath) || !existsSync(keyPath)) {
+    const attrs = [{ name: 'commonName', value: 'localhost' }];
+    const pems = generate(attrs, {
+      days: 365,
+      keySize: 2048,
+      algorithm: 'sha256',
+    });
+
+    writeFileSync(certPath, pems.cert);
+    writeFileSync(keyPath, pems.private);
+  }
+
+  return {
+    cert: readFileSync(certPath),
+    key: readFileSync(keyPath),
+  };
+}
+
+const httpsOptions = getHttpsOptions();
+
 const fastify = Fastify({
+  ...(httpsOptions && { https: httpsOptions }),
   logger: {
     level: dev ? 'info' : 'warn',
     // In development, use pretty printing for better readability
@@ -86,7 +120,7 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
 async function authenticateRequest(request: { headers: { cookie?: string } }): Promise<JWTPayload | null> {
   try {
     const cookies = parseCookies(request.headers.cookie);
-    const token = cookies.auth_token || null;
+    const token = cookies.authorization || null;
 
     if (!token) {
       return null;
@@ -146,7 +180,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
     // Get cookie header
     const cookieHeader = req.header.get('cookie');
     const cookies = parseCookies(cookieHeader || '');
-    const token = cookies.auth_token || null;
+    const token = cookies.authorization || null;
 
     if (token) {
       try {
@@ -201,9 +235,9 @@ fastify.get('/api/authentication/get-token', async (request, reply) => {
 
 fastify.post('/authentication/logout', async (request, reply) => {
   // Clear httpOnly secure cookie
-  reply.setCookie('auth_token', '', {
+  reply.setCookie('authorization', '', {
     httpOnly: true,
-    secure: getEnvVar('NODE_ENV') === 'production',
+    secure: true, // Always secure since we use HTTPS in dev and production
     sameSite: 'strict',
     maxAge: 0,
     path: '/',
@@ -242,7 +276,8 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       return;
     }
 
-    const redirectUri = `${request.headers.origin || `http://${hostname}:${port}`}/authentication/oauth/google`;
+    const protocol = dev ? 'https' : (request.headers['x-forwarded-proto'] || 'http');
+    const redirectUri = `${request.headers.origin || `${protocol}://${hostname}:${port}`}/authentication/oauth/google`;
     fastify.log.info({ msg: '[OAuth] Exchanging code for token', redirectUri });
 
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
@@ -301,11 +336,11 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
 
     // Set httpOnly secure cookie for authentication (protected from XSS)
     // httpOnly: true - cookie cannot be accessed by JavaScript
-    // secure: true in production - cookie only sent over HTTPS
+    // secure: true - cookie only sent over HTTPS (HTTPS is used in dev and production)
     // sameSite: 'strict' - protects against CSRF attacks
-    reply.setCookie('auth_token', jwt, {
+    reply.setCookie('authorization', jwt, {
       httpOnly: true,
-      secure: getEnvVar('NODE_ENV') === 'production',
+      secure: true, // Always secure since we use HTTPS in dev and production
       sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 30, // 30 days
       path: '/',
@@ -337,7 +372,6 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
   }
 });
 
-// Legacy POST routes removed - now using Connect RPC via fastifyConnectPlugin
 // RPC routes are handled by Connect at:
 // - /api/config.v1.ConfigService/*
 // - /api/world.v1.WorldService/*
@@ -398,7 +432,7 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
       // Get token from httpOnly secure cookie only
       // WebSocket connections will include cookies automatically from same origin
       const cookies = parseCookies(req.headers.cookie || '');
-      const token = cookies.auth_token || null;
+      const token = cookies.authorization || null;
 
       if (!token) {
         socket.close(1008, 'Unauthorized: No token');
@@ -582,13 +616,16 @@ if (!dev) {
 // Start server
 try {
   await fastify.listen({ port, host: hostname });
+  const protocol = dev ? 'https' : 'http';
+  const wsProtocol = dev ? 'wss' : 'ws';
   // Use warn level so it shows in production (production log level is 'warn')
   fastify.log.warn(`[SERVER] Application started - Host: ${hostname}, Port: ${port}`);
-  fastify.log.warn(`[SERVER] HTTP server: http://${hostname}:${port}`);
-  fastify.log.warn(`[SERVER] WebSocket server: ws://${hostname}:${port}/api/ws/beji-sync`);
+  fastify.log.warn(`[SERVER] ${protocol.toUpperCase()} server: ${protocol}://${hostname}:${port}`);
+  fastify.log.warn(`[SERVER] WebSocket server: ${wsProtocol}://${hostname}:${port}/api/ws/beji-sync`);
   if (dev) {
-    fastify.log.info(`> Fastify server ready on http://${hostname}:${port}`);
-    fastify.log.info(`> WebSocket server ready on ws://${hostname}:${port}/api/ws/beji-sync`);
+    fastify.log.info(`> Fastify server ready on ${protocol}://${hostname}:${port}`);
+    fastify.log.info(`> WebSocket server ready on ${wsProtocol}://${hostname}:${port}/api/ws/beji-sync`);
+    fastify.log.info(`> Using self-signed certificate - you may need to accept the security warning in your browser`);
   }
 } catch (err) {
   fastify.log.error(err);
