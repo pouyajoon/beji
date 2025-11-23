@@ -45,17 +45,19 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = (dev ? 'localhost' : '0.0.0.0');
 const port = parseInt(process.env.PORT || '3000', 10);
 
-// Generate or load SSL certificates for HTTPS (always use HTTPS)
+// Generate or load SSL certificates for HTTPS in development only
+// In production (Render.com), server runs on HTTP (load balancer handles HTTPS termination)
 function getHttpsOptions(): ServerOptions | undefined {
+  if (!dev) {
+    return undefined; // No HTTPS in production - Render.com load balancer handles HTTPS
+  }
+
   const certPath = resolve(__dirname, 'dev-cert.pem');
   const keyPath = resolve(__dirname, 'dev-key.pem');
 
   // Generate certificates if they don't exist
   if (!existsSync(certPath) || !existsSync(keyPath)) {
-    // For self-signed certs, use localhost in dev, or a generic name in production
-    // The actual hostname doesn't matter much for self-signed certs
-    const commonName = dev ? 'localhost' : (process.env.HOSTNAME || 'server');
-    const attrs = [{ name: 'commonName', value: commonName }];
+    const attrs = [{ name: 'commonName', value: 'localhost' }];
     const pems = generate(attrs, {
       days: 365,
       keySize: 2048,
@@ -275,8 +277,9 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       return;
     }
 
-    // Always use HTTPS - server always runs with HTTPS (self-signed in production)
-    // Construct redirect URI - must match exactly what's registered in Google Console
+    // Always use HTTPS for redirect URI (even though server runs on HTTP in production)
+    // On Render.com: server runs on HTTP internally, but external URLs are HTTPS
+    // The redirect URI must match exactly what's registered in Google Console (HTTPS)
     // Prefer origin header (set by browser) as it matches what client sent to Google
     let redirectUri: string;
     if (request.headers.origin) {
