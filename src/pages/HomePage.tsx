@@ -1,8 +1,10 @@
+import type React from 'react';
+
 import { AuthenticatedPage } from '../../components/AuthenticatedPage';
 import { StartPage } from '../../components/StartPage';
 import UserMenu from '../../components/UserMenu';
 
-export default function HomePage() {
+export default function HomePage(): React.ReactElement {
   return (
     <AuthenticatedPage>
       <div style={{ padding: 0, minHeight: '100vh', position: 'relative' }}>

@@ -16,7 +16,6 @@ import { WebSocket } from 'ws';
 
 import { verifyJWT, signJWT, type JWTPayload } from './src/lib/auth/jwt';
 import {
-  getPlayerIdsForUser,
   getBejisForUser,
   updateBejiPosition,
   getBeji,
@@ -214,11 +213,11 @@ fastify.get('/api/authentication/get-token', async (request, reply) => {
   const authHeader = request.headers.authorization;
   if (authHeader) {
     const match = authHeader.match(/^Bearer\s+(.+)$/i);
-    token = match ? match[1] : null;
+    token = match && match[1] ? match[1] : null;
   }
   if (!token) {
     const cookies = parseCookies(request.headers.cookie);
-    token = cookies.auth_token;
+    token = cookies.auth_token || null;
   }
 
   return {
@@ -428,13 +427,13 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
 
       if (authHeader) {
         const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        token = match ? match[1] : null;
+        token = match && match[1] ? match[1] : null;
       }
 
       // Fallback to cookie for backward compatibility
       if (!token) {
         const cookies = parseCookies(req.headers.cookie || '');
-        token = cookies.auth_token;
+        token = cookies.auth_token || null;
       }
 
       if (!token) {
