@@ -13,6 +13,7 @@ import {
 } from '../../components/atoms';
 import { AuthenticatedPage } from '../../components/AuthenticatedPage';
 import { Map } from '../../components/Map';
+import { WorldDrawer } from '../../components/world/WorldDrawer';
 import { useSetAtom } from '../../lib/jotai';
 import { getWorld } from '../lib/rpc/worldClient';
 import type { StaticBeji as ProtoStaticBeji } from '../proto/staticbeji/v1/staticbeji_pb';
@@ -120,40 +121,6 @@ function WorldPageContent() {
     loadWorld();
   }, [worldId, setPlayers, setBeji, setStaticBeji, setWorlds]);
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          height: '100vh',
-          width: '100vw',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#ffffff',
-        }}
-      >
-        <div style={{ fontSize: '18px', color: '#000000' }}>Loading world...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        style={{
-          height: '100vh',
-          width: '100vw',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#ffffff',
-        }}
-      >
-        <div style={{ fontSize: '18px', color: '#ef4444' }}>Error: {error}</div>
-      </div>
-    );
-  }
-
   return (
     <div
       style={{
@@ -162,12 +129,37 @@ function WorldPageContent() {
         margin: 0,
         padding: 0,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         background: '#ffffff',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <Map />
+      {/* Drawer - always visible */}
+      <WorldDrawer currentWorldId={worldId} />
+
+      {/* Map area */}
+      <div
+        style={{
+          flex: 1,
+          height: '100vh',
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {loading ? (
+          <div style={{ fontSize: '18px', color: '#000000' }}>Loading world...</div>
+        ) : error ? (
+          <div style={{ fontSize: '18px', color: '#ef4444' }}>Error: {error}</div>
+        ) : (
+          <div style={{ width: '100%', height: '100%' }}>
+            <Map />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

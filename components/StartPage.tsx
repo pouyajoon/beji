@@ -167,8 +167,34 @@ export function StartPage() {
                 />
 
                 {isLoadingBejis && (
-                    <div style={{ marginBottom: "16px", fontSize: "14px", color: "var(--text-color, #000000)", opacity: 0.7 }}>
-                        {messages.Start?.loadingBejisLabel ?? "Loading your bejis..."}
+                    <div style={{ 
+                        marginBottom: "16px", 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        alignItems: "center", 
+                        justifyContent: "center",
+                        gap: "12px"
+                    }}>
+                        <div style={{
+                            fontSize: "48px",
+                            animation: "spin 1s linear infinite",
+                            display: "inline-block"
+                        }}>
+                            ⏳
+                        </div>
+                        <div style={{ 
+                            fontSize: "14px", 
+                            color: "var(--text-color, #000000)", 
+                            opacity: 0.7 
+                        }}>
+                            {messages.Start?.loadingBejisLabel ?? "Loading your bejis..."}
+                        </div>
+                        <style>{`
+                            @keyframes spin {
+                                from { transform: rotate(0deg); }
+                                to { transform: rotate(360deg); }
+                            }
+                        `}</style>
                     </div>
                 )}
 

@@ -125,6 +125,7 @@ export function CanvasMap() {
     // Initialize camera target only once - actual updates happen in render loop
     const cameraTargetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const currentBejiIdRef = useRef<string | null>(null);
+    const lastInitializedBejiIdRef = useRef<string | null>(null);
     useEffect(() => {
         // Initialize camera target only when currentPlayerId changes or when beji is first created
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
@@ -140,11 +141,27 @@ export function CanvasMap() {
             }
         }
     }, [beji, currentPlayerId]); // Depend on beji array but only update when beji ID changes
+    
     // Return a stable reference that doesn't trigger re-renders on target changes
     const cameraTarget = cameraTargetRef.current;
 
     // Camera offset allows zooming to mouse position without breaking player-following target
     const [cameraOffset, setCameraOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    
+    // Initialize zoom to show 20m around the beji when loading a world
+    useEffect(() => {
+        const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
+        // Initialize zoom when beji is loaded and viewport is ready, and only once per beji
+        if (focus && viewport.width > 0 && focus.id !== lastInitializedBejiIdRef.current) {
+            // Calculate zoom to show 20m around beji (40m total view)
+            const desiredViewWidthMeters = 40; // 20m on each side
+            const calculatedPixelsPerMeter = viewport.width / desiredViewWidthMeters;
+            setPixelsPerMeter(calculatedPixelsPerMeter);
+            // Reset camera offset to center on beji
+            setCameraOffset({ x: 0, y: 0 });
+            lastInitializedBejiIdRef.current = focus.id;
+        }
+    }, [beji, currentPlayerId, viewport.width, setPixelsPerMeter, setCameraOffset]);
     const cameraCenterX = cameraTarget.x + cameraOffset.x;
     const cameraCenterY = cameraTarget.y + cameraOffset.y;
 
@@ -534,7 +551,7 @@ export function CanvasMap() {
 
 
     return (
-        <div ref={containerRef} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100vw", height: "100dvh", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
+        <div ref={containerRef} style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%", height: "100%", overflow: "hidden", position: "relative", border: "2px solid #e5e7eb" }}>
             <ActionsBar
                 followMouse={followMouse}
                 onToggleFollowMouse={setFollowMouse}
