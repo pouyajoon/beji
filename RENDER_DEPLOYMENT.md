@@ -89,9 +89,14 @@ Update your Google OAuth redirect URIs to include:
 4. **Note**: Render Redis internal service uses `redis://` without TLS
 
 **Important**: 
-- When you link a Render Redis instance to your service, Render automatically sets `REDISCLI_AUTH` with the full connection URL
-- The connection URL format is `redis://red-xxxxx:6379` (internal) or includes authentication if enabled
-- No manual configuration needed when using Render Redis
+- When you link a Render Key Value instance to your service, Render automatically sets:
+  - `REDISCLI_AUTH` - the password
+  - `REDIS_HOST` - the hostname (e.g., `frankfurt-keyvalue.render.com`)
+  - `REDIS_PORT` - the port (e.g., `6379`)
+  - `REDIS_USERNAME` - the username (e.g., `red-d4g9n4hr0fns739f93vg`)
+- The application will automatically construct the connection URL from these variables
+- Render Key Value uses TLS, so the connection will use `rediss://` protocol
+- No manual configuration needed when using Render Key Value
 
 ### Option 2: External Redis
 
@@ -111,7 +116,11 @@ REDISCLI_AUTH=rediss://username:password@redis.example.com:6380
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth Client Secret |
 | `JWT_SECRET` | Yes | Secret key for JWT signing |
-| `REDISCLI_AUTH` | Yes | Full Redis connection URL (e.g., `redis://red-xxxxx:6379` or `rediss://host:port`) |
+| `REDISCLI_AUTH` | Yes | Redis password OR full connection URL (e.g., `PONgj8skX7j9qXzmQSMRPEO2YMoICq1p` or `rediss://host:port`) |
+| `REDIS_HOST` | Yes* | Redis hostname (required if `REDISCLI_AUTH` is a password) |
+| `REDIS_PORT` | Yes* | Redis port (required if `REDISCLI_AUTH` is a password) |
+| `REDIS_USERNAME` | No | Redis username (optional, used if `REDISCLI_AUTH` is a password) |
+\* Required when `REDISCLI_AUTH` is a password (not a full URL)
 | `ALLOWED_ORIGINS` | No | Comma-separated list of allowed CORS origins |
 
 ## Server Architecture

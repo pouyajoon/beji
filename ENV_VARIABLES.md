@@ -8,17 +8,42 @@ These variables must be set for the application to function properly.
 
 ### `REDISCLI_AUTH`
 - **Required**: Yes
-- **Description**: Full Redis connection URL
-- **Format**: `redis://host:port` or `rediss://host:port` (with TLS)
+- **Description**: Redis password OR full connection URL
+- **Format**: 
+  - **Option 1**: Full URL - `redis://host:port` or `rediss://host:port` (with TLS)
+  - **Option 2**: Password only - used with `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`
 - **Example**: 
-  - `redis://red-xxxxx:6379` (Render internal Redis)
-  - `redis://default:password@red-xxxxx:6379` (with authentication)
-  - `rediss://redis.example.com:6380` (external Redis with TLS)
+  - Full URL: `redis://red-xxxxx:6379` or `rediss://username:password@host:port`
+  - Password only: `PONgj8skX7j9qXzmQSMRPEO2YMoICq1p` (used with REDIS_HOST, REDIS_PORT, REDIS_USERNAME)
 - **Used in**: `src/lib/redis/client.ts`
 - **Note**: 
-  - Must start with `redis://` or `rediss://`
-  - Render.com automatically sets this when you link a Key Value instance to your service
-  - Contains the complete connection string including protocol, host, port, and optionally credentials
+  - If it starts with `redis://` or `rediss://`, it's treated as a full URL
+  - Otherwise, it's treated as a password and requires `REDIS_HOST` and `REDIS_PORT` (and optionally `REDIS_USERNAME`)
+  - Render.com Key Value provides the password in `REDISCLI_AUTH` when you link a service
+
+### `REDIS_HOST`
+- **Required**: Yes* (if `REDISCLI_AUTH` is a password, not a URL)
+- **Description**: Redis hostname
+- **Format**: String (hostname or IP address)
+- **Example**: `frankfurt-keyvalue.render.com`
+- **Used in**: `src/lib/redis/client.ts`
+- **Note**: Required when `REDISCLI_AUTH` is a password (not a full URL)
+
+### `REDIS_PORT`
+- **Required**: Yes* (if `REDISCLI_AUTH` is a password, not a URL)
+- **Description**: Redis port number
+- **Format**: Number (as string)
+- **Example**: `6379`
+- **Used in**: `src/lib/redis/client.ts`
+- **Note**: Required when `REDISCLI_AUTH` is a password (not a full URL)
+
+### `REDIS_USERNAME`
+- **Required**: No
+- **Description**: Redis username for authentication
+- **Format**: String
+- **Example**: `red-d4g9n4hr0fns739f93vg`
+- **Used in**: `src/lib/redis/client.ts`
+- **Note**: Optional - only used when `REDISCLI_AUTH` is a password (not a full URL)
 
 ### `GOOGLE_CLIENT_ID`
 - **Required**: Yes
@@ -116,12 +141,20 @@ These variables are only used in diagnostic tests and are not required for norma
 
 Create a `.env.local` file in the project root with the following structure:
 
-# Required - Redis Configuration
+# Required - Redis Configuration (choose one option)
+
+# Option 1: REDISCLI_AUTH as full URL
 REDISCLI_AUTH=redis://red-xxxxx:6379
 # Or with authentication:
 # REDISCLI_AUTH=redis://default:password@red-xxxxx:6379
 # Or for external Redis with TLS:
 # REDISCLI_AUTH=rediss://username:password@redis.example.com:6380
+
+# Option 2: REDISCLI_AUTH as password (Render Key Value style)
+REDISCLI_AUTH=PONgj8skX7j9qXzmQSMRPEO2YMoICq1p
+REDIS_HOST=frankfurt-keyvalue.render.com
+REDIS_PORT=6379
+REDIS_USERNAME=red-d4g9n4hr0fns739f93vg
 
 # Required - Google OAuth Configuration
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com

@@ -30,11 +30,19 @@ describe('World Creation with Redis Integration Test', () => {
     let createdStaticBejiIds: string[] = [];
 
     beforeAll(async () => {
-        // Check if REDISCLI_AUTH is set and has valid format
+        // Check if REDISCLI_AUTH is set
         const redisCliAuth = process.env.REDISCLI_AUTH;
-        if (!redisCliAuth || (!redisCliAuth.startsWith('redis://') && !redisCliAuth.startsWith('rediss://'))) {
-            console.warn('REDISCLI_AUTH not set or invalid format, skipping Redis integration test');
+        if (!redisCliAuth) {
+            console.warn('REDISCLI_AUTH not set, skipping Redis integration test');
             return;
+        }
+
+        // If REDISCLI_AUTH is a password (not a URL), check for required env vars
+        if (!redisCliAuth.startsWith('redis://') && !redisCliAuth.startsWith('rediss://')) {
+            if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
+                console.warn('REDISCLI_AUTH is a password but REDIS_HOST or REDIS_PORT is missing, skipping Redis integration test');
+                return;
+            }
         }
 
         // Initialize Redis client

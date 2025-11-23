@@ -8,8 +8,9 @@ This project uses Redis for persistent game state storage in the MMORPG.
 
 ## Configuration
 
-Redis connection is configured via the `REDISCLI_AUTH` environment variable. This should contain the full Redis connection URL.
+Redis connection is configured via the `REDISCLI_AUTH` environment variable. This can be either a full URL or just a password.
 
+**Option 1: Full URL**
 ```bash
 REDISCLI_AUTH=redis://red-d4g9n4hr0fns739f93vg:6379
 # or with authentication
@@ -18,10 +19,19 @@ REDISCLI_AUTH=redis://default:password@red-d4g9n4hr0fns739f93vg:6379
 REDISCLI_AUTH=rediss://redis.example.com:6380
 ```
 
+**Option 2: Password only (Render Key Value style)**
+```bash
+REDISCLI_AUTH=PONgj8skX7j9qXzmQSMRPEO2YMoICq1p
+REDIS_HOST=frankfurt-keyvalue.render.com
+REDIS_PORT=6379
+REDIS_USERNAME=red-d4g9n4hr0fns739f93vg
+```
+
 **Note:** 
-- Render.com internal Redis uses `redis://` without TLS. The URL format is `redis://red-xxxxx:6379`.
-- `REDISCLI_AUTH` must contain a full URL starting with `redis://` or `rediss://`.
-- Render.com provides the full connection string in `REDISCLI_AUTH` when you link a Key Value instance to your service.
+- If `REDISCLI_AUTH` starts with `redis://` or `rediss://`, it's treated as a full URL
+- Otherwise, it's treated as a password and requires `REDIS_HOST` and `REDIS_PORT` (and optionally `REDIS_USERNAME`)
+- Render.com Key Value provides the password in `REDISCLI_AUTH` when you link a service, along with `REDIS_HOST`, `REDIS_PORT`, and `REDIS_USERNAME`
+- Render Key Value uses TLS, so the constructed URL will use `rediss://`
 
 ## Redis Provider
 

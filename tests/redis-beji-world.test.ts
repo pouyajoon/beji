@@ -31,9 +31,18 @@ describe('Redis Beji and World Integration Test', () => {
 
     beforeAll(async () => {
         // Skip if REDISCLI_AUTH is not set
-        if (!process.env.REDISCLI_AUTH) {
+        const redisCliAuth = process.env.REDISCLI_AUTH;
+        if (!redisCliAuth) {
             console.warn('REDISCLI_AUTH not set, skipping Redis beji-world integration test');
             return;
+        }
+
+        // If REDISCLI_AUTH is a password (not a URL), check for required env vars
+        if (!redisCliAuth.startsWith('redis://') && !redisCliAuth.startsWith('rediss://')) {
+            if (!process.env.REDIS_HOST || !process.env.REDIS_PORT) {
+                console.warn('REDISCLI_AUTH is a password but REDIS_HOST or REDIS_PORT is missing, skipping Redis beji-world integration test');
+                return;
+            }
         }
 
         try {

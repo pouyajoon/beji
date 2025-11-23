@@ -86,19 +86,77 @@ describe('Redis Client', () => {
         if (originalCliAuth) process.env.REDISCLI_AUTH = originalCliAuth;
     });
 
-    it('throws error when REDISCLI_AUTH does not contain a valid URL', async () => {
+    it('throws error when REDISCLI_AUTH is password but REDIS_HOST is missing', async () => {
         const originalCliAuth = process.env.REDISCLI_AUTH;
-        process.env.REDISCLI_AUTH = 'invalid-url';
+        const originalHost = process.env.REDIS_HOST;
+        const originalPort = process.env.REDIS_PORT;
+        const originalUsername = process.env.REDIS_USERNAME;
+        
+        process.env.REDISCLI_AUTH = 'mypassword';
+        delete process.env.REDIS_HOST;
+        delete process.env.REDIS_PORT;
+        delete process.env.REDIS_USERNAME;
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
-        expect(() => getRedisClient()).toThrow('REDISCLI_AUTH must contain a full Redis URL starting with redis:// or rediss://');
+        expect(() => getRedisClient()).toThrow('REDIS_HOST environment variable is required when REDISCLI_AUTH is a password');
 
-        if (originalCliAuth) {
-            process.env.REDISCLI_AUTH = originalCliAuth;
-        } else {
-            delete process.env.REDISCLI_AUTH;
-        }
+        if (originalCliAuth) process.env.REDISCLI_AUTH = originalCliAuth;
+        if (originalHost) process.env.REDIS_HOST = originalHost;
+        if (originalPort) process.env.REDIS_PORT = originalPort;
+        if (originalUsername) process.env.REDIS_USERNAME = originalUsername;
+    });
+
+    it('constructs URL from REDISCLI_AUTH password and other env vars', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        const originalHost = process.env.REDIS_HOST;
+        const originalPort = process.env.REDIS_PORT;
+        const originalUsername = process.env.REDIS_USERNAME;
+        
+        process.env.REDISCLI_AUTH = 'mypassword';
+        process.env.REDIS_HOST = 'frankfurt-keyvalue.render.com';
+        process.env.REDIS_PORT = '6379';
+        process.env.REDIS_USERNAME = 'red-d4g9n4hr0fns739f93vg';
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        getRedisClient();
+
+        // Should construct rediss:// URL with TLS (Render Key Value uses TLS)
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            url: 'rediss://red-d4g9n4hr0fns739f93vg:mypassword@frankfurt-keyvalue.render.com:6379',
+        });
+
+        if (originalCliAuth) process.env.REDISCLI_AUTH = originalCliAuth;
+        if (originalHost) process.env.REDIS_HOST = originalHost;
+        if (originalPort) process.env.REDIS_PORT = originalPort;
+        if (originalUsername) process.env.REDIS_USERNAME = originalUsername;
+    });
+
+    it('constructs URL from REDISCLI_AUTH password without username', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        const originalHost = process.env.REDIS_HOST;
+        const originalPort = process.env.REDIS_PORT;
+        const originalUsername = process.env.REDIS_USERNAME;
+        
+        process.env.REDISCLI_AUTH = 'mypassword';
+        process.env.REDIS_HOST = 'frankfurt-keyvalue.render.com';
+        process.env.REDIS_PORT = '6379';
+        delete process.env.REDIS_USERNAME;
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        getRedisClient();
+
+        // Should construct rediss:// URL without username
+        expect(mockCreateClient).toHaveBeenCalledWith({
+            url: 'rediss://mypassword@frankfurt-keyvalue.render.com:6379',
+        });
+
+        if (originalCliAuth) process.env.REDISCLI_AUTH = originalCliAuth;
+        if (originalHost) process.env.REDIS_HOST = originalHost;
+        if (originalPort) process.env.REDIS_PORT = originalPort;
+        if (originalUsername) process.env.REDIS_USERNAME = originalUsername;
     });
 
     it('throws error when REDISCLI_AUTH URL is missing hostname', async () => {
