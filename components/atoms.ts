@@ -8,8 +8,18 @@ export interface IPosition {
     y: number;
 }
 
+export type User = {
+    id: string; // Google userId (sub)
+    email: string;
+    picture?: string;
+    name?: string;
+    createdAt: number; // Timestamp when user was created
+    lastLoginAt: number; // Timestamp of last login
+};
+
 export type Player = {
     id: string;
+    userId?: string; // Reference to User.id (optional for backward compatibility with old data)
     emoji: string;
     emojiCodepoints: number[];
     bejiIds: string[]; // List of beji IDs this player owns

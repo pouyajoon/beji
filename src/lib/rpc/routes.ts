@@ -5,10 +5,10 @@ import { registerPlayerService } from './services/playerService';
 
 export function registerPublicRoutes(router: ConnectRouter) {
   registerConfigService(router);
-  registerWorldService(router);
 }
 
 export function registerAuthenticatedRoutes(router: ConnectRouter) {
+  registerWorldService(router);
   registerPlayerService(router);
 }
 

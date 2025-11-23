@@ -18,8 +18,8 @@ function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?
     return new MessageClass(data);
 }
 import {
-    getPlayerIdForUser,
-    getBejiForPlayer as getBejiForPlayerRedis,
+    getPlayerIdsForUser,
+    getBejisForUser,
     getWorld as getWorldFromRedis,
 } from '../../redis/gameState';
 import type { JWTPayload } from '../../auth/jwt';
@@ -75,13 +75,13 @@ export function registerPlayerService(router: ConnectRouter) {
                         throw new Error('Forbidden');
                     }
 
-                    const playerId = await getPlayerIdForUser(req.userId);
-                    if (!playerId) {
-                        console.log('[PlayerService.getUserBejis] No player found for user:', req.userId);
+                    // Get all bejis for this user (across all their players)
+                    const bejis = await getBejisForUser(req.userId);
+                    
+                    if (bejis.length === 0) {
+                        console.log('[PlayerService.getUserBejis] No bejis found for user:', req.userId);
                         return create(GetUserBejisResponse, { bejis: [] });
                     }
-
-                    const bejis = await getBejiForPlayerRedis(playerId);
                     const bejisWithWorlds = await Promise.all(
                         bejis.map(async (beji) => {
                             try {

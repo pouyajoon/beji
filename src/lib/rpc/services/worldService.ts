@@ -1,4 +1,6 @@
-import type { ConnectRouter, ServiceImpl } from '@connectrpc/connect';
+import type { ConnectRouter, HandlerContext, ServiceImpl } from '@connectrpc/connect';
+import { AUTH_CONTEXT_KEY } from './playerService';
+import type { JWTPayload } from '../../auth/jwt';
 import { ConnectError, Code } from '@connectrpc/connect';
 import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
@@ -31,6 +33,7 @@ import {
   saveBeji,
   saveWorld,
   saveStaticBeji,
+  getOrCreateUser,
   getWorld as getWorldFromRedis,
   getBeji,
   getPlayer,
@@ -88,15 +91,28 @@ export function registerWorldService(router: ConnectRouter) {
   router.service(
     WorldService,
     {
-      async createWorld(req: CreateWorldRequest): Promise<CreateWorldResponse> {
+      async createWorld(req: CreateWorldRequest, context: HandlerContext): Promise<CreateWorldResponse> {
         try {
           if (!req.bejiName || !req.emojiCodepoints || req.emojiCodepoints.length === 0) {
             console.error('[WorldService.createWorld] Validation failed: bejiName and emojiCodepoints are required', { bejiName: req.bejiName, emojiCodepoints: req.emojiCodepoints });
             throw new Error('bejiName and emojiCodepoints are required');
           }
 
+          // Get userId from auth context
+          const authPayload = context.values.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
+          if (!authPayload || !authPayload.userId) {
+            console.error('[WorldService.createWorld] Unauthorized: No auth payload or userId in context');
+            throw new ConnectError('Unauthorized', Code.Unauthenticated);
+          }
+          const userId = authPayload.userId;
+
+          // Create or update user in Redis
+          await getOrCreateUser(userId, authPayload.email, authPayload.picture);
+
           const emojiChar = codepointsToEmoji(req.emojiCodepoints);
           const timestamp = Date.now();
+          
+          // Create a new player for each world (users can have multiple players)
           const playerId = `player-${timestamp}`;
           const worldId = `world-${timestamp}`;
           const bejiId = `beji-${timestamp}`;
@@ -104,8 +120,10 @@ export function registerWorldService(router: ConnectRouter) {
           const startX = 0;
           const startY = 0;
 
+          // Create new player
           const newPlayer: PlayerType = {
             id: playerId,
+            userId: userId, // Link player to user
             emoji: emojiChar,
             emojiCodepoints: req.emojiCodepoints,
             bejiIds: [bejiId],
@@ -160,7 +178,7 @@ export function registerWorldService(router: ConnectRouter) {
           };
 
           await Promise.all([
-            savePlayer(newPlayer),
+            savePlayer(newPlayer), // This will automatically add player to user's player list
             saveBeji(newBeji),
             saveWorld(newWorld),
             ...staticBejis.map((sb) => saveStaticBeji(sb)),
@@ -174,12 +192,20 @@ export function registerWorldService(router: ConnectRouter) {
         }
       },
 
-      async getWorld(req: GetWorldRequest): Promise<GetWorldResponse> {
+      async getWorld(req: GetWorldRequest, context: HandlerContext): Promise<GetWorldResponse> {
         try {
           if (!req.worldId) {
             console.error('[WorldService.getWorld] Validation failed: worldId is required');
             throw new ConnectError('worldId is required', Code.InvalidArgument);
           }
+
+          // Get userId from auth context
+          const authPayload = context.values.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
+          if (!authPayload || !authPayload.userId) {
+            console.error('[WorldService.getWorld] Unauthorized: No auth payload or userId in context');
+            throw new ConnectError('Unauthorized', Code.Unauthenticated);
+          }
+          const userId = authPayload.userId;
 
           const world = await getWorldFromRedis(req.worldId);
           if (!world) {
@@ -197,6 +223,16 @@ export function registerWorldService(router: ConnectRouter) {
           if (!player) {
             console.error('[WorldService.getWorld] Player not found:', beji.playerId);
             throw new ConnectError(`Player not found: ${beji.playerId}`, Code.NotFound);
+          }
+
+          // Verify that the world belongs to the authenticated user
+          if (player.userId && player.userId !== userId) {
+            console.error('[WorldService.getWorld] Forbidden: World does not belong to user', {
+              worldId: req.worldId,
+              requestedUserId: userId,
+              worldOwnerUserId: player.userId,
+            });
+            throw new ConnectError('Forbidden: This world does not belong to you', Code.PermissionDenied);
           }
 
           const staticBeji = await getStaticBejiForWorld(world.id);

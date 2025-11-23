@@ -1,12 +1,17 @@
 import { getRedisClient } from "./client";
-import type { GameState, Player, Beji, StaticBeji, World } from "../../../components/atoms";
+import type { GameState, User, Player, Beji, StaticBeji, World } from "../../../components/atoms";
 
+const USERS_KEY = "beji:users";
 const PLAYERS_KEY = "beji:players";
 const WORLDS_KEY = "beji:worlds";
 const BEJI_KEY = "beji:beji";
 const STATIC_BEJI_KEY = "beji:staticBeji";
 
 // Key helpers
+function userKey(userId: string): string {
+    return `beji:user:${userId}`;
+}
+
 function playerKey(playerId: string): string {
     return `beji:player:${playerId}`;
 }
@@ -23,6 +28,115 @@ function staticBejiKey(staticBejiId: string): string {
     return `beji:staticBeji:${staticBejiId}`;
 }
 
+
+/**
+ * Get a specific user from Redis
+ */
+export async function getUser(userId: string): Promise<User | null> {
+    try {
+        const client = getRedisClient();
+        const data = await client.get(userKey(userId));
+        if (!data) return null;
+        return JSON.parse(data) as User;
+    } catch (error) {
+        console.error(`Error getting user ${userId} from Redis:`, error);
+        return null;
+    }
+}
+
+/**
+ * Save a user to Redis
+ */
+export async function saveUser(user: User): Promise<boolean> {
+    try {
+        const client = getRedisClient();
+        const multi = client.multi();
+        multi.set(userKey(user.id), JSON.stringify(user));
+        multi.sAdd(USERS_KEY, user.id);
+        await multi.exec();
+        return true;
+    } catch (error) {
+        console.error(`Error saving user ${user.id} to Redis:`, error);
+        return false;
+    }
+}
+
+/**
+ * Get or create a user in Redis
+ */
+export async function getOrCreateUser(userId: string, email: string, picture?: string, name?: string): Promise<User> {
+    let user = await getUser(userId);
+    if (!user) {
+        const now = Date.now();
+        user = {
+            id: userId,
+            email,
+            picture,
+            name,
+            createdAt: now,
+            lastLoginAt: now,
+        };
+        await saveUser(user);
+    } else {
+        // Update lastLoginAt
+        user.lastLoginAt = Date.now();
+        if (picture && !user.picture) user.picture = picture;
+        if (name && !user.name) user.name = name;
+        await saveUser(user);
+    }
+    return user;
+}
+
+/**
+ * Get all player IDs for a user
+ */
+export async function getPlayerIdsForUser(userId: string): Promise<string[]> {
+    try {
+        const client = getRedisClient();
+        const playerIds = await client.sMembers(`beji:user:${userId}:players`);
+        return playerIds || [];
+    } catch (error) {
+        console.error(`Error getting player IDs for user ${userId} from Redis:`, error);
+        return [];
+    }
+}
+
+/**
+ * Get all bejis for a user (across all their players)
+ */
+export async function getBejisForUser(userId: string): Promise<Beji[]> {
+    try {
+        const playerIds = await getPlayerIdsForUser(userId);
+        if (playerIds.length === 0) return [];
+
+        const allBejis: Beji[] = [];
+        for (const playerId of playerIds) {
+            const bejis = await getBejiForPlayer(playerId);
+            allBejis.push(...bejis);
+        }
+
+        // Sort by creation time (most recent first)
+        allBejis.sort((a, b) => b.createdAt - a.createdAt);
+        return allBejis;
+    } catch (error) {
+        console.error(`Error getting bejis for user ${userId} from Redis:`, error);
+        return [];
+    }
+}
+
+/**
+ * Add a player to a user's player list
+ */
+export async function addPlayerToUser(userId: string, playerId: string): Promise<boolean> {
+    try {
+        const client = getRedisClient();
+        await client.sAdd(`beji:user:${userId}:players`, playerId);
+        return true;
+    } catch (error) {
+        console.error(`Error adding player ${playerId} to user ${userId} in Redis:`, error);
+        return false;
+    }
+}
 
 /**
  * Get a specific player from Redis
@@ -48,6 +162,10 @@ export async function savePlayer(player: Player): Promise<boolean> {
         const multi = client.multi();
         multi.set(playerKey(player.id), JSON.stringify(player));
         multi.sAdd(PLAYERS_KEY, player.id);
+        // Add player to user's player list
+        if (player.userId) {
+            multi.sAdd(`beji:user:${player.userId}:players`, player.id);
+        }
         // Update beji tracking for player
         if (player.bejiIds && player.bejiIds.length > 0) {
             for (const bejiId of player.bejiIds) {
@@ -130,7 +248,6 @@ export async function updateBejiPosition(
         return false;
     }
 }
-
 
 /**
  * Get beji for a specific player
@@ -254,13 +371,14 @@ export async function saveWorld(world: World): Promise<boolean> {
 
 
 /**
- * Get the player ID for a given user ID
+ * @deprecated Use getPlayerIdsForUser instead - users can have multiple players
+ * Get the first player ID for a given user ID (for backward compatibility)
  */
 export async function getPlayerIdForUser(userId: string): Promise<string | null> {
     try {
-        const client = getRedisClient();
-        const playerId = await client.get(`beji:user:${userId}:player`);
-        return playerId;
+        const playerIds = await getPlayerIdsForUser(userId);
+        const firstPlayerId = playerIds.length > 0 ? playerIds[0] : undefined;
+        return firstPlayerId ?? null;
     } catch (error) {
         console.error(`Error getting player ID for user ${userId} from Redis:`, error);
         return null;

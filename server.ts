@@ -16,11 +16,12 @@ import { WebSocket } from 'ws';
 
 import { verifyJWT, signJWT, type JWTPayload } from './src/lib/auth/jwt';
 import {
-  getPlayerIdForUser,
+  getPlayerIdsForUser,
+  getBejisForUser,
   updateBejiPosition,
   getBeji,
   getWorld as getWorldFromRedis,
-  getBejiForPlayer as getBejiForPlayerRedis,
+  getPlayer,
 } from './src/lib/redis/gameState';
 import {
   registerPublicRoutes,
@@ -133,13 +134,15 @@ await fastify.register(fastifyMiddiePlugin);
 await fastify.register(fastifyCookiePlugin);
 
 // Authentication interceptor for Connect RPC
-// Only applies to authenticated routes (PlayerService)
+// Applies to authenticated routes (PlayerService and WorldService)
 // Access cookies from request headers (cookies are sent in Cookie header)
 const authInterceptor: Interceptor = (next) => async (req) => {
-  // Only require auth for PlayerService
-  const isPlayerService = req.service.typeName.includes('PlayerService');
+  // Require auth for PlayerService and WorldService
+  const isAuthenticatedService = 
+    req.service.typeName.includes('PlayerService') || 
+    req.service.typeName.includes('WorldService');
 
-  if (isPlayerService) {
+  if (isAuthenticatedService) {
     // Get cookie header from Connect request
     const cookieHeader = req.header.get('cookie');
 
@@ -167,13 +170,13 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 await fastify.register(fastifyConnectPlugin, {
   routes: (router) => {
     // Register all routes on the same router
-    // Public routes (Config, World) - no auth required
+    // Public routes (Config) - no auth required
     registerPublicRoutes(router);
 
-    // Authenticated routes (Player) - auth handled by interceptor
+    // Authenticated routes (Player, World) - auth handled by interceptor
     registerAuthenticatedRoutes(router);
   },
-  // Apply auth interceptor to all routes, but it only processes PlayerService
+  // Apply auth interceptor to all routes, processes PlayerService and WorldService
   interceptors: [authInterceptor],
   // Connect RPC uses binary protocol buffers (application/connect+proto) by default
   // This ensures efficient binary serialization of proto messages
@@ -326,12 +329,8 @@ fastify.get('/api/users/:userId/bejis', async (request, reply) => {
       return reply.status(403).send({ error: 'Forbidden' });
     }
 
-    const playerId = await getPlayerIdForUser(userId);
-    if (!playerId) {
-      return { bejis: [] };
-    }
-
-    const bejis = await getBejiForPlayerRedis(playerId);
+    // Get all bejis for this user (across all their players)
+    const bejis = await getBejisForUser(userId);
     const bejisWithWorlds = await Promise.all(
       bejis.map(async (beji) => {
         const world = beji.worldId ? await getWorldFromRedis(beji.worldId) : null;
@@ -379,38 +378,48 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
 
       const payload = await verifyJWT(token);
       userId = payload.userId;
-      playerId = await getPlayerIdForUser(userId);
 
-      if (!playerId) {
-        socket.close(1008, 'Unauthorized: Player not found');
-        return;
-      }
+      // Get all bejis for this user to verify ownership
+      const userBejis = await getBejisForUser(userId);
+      const userBejiIds = new Set(userBejis.map((b) => b.id));
 
-      fastify.log.info(`WebSocket connected: ${connectionId} (user: ${userId}, player: ${playerId})`);
+      fastify.log.info(`WebSocket connected: ${connectionId} (user: ${userId}, ${userBejis.length} bejis)`);
 
       socket.on('message', async (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString());
 
           if (message.type === 'connect' && message.bejiId) {
-            const beji = await getBeji(message.bejiId);
-            if (!beji || beji.playerId !== playerId) {
-              const playerBejis = await getBejiForPlayerRedis(playerId!);
-              const isOwnedByPlayer = playerBejis.some((b) => b.id === message.bejiId);
+            // Verify that the beji belongs to this user
+            if (!userBejiIds.has(message.bejiId)) {
+              socket.send(
+                JSON.stringify({
+                  error: 'Forbidden',
+                  message: `Beji ${message.bejiId} does not belong to you`,
+                })
+              );
+              return;
+            }
 
-              if (!isOwnedByPlayer) {
-                socket.send(
-                  JSON.stringify({
-                    error: 'Forbidden',
-                    message: `Beji ${message.bejiId} does not belong to player`,
-                  })
-                );
-                return;
-              }
+            const beji = await getBeji(message.bejiId);
+            if (!beji) {
+              socket.send(
+                JSON.stringify({
+                  error: 'Not Found',
+                  message: `Beji ${message.bejiId} not found`,
+                })
+              );
+              return;
+            }
+
+            // Get player to set playerId for logging
+            const bejiPlayer = await getPlayer(beji.playerId);
+            if (bejiPlayer) {
+              playerId = bejiPlayer.id;
             }
 
             bejiId = message.bejiId;
-            fastify.log.info(`Beji ${bejiId} connected via WebSocket ${connectionId}`);
+            fastify.log.info(`Beji ${bejiId} connected via WebSocket ${connectionId} (user: ${userId}, player: ${playerId})`);
 
             socket.send(
               JSON.stringify({
@@ -419,10 +428,16 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
               })
             );
           } else if (message.type === 'update' && message.bejiId && message.position) {
+            // Verify that the beji belongs to this user
+            if (!userBejiIds.has(message.bejiId)) {
+              socket.send(JSON.stringify({ error: 'Forbidden', message: 'Beji does not belong to you' }));
+              return;
+            }
+
             if (message.bejiId !== bejiId) {
               const beji = await getBeji(message.bejiId);
-              if (!beji || beji.playerId !== playerId) {
-                socket.send(JSON.stringify({ error: 'Forbidden' }));
+              if (!beji) {
+                socket.send(JSON.stringify({ error: 'Not Found' }));
                 return;
               }
               bejiId = message.bejiId;
@@ -538,8 +553,14 @@ if (!dev) {
 // Start server
 try {
   await fastify.listen({ port, host: hostname });
-  fastify.log.info(`> Fastify server ready on http://${hostname}:${port}`);
-  fastify.log.info(`> WebSocket server ready on ws://${hostname}:${port}/api/ws/beji-sync`);
+  // Use warn level so it shows in production (production log level is 'warn')
+  fastify.log.warn(`[SERVER] Application started - Host: ${hostname}, Port: ${port}`);
+  fastify.log.warn(`[SERVER] HTTP server: http://${hostname}:${port}`);
+  fastify.log.warn(`[SERVER] WebSocket server: ws://${hostname}:${port}/api/ws/beji-sync`);
+  if (dev) {
+    fastify.log.info(`> Fastify server ready on http://${hostname}:${port}`);
+    fastify.log.info(`> WebSocket server ready on ws://${hostname}:${port}/api/ws/beji-sync`);
+  }
 } catch (err) {
   fastify.log.error(err);
   process.exit(1);
