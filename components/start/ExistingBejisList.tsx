@@ -1,6 +1,7 @@
 import React from "react";
-import type { Beji, World } from "../atoms";
+
 import { useMessages } from "../../i18n/DictionaryProvider";
+import type { Beji, World } from "../atoms";
 
 interface ExistingBejisListProps {
     bejis: Array<Beji & { world?: World | null }>;

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { Tooltip } from "../Tooltip";
+
 import { registerShortcut, unregisterShortcutById, RESERVED_KEYS } from "../../src/lib/shortcuts";
+import { Tooltip } from "../Tooltip";
 
 type ToggleFollowMouseActionProps = {
     followMouse: boolean;

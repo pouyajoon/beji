@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+
 import { useAtomValue, useSetAtom } from "../../lib/jotai";
-import { Tooltip } from "../Tooltip";
-import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "../atoms";
 import { registerShortcut, unregisterShortcutById, RESERVED_KEYS } from "../../src/lib/shortcuts";
+import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "../atoms";
 import type { Beji } from "../atoms";
+import { Tooltip } from "../Tooltip";
 
 type ZoomToBejiActionProps = {
     currentPlayerId: string;

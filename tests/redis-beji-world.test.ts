@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { config } from 'dotenv';
 import { resolve } from 'path';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
+import type { Player, Beji, World, StaticBeji } from '../components/atoms';
+import { codepointsToEmoji } from '../components/emoji';
 import { getRedisClient } from '../src/lib/redis/client';
 import {
     savePlayer,
@@ -12,8 +15,6 @@ import {
     getWorld,
     getStaticBejiForWorld,
 } from '../src/lib/redis/gameState';
-import type { Player, Beji, World, StaticBeji } from '../components/atoms';
-import { codepointsToEmoji } from '../components/emoji';
 
 // Load .env.local for integration tests
 config({ path: resolve(process.cwd(), '.env.local') });

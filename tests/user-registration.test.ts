@@ -1,15 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { config } from "dotenv";
 import { resolve } from "path";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+
 import { getRedisClient } from "../src/lib/redis/client";
 import {
     getPlayerIdForUser,
-    getPlayer,
-    savePlayer,
-    getBejiForPlayer,
 } from "../src/lib/redis/gameState";
-import type { Player } from "../components/atoms";
-import { codepointsToEmoji } from "../components/emoji";
 
 // Load .env.local for integration tests
 config({ path: resolve(process.cwd(), ".env.local") });

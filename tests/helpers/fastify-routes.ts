@@ -1,7 +1,8 @@
-import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
+import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+
 import {
   handleGetToken,
   handleGoogleOAuth,

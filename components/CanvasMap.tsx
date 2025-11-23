@@ -1,7 +1,7 @@
 "use client";
 
-import { useAtom, useAtomValue, useSetAtom } from "../lib/jotai";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+
 import type { Beji } from "./atoms";
 import {
     bejiAtom,
@@ -12,27 +12,27 @@ import {
     staticBejiForWorldAtom,
     followMouseAtom,
 } from "./atoms";
-import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
-import { useShortcuts } from "../src/lib/shortcuts";
-import { VirtualJoystick } from "./VirtualJoystick";
 import { ActionsBar } from "./map/ActionsBar";
-import { useTouchHandlers } from "./map/useTouchHandlers";
-import { useMouseHandlers } from "./map/useMouseHandlers";
 import { useBejiSync } from "../hooks/useBejiSync";
-import { setupCanvas } from "./map/drawing/canvasSetup";
-import { drawBackground } from "./map/drawing/background";
-import { drawGrid } from "./map/drawing/grid";
-import { drawOriginMarker } from "./map/drawing/originMarker";
-import { drawBeji } from "./map/drawing/beji";
-import { drawStaticBeji } from "./map/drawing/staticBeji";
-import { drawGuidanceLine } from "./map/drawing/guidanceLine";
-import { drawDebugOverlay } from "./map/drawing/debugOverlay";
+import { useKeyboardMovement } from "../hooks/useKeyboardMovement";
 import { MAP_SIZE, BEJI_SPEED_MPS } from "../lib/constants";
+import { useAtom, useAtomValue, useSetAtom } from "../lib/jotai";
+import { drawBackground } from "./map/drawing/background";
+import { drawBeji } from "./map/drawing/beji";
+import { setupCanvas } from "./map/drawing/canvasSetup";
+import { drawDebugOverlay } from "./map/drawing/debugOverlay";
+import { useMouseHandlers } from "./map/useMouseHandlers";
+import { useTouchHandlers } from "./map/useTouchHandlers";
+import { VirtualJoystick } from "./VirtualJoystick";
+import { useShortcuts } from "../src/lib/shortcuts";
+import { drawGrid } from "./map/drawing/grid";
+import { drawGuidanceLine } from "./map/drawing/guidanceLine";
+import { drawOriginMarker } from "./map/drawing/originMarker";
+import { drawStaticBeji } from "./map/drawing/staticBeji";
 
 export function CanvasMap() {
     const beji = useAtomValue(bejiAtom);
     const players = useAtomValue(playersAtom);
-    const allStaticBeji = useAtomValue(staticBejiAtom);
     const setBeji = useSetAtom(bejiAtom);
     const setStaticBeji = useSetAtom(staticBejiAtom);
     const setInventory = useSetAtom(inventoryAtom);
@@ -101,7 +101,6 @@ export function CanvasMap() {
     const [pixelsPerMeter, setPixelsPerMeter] = useAtom(zoomPxPerMeterAtom);
     const [followMouse, setFollowMouse] = useAtom(followMouseAtom);
     const followMouseRef = useRef<boolean>(true);
-    const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
     const prevFollowMouseRef = useRef<boolean>(true);
     useEffect(() => {
         followMouseRef.current = followMouse;
@@ -183,7 +182,9 @@ export function CanvasMap() {
                 "beji:lastPosition",
                 JSON.stringify({ x: Math.round(targetX), y: Math.round(targetY) })
             );
-        } catch { }
+        } catch {
+          // Ignore localStorage errors
+        }
     }, [beji, currentPlayerId]);
 
     // Initialize physics positions from beji atom
@@ -315,7 +316,6 @@ export function CanvasMap() {
     });
 
     const fullInventory = useAtomValue(inventoryAtom);
-    const playerInventory = currentPlayerId ? (fullInventory[currentPlayerId] || {}) : {};
     
     const handleHarvestStaticBeji = (codepoint: number) => {
         const newInv = { ...fullInventory };
@@ -366,8 +366,7 @@ export function CanvasMap() {
         if (!followMouse) {
             mouseHandlers.mouseWorldRef.current = null;
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [followMouse]);
+    }, [followMouse, mouseHandlers]);
 
     // Render loop (draw only; no simulation)
     useEffect(() => {
@@ -378,9 +377,9 @@ export function CanvasMap() {
         const canvasEl = canvas;
         const ctx2 = ctx;
 
-        let lastTs = performance.now();
         function draw(ts: number) {
-            lastTs = ts;
+            // ts is used for animation timing
+            void ts;
 
             // Update camera target from physics position (for smooth following)
             // Don't update camera when beji is walking to prevent scrolling
@@ -500,7 +499,6 @@ export function CanvasMap() {
             // Draw debug overlay
             drawDebugOverlay({
                 ctx: ctx2,
-                canvas: canvasEl,
                 mouseWorld: mouseHandlers.mouseWorldRef.current,
                 beji: bejiRef.current,
                 physicsPositions: physicsPositionsRef.current,

@@ -1,10 +1,11 @@
 import { createClient } from '@connectrpc/connect';
+
+import { transport } from './transport';
 import { PlayerService } from '../../proto/player/v1/player_connect';
 import {
     GetUserBejisRequest,
     GetUserBejisResponse,
 } from '../../proto/player/v1/player_pb';
-import { transport } from './transport';
 
 const client = createClient(PlayerService, transport);
 

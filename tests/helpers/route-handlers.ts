@@ -6,6 +6,9 @@ import type { JsonValue, Message } from '@bufbuild/protobuf';
 function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
   return new MessageClass(data);
 }
+import { convertAppToProto, convertBejiToProto, convertWorldToSummary } from './proto-helpers';
+import type { Beji as BejiType, Player as PlayerType, StaticBeji as StaticBejiType, World as WorldType } from '../../components/atoms';
+import { codepointsToEmoji } from '../../components/emoji';
 import { verifyJWT, signJWT, type JWTPayload } from '../../src/lib/auth/jwt';
 import {
   getPlayerIdForUser,
@@ -19,13 +22,6 @@ import {
   saveStaticBeji,
   saveWorld,
 } from '../../src/lib/redis/gameState';
-import type { Beji as BejiType, Player as PlayerType, StaticBeji as StaticBejiType, World as WorldType } from '../../components/atoms';
-import {
-  CreateWorldRequest,
-  CreateWorldResponse,
-  GetWorldRequest,
-  GetWorldResponse,
-} from '../../src/proto/world/v1/world_pb';
 import {
   GetPublicConfigRequest,
   GetPublicConfigResponse,
@@ -35,8 +31,12 @@ import {
   GetUserBejisResponse,
   BejiWithWorld,
 } from '../../src/proto/player/v1/player_pb';
-import { codepointsToEmoji } from '../../components/emoji';
-import { convertAppToProto, convertBejiToProto, convertWorldToSummary } from './proto-helpers';
+import {
+  CreateWorldRequest,
+  CreateWorldResponse,
+  GetWorldRequest,
+  GetWorldResponse,
+} from '../../src/proto/world/v1/world_pb';
 
 // Helper to get env vars at runtime only
 function getEnvVar(key: string): string | undefined {

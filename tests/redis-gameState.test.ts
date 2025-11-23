@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { GameState, Player, Beji, StaticBeji, World } from '../components/atoms';
+
+import type { Player, Beji, StaticBeji, World } from '../components/atoms';
 
 // Mock Redis client
 const mockRedis = {

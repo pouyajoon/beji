@@ -2,12 +2,11 @@
  * Debug overlay drawing utilities
  */
 
-import type { Beji } from "../../atoms";
 import { BEJI_SPEED_MPS } from "../../../lib/constants";
+import type { Beji } from "../../atoms";
 
 type DebugOverlayParams = {
     ctx: CanvasRenderingContext2D;
-    canvas: HTMLCanvasElement;
     mouseWorld: { x: number; y: number } | null;
     beji: Beji[];
     physicsPositions: Map<string, { x: number; y: number }>;
@@ -24,7 +23,6 @@ type DebugOverlayParams = {
  */
 export function drawDebugOverlay({
     ctx,
-    canvas,
     mouseWorld,
     beji,
     physicsPositions,

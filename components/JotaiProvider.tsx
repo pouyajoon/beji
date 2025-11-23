@@ -1,5 +1,6 @@
-import { Provider } from "../lib/jotai";
 import type { ReactNode } from "react";
+
+import { Provider } from "../lib/jotai";
 
 type Props = {
   children: ReactNode;

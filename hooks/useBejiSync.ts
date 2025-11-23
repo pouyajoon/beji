@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
-import { createBejiSyncClient, type BejiSyncClient } from "../src/lib/realtime/bejiSync";
+
 import type { IPosition } from "../components/atoms";
+import { createBejiSyncClient, type BejiSyncClient } from "../src/lib/realtime/bejiSync";
 
 interface UseBejiSyncOptions {
     bejiId: string | null;

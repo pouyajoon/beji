@@ -1,10 +1,20 @@
-import type { ConnectRouter, HandlerContext, ServiceImpl } from '@connectrpc/connect';
-import { AUTH_CONTEXT_KEY } from './playerService';
-import type { JWTPayload } from '../../auth/jwt';
-import { ConnectError, Code } from '@connectrpc/connect';
-import { verifyJWT } from '../../auth/jwt';
 import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
+import type { ConnectRouter, HandlerContext } from '@connectrpc/connect';
+import { ConnectError, Code } from '@connectrpc/connect';
+
+import { AUTH_CONTEXT_KEY } from './playerService';
+import type {
+  Beji as BejiType,
+  Player as PlayerType,
+  StaticBeji as StaticBejiType,
+  World as WorldType,
+} from '../../../../components/atoms';
+import { codepointsToEmoji } from '../../../../components/emoji';
+import { Beji } from '../../../proto/beji/v1/beji_pb';
+import { Position } from '../../../proto/common/v1/common_pb';
+import { Player } from '../../../proto/player/v1/player_pb';
+import { StaticBeji } from '../../../proto/staticbeji/v1/staticbeji_pb';
 import { WorldService } from '../../../proto/world/v1/world_connect';
 import {
   CreateWorldRequest,
@@ -14,21 +24,13 @@ import {
   WorldData,
   World,
 } from '../../../proto/world/v1/world_pb';
-import { Player } from '../../../proto/player/v1/player_pb';
-import { Beji } from '../../../proto/beji/v1/beji_pb';
-import { Position } from '../../../proto/common/v1/common_pb';
-import { StaticBeji } from '../../../proto/staticbeji/v1/staticbeji_pb';
+import type { JWTPayload } from '../../auth/jwt';
+import { verifyJWT } from '../../auth/jwt';
 
 // Helper function to create proto messages (compatible with v1 API)
 function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
   return new MessageClass(data);
 }
-import type {
-  Beji as BejiType,
-  Player as PlayerType,
-  StaticBeji as StaticBejiType,
-  World as WorldType,
-} from '../../../../components/atoms';
 import {
   savePlayer,
   saveBeji,
@@ -40,7 +42,6 @@ import {
   getPlayer,
   getStaticBejiForWorld,
 } from '../../redis/gameState';
-import { codepointsToEmoji } from '../../../../components/emoji';
 
 function convertAppToProto(
   world: WorldType,

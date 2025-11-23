@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, cloneElement } from "react";
 import {
     useFloating,
     offset,
@@ -13,6 +12,7 @@ import {
     useInteractions,
     FloatingPortal,
 } from "@floating-ui/react";
+import { useState, cloneElement } from "react";
 
 type TooltipProps = {
     label: string;

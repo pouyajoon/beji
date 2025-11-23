@@ -1,5 +1,5 @@
 import { getRedisClient } from "./client";
-import type { GameState, User, Player, Beji, StaticBeji, World } from "../../../components/atoms";
+import type { User, Player, Beji, StaticBeji, World } from "../../../components/atoms";
 
 const USERS_KEY = "beji:users";
 const PLAYERS_KEY = "beji:players";

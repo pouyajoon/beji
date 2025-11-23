@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+
 import type { Beji, World } from "../atoms";
+import type { BejiWithWorld } from "../../src/proto/player/v1/player_pb";
 import { getUserBejis } from "../../src/lib/rpc/playerClient";
 
 type BejisLoaderProps = {
@@ -21,25 +23,13 @@ export function BejisLoader({
         // Fetch user info and existing bejis
         async function fetchUserAndBejis() {
             try {
-                // First, get user info
-                const token = localStorage.getItem('auth_token');
-                const headers: HeadersInit = {};
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-                
+                // First, get user info - httpOnly secure cookies are sent automatically
                 const userResponse = await fetch("/api/authentication/get-token", {
-                    headers,
-                    credentials: 'include', // Include cookies for backward compatibility
+                    credentials: 'include',
                 });
                 if (userResponse.ok) {
                     const userData = await userResponse.json();
                     const currentUserId = userData.userId;
-                    
-                    // Store token if returned by server
-                    if (userData.token && !token) {
-                        localStorage.setItem('auth_token', userData.token);
-                    }
                     
                     setUserId(currentUserId);
                     setUserSub(currentUserId);
@@ -49,7 +39,7 @@ export function BejisLoader({
                         const bejisData = await getUserBejis(currentUserId);
 
                         // Convert RPC response to app format
-                        const convertedBejis = (bejisData.bejis || []).map((bw: any) => {
+                        const convertedBejis = (bejisData.bejis || []).map((bw: BejiWithWorld) => {
                             const beji: Beji = {
                                 id: bw.beji.id,
                                 playerId: bw.beji.playerId,

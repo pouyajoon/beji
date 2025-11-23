@@ -1,7 +1,11 @@
-import type { ConnectRouter, HandlerContext, ServiceImpl } from '@connectrpc/connect';
-import { createContextKey } from '@connectrpc/connect';
 import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
+import type { ConnectRouter, HandlerContext } from '@connectrpc/connect';
+import { createContextKey } from '@connectrpc/connect';
+
+import type { Beji as BejiType, World as WorldType } from '../../../../components/atoms';
+import { Beji } from '../../../proto/beji/v1/beji_pb';
+import { Position } from '../../../proto/common/v1/common_pb';
 import { PlayerService } from '../../../proto/player/v1/player_connect';
 import {
     GetUserBejisRequest,
@@ -9,20 +13,16 @@ import {
     BejiWithWorld,
     WorldSummary,
 } from '../../../proto/player/v1/player_pb';
-import { Beji } from '../../../proto/beji/v1/beji_pb';
-import { Position } from '../../../proto/common/v1/common_pb';
-import type { Beji as BejiType, World as WorldType } from '../../../../components/atoms';
 
 // Helper function to create proto messages (compatible with v1 API)
 function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {
     return new MessageClass(data);
 }
+import type { JWTPayload } from '../../auth/jwt';
 import {
-    getPlayerIdsForUser,
     getBejisForUser,
     getWorld as getWorldFromRedis,
 } from '../../redis/gameState';
-import type { JWTPayload } from '../../auth/jwt';
 
 // Context key for authentication
 export const AUTH_CONTEXT_KEY = createContextKey<JWTPayload | undefined>(undefined, {

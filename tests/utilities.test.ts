@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect } from 'vitest';
-import { getTouchDistance, getTouchCenter } from '../components/map/touchUtils';
+
 import { codepointsToEmoji } from '../components/emoji';
+import { getTouchDistance, getTouchCenter } from '../components/map/touchUtils';
 
 describe('touchUtils', () => {
     describe('getTouchDistance', () => {

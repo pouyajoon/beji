@@ -1,5 +1,6 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
-import { signJWT, verifyJWT, type JWTPayload } from "../src/lib/auth/jwt";
+import { describe, expect, test, beforeEach } from "vitest";
+
+import { signJWT, verifyJWT } from "../src/lib/auth/jwt";
 
 describe("JWT Authentication", () => {
     const originalEnv = process.env.JWT_SECRET;

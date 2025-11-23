@@ -1,9 +1,9 @@
 "use client";
 
 import type { Beji } from "../atoms";
+import { InventoryDisplay } from "./InventoryDisplay";
 import { ToggleFollowMouseAction } from "./ToggleFollowMouseAction";
 import { ZoomToBejiAction } from "./ZoomToBejiAction";
-import { InventoryDisplay } from "./InventoryDisplay";
 import UserMenu from "../UserMenu";
 
 type ActionsBarProps = {

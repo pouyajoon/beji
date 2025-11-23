@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderToString } from 'react-dom/server';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock react-router-dom before importing the component
 vi.mock('react-router-dom', () => ({

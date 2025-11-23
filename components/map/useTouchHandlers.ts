@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "react";
+
 import { getTouchDistance, getTouchCenter } from "./touchUtils";
 import { MAP_SIZE } from "../../lib/constants";
 

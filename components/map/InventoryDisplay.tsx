@@ -1,7 +1,7 @@
 "use client";
 
 import { useAtomValue } from "../../lib/jotai";
-import { inventoryForPlayerAtom, playersAtom, inventoryAtom } from "../atoms";
+import { playersAtom, inventoryAtom } from "../atoms";
 import { codepointsToEmoji } from "../emoji";
 
 export function InventoryDisplay() {

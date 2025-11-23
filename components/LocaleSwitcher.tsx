@@ -1,8 +1,8 @@
 "use client";
 
-import { useSetAtom } from "../lib/jotai";
 import { languageAtom } from "./atoms";
 import { Tooltip } from "./Tooltip";
+import { useSetAtom } from "../lib/jotai";
 import type { AppLocale } from "../src/i18n";
 
 const LOCALES: { code: AppLocale; flag: string; label: string }[] = [

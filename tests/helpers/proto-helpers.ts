@@ -5,18 +5,16 @@ function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?
   return new MessageClass(data);
 }
 import type { Beji as BejiType, Player as PlayerType, StaticBeji as StaticBejiType, World as WorldType } from '../../components/atoms';
+import { Beji } from '../../src/proto/beji/v1/beji_pb';
+import { Position } from '../../src/proto/common/v1/common_pb';
+import { Player ,
+  WorldSummary,
+} from '../../src/proto/player/v1/player_pb';
+import { StaticBeji } from '../../src/proto/staticbeji/v1/staticbeji_pb';
 import {
   WorldData,
   World,
 } from '../../src/proto/world/v1/world_pb';
-import { Player } from '../../src/proto/player/v1/player_pb';
-import { Beji } from '../../src/proto/beji/v1/beji_pb';
-import { StaticBeji } from '../../src/proto/staticbeji/v1/staticbeji_pb';
-import { Position } from '../../src/proto/common/v1/common_pb';
-import {
-  WorldSummary,
-  BejiWithWorld,
-} from '../../src/proto/player/v1/player_pb';
 
 // Helper to convert app types to proto types
 export function convertAppToProto(

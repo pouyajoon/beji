@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { AuthenticatedPage } from '../../components/AuthenticatedPage';
-import { Map } from '../../components/Map';
-import { getWorld } from '../lib/rpc/worldClient';
-import { useSetAtom } from '../../lib/jotai';
+
 import {
   playersAtom,
   bejiAtom,
@@ -14,6 +11,10 @@ import {
   type StaticBeji,
   type World,
 } from '../../components/atoms';
+import { AuthenticatedPage } from '../../components/AuthenticatedPage';
+import { Map } from '../../components/Map';
+import { useSetAtom } from '../../lib/jotai';
+import { getWorld } from '../lib/rpc/worldClient';
 import type { StaticBeji as ProtoStaticBeji } from '../proto/staticbeji/v1/staticbeji_pb';
 
 function WorldPageContent() {

@@ -1,4 +1,6 @@
 import { createClient } from '@connectrpc/connect';
+
+import { transport } from './transport';
 import { WorldService } from '../../proto/world/v1/world_connect';
 import {
     CreateWorldRequest,
@@ -6,7 +8,6 @@ import {
     GetWorldRequest,
     GetWorldResponse,
 } from '../../proto/world/v1/world_pb';
-import { transport } from './transport';
 
 const client = createClient(WorldService, transport);
 

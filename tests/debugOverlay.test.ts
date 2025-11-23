@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { drawDebugOverlay } from '../components/map/drawing/debugOverlay';
+
 import type { Beji } from '../components/atoms';
+import { drawDebugOverlay } from '../components/map/drawing/debugOverlay';
 
 describe('drawDebugOverlay', () => {
     let canvas: HTMLCanvasElement;

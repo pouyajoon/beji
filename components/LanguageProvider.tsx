@@ -1,8 +1,9 @@
-import { useAtom } from "../lib/jotai";
-import { languageAtom } from "./atoms";
 import { useEffect, useState } from "react";
-import { loadMessages, defaultLocale, type AppLocale } from "../src/i18n";
+
+import { languageAtom } from "./atoms";
 import { DictionaryProvider } from "../i18n/DictionaryProvider";
+import { useAtom } from "../lib/jotai";
+import { loadMessages, defaultLocale, type AppLocale } from "../src/i18n";
 
 // Minimal fallback messages to prevent errors during loading
 const FALLBACK_MESSAGES: Record<string, unknown> = {

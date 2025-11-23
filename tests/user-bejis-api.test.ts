@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
 import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 
 const mockGetPlayerIdForUser = vi.fn();

@@ -1,4 +1,5 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
+
 import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 
 const mockSignJWT = vi.fn();

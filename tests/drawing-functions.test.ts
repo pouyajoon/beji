@@ -2,14 +2,15 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach } from 'vitest';
+
+import type { Beji, StaticBeji } from '../components/atoms';
 import { drawBackground } from '../components/map/drawing/background';
-import { drawGrid } from '../components/map/drawing/grid';
-import { drawOriginMarker } from '../components/map/drawing/originMarker';
-import { drawGuidanceLine } from '../components/map/drawing/guidanceLine';
-import { drawStaticBeji } from '../components/map/drawing/staticBeji';
 import { drawBeji } from '../components/map/drawing/beji';
 import { setupCanvas } from '../components/map/drawing/canvasSetup';
-import type { Beji, StaticBeji } from '../components/atoms';
+import { drawGrid } from '../components/map/drawing/grid';
+import { drawGuidanceLine } from '../components/map/drawing/guidanceLine';
+import { drawOriginMarker } from '../components/map/drawing/originMarker';
+import { drawStaticBeji } from '../components/map/drawing/staticBeji';
 
 describe('drawBackground', () => {
     let canvas: HTMLCanvasElement;

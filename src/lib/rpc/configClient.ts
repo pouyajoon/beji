@@ -1,7 +1,8 @@
 import { createClient } from '@connectrpc/connect';
+
+import { transport } from './transport';
 import { ConfigService } from '../../proto/config/v1/config_connect';
 import { GetPublicConfigRequest, GetPublicConfigResponse } from '../../proto/config/v1/config_pb';
-import { transport } from './transport';
 
 const client = createClient(ConfigService, transport);
 

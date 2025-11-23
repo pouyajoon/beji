@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { config } from 'dotenv';
 import { resolve } from 'path';
 import { createClient } from 'redis';
+import { describe, it, expect } from 'vitest';
 
 // Load .env.local for integration tests
 config({ path: resolve(process.cwd(), '.env.local') });

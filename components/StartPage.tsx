@@ -1,7 +1,6 @@
-import { useAtom, useSetAtom } from "../lib/jotai";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMessages } from "../i18n/DictionaryProvider";
+
 import {
     bejiAtom,
     playersAtom,
@@ -16,10 +15,12 @@ import {
     type World,
 } from "./atoms";
 import { generateRandomEmojiSet } from "../app/emoji/random";
-import { Header } from "./start/Header";
-import { ExistingBejisList } from "./start/ExistingBejisList";
-import { CreateBejiForm } from "./start/CreateBejiForm";
+import { useMessages } from "../i18n/DictionaryProvider";
+import { useAtom, useSetAtom } from "../lib/jotai";
 import { BejisLoader } from "./start/BejisLoader";
+import { CreateBejiForm } from "./start/CreateBejiForm";
+import { ExistingBejisList } from "./start/ExistingBejisList";
+import { Header } from "./start/Header";
 import { createWorld } from "../src/lib/rpc/worldClient";
 import type { StaticBeji as ProtoStaticBeji } from "../src/proto/staticbeji/v1/staticbeji_pb";
 

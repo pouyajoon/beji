@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { RedisClientType } from 'redis';
 
 // Mock redis before importing
 const mockRedisInstance = {

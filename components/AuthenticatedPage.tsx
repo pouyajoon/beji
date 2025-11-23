@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSetAtom } from '../lib/jotai';
+
 import { userSubAtom } from './atoms';
+import { useSetAtom } from '../lib/jotai';
 
 interface AuthenticatedPageProps {
   children: React.ReactNode;
@@ -15,7 +16,10 @@ export function AuthenticatedPage({ children }: AuthenticatedPageProps) {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch('/api/authentication/get-token');
+        // httpOnly secure cookies are sent automatically with credentials: 'include'
+        const response = await fetch('/api/authentication/get-token', {
+          credentials: 'include',
+        });
         if (response.ok) {
           const data = await response.json();
           setUserSub(data.userId);

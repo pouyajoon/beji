@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { getRedisClient } from '../src/lib/redis/client';
-import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 import type { RedisClientType } from 'redis';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+
+import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
+import { getRedisClient } from '../src/lib/redis/client';
 
 // Load .env.local for integration tests
 config({ path: resolve(process.cwd(), '.env.local') });

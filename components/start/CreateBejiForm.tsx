@@ -1,7 +1,7 @@
-import { EmojiPicker } from "./EmojiPicker";
 import { BejiNameInput } from "./BejiNameInput";
-import { StartAction } from "./StartAction";
+import { EmojiPicker } from "./EmojiPicker";
 import { SelectedPreview } from "./SelectedPreview";
+import { StartAction } from "./StartAction";
 
 type CreateBejiFormProps = {
     emojiGrid: number[][];

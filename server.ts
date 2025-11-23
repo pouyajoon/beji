@@ -81,23 +81,12 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
   return cookies;
 }
 
-// Auth helper - supports both Authorization header (Bearer token) and cookie (for backward compatibility)
-async function authenticateRequest(request: { headers: { authorization?: string; cookie?: string } }): Promise<JWTPayload | null> {
+// Auth helper - uses httpOnly secure cookie only
+// Token is stored in httpOnly cookie and cannot be accessed by JavaScript
+async function authenticateRequest(request: { headers: { cookie?: string } }): Promise<JWTPayload | null> {
   try {
-    let token: string | null = null;
-
-    // Try Authorization header first (Bearer token)
-    const authHeader = request.headers.authorization;
-    if (authHeader) {
-      const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      token = match && match[1] ? match[1] : null;
-    }
-
-    // Fallback to cookie for backward compatibility
-    if (!token) {
-      const cookies = parseCookies(request.headers.cookie);
-      token = cookies.auth_token || null;
-    }
+    const cookies = parseCookies(request.headers.cookie);
+    const token = cookies.auth_token || null;
 
     if (!token) {
       return null;
@@ -141,12 +130,12 @@ await fastify.register(fastifyWebsocketPlugin);
 // Register middie plugin for Vite middleware integration
 await fastify.register(fastifyMiddiePlugin);
 
-// Register cookie plugin
+// Register cookie plugin for httpOnly secure cookies
 await fastify.register(fastifyCookiePlugin);
 
 // Authentication interceptor for Connect RPC
 // Applies to authenticated routes (PlayerService and WorldService)
-// Access cookies from request headers (cookies are sent in Cookie header)
+// Uses httpOnly secure cookie
 const authInterceptor: Interceptor = (next) => async (req) => {
   // Require auth for PlayerService and WorldService
   const isAuthenticatedService =
@@ -154,30 +143,24 @@ const authInterceptor: Interceptor = (next) => async (req) => {
     req.service.typeName.includes('WorldService');
 
   if (isAuthenticatedService) {
-    // Get Authorization header (Bearer token)
-    const authHeader = req.header.get('authorization');
+    // Get cookie header
+    const cookieHeader = req.header.get('cookie');
+    const cookies = parseCookies(cookieHeader || '');
+    const token = cookies.auth_token || null;
 
-    if (authHeader) {
-      // Extract Bearer token: "Bearer <token>"
-      const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      const token = match ? match[1] : null;
-
-      if (token) {
-        try {
-          const payload = await verifyJWT(token);
-          // Store auth payload in context for use by services
-          // The context is available on the request as contextValues
-          req.contextValues.set(AUTH_CONTEXT_KEY, payload);
-          fastify.log.info(`[AuthInterceptor] Auth payload set for ${req.service.typeName}, userId: ${payload.userId}`);
-        } catch (error) {
-          // Auth failed, but don't throw here - let services decide
-          fastify.log.warn(`[AuthInterceptor] JWT verification failed for ${req.service.typeName}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      } else {
-        fastify.log.warn(`[AuthInterceptor] Invalid Authorization header format for ${req.service.typeName} (expected: Bearer <token>)`);
+    if (token) {
+      try {
+        const payload = await verifyJWT(token);
+        // Store auth payload in context for use by services
+        // The context is available on the request as contextValues
+        req.contextValues.set(AUTH_CONTEXT_KEY, payload);
+        fastify.log.info(`[AuthInterceptor] Auth payload set for ${req.service.typeName}, userId: ${payload.userId}`);
+      } catch (error) {
+        // Auth failed, but don't throw here - let services decide
+        fastify.log.warn(`[AuthInterceptor] JWT verification failed for ${req.service.typeName}: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {
-      fastify.log.warn(`[AuthInterceptor] No Authorization header found for ${req.service.typeName}`);
+      fastify.log.warn(`[AuthInterceptor] No auth token cookie found for ${req.service.typeName}`);
     }
   }
 
@@ -208,26 +191,16 @@ fastify.get('/api/authentication/get-token', async (request, reply) => {
     return reply.status(401).send({ error: 'Unauthorized' });
   }
 
-  // Return token so client can store it and use it in Authorization header
-  let token: string | null = null;
-  const authHeader = request.headers.authorization;
-  if (authHeader) {
-    const match = authHeader.match(/^Bearer\s+(.+)$/i);
-    token = match && match[1] ? match[1] : null;
-  }
-  if (!token) {
-    const cookies = parseCookies(request.headers.cookie);
-    token = cookies.auth_token || null;
-  }
-
+  // Return user info only - token is stored in httpOnly cookie and not accessible to JavaScript
   return {
     userId: payload.userId,
     email: payload.email,
-    token: token || undefined, // Include token if available
+    picture: payload.picture,
   };
 });
 
 fastify.post('/authentication/logout', async (request, reply) => {
+  // Clear httpOnly secure cookie
   reply.setCookie('auth_token', '', {
     httpOnly: true,
     secure: getEnvVar('NODE_ENV') === 'production',
@@ -326,7 +299,10 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       picture: userInfo.picture, // Include user's profile picture from Google
     });
 
-    // Store token in cookie for backward compatibility and for get-token endpoint
+    // Set httpOnly secure cookie for authentication (protected from XSS)
+    // httpOnly: true - cookie cannot be accessed by JavaScript
+    // secure: true in production - cookie only sent over HTTPS
+    // sameSite: 'strict' - protects against CSRF attacks
     reply.setCookie('auth_token', jwt, {
       httpOnly: true,
       secure: getEnvVar('NODE_ENV') === 'production',
@@ -335,9 +311,8 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
       path: '/',
     });
 
-    // Return HTML page that stores token in localStorage and redirects
-    // This allows the client to use the token in Authorization header
-    fastify.log.info('[OAuth] Authentication successful, returning token storage page');
+    // Return HTML page that redirects - token is stored in httpOnly cookie only
+    fastify.log.info('[OAuth] Authentication successful, setting httpOnly secure cookie');
     reply.type('text/html').send(`
       <!DOCTYPE html>
       <html>
@@ -346,8 +321,7 @@ fastify.get('/authentication/oauth/google', async (request, reply) => {
         </head>
         <body>
           <script>
-            // Store token in localStorage for use in Authorization header
-            localStorage.setItem('auth_token', ${JSON.stringify(jwt)});
+            // Token is stored in httpOnly secure cookie, not accessible to JavaScript
             // Redirect to home page
             window.location.href = '/';
           </script>
@@ -421,20 +395,10 @@ fastify.get('/api/ws/beji-sync', { websocket: true }, (connection, req) => {
     const socket: WebSocket = connection.socket;
 
     try {
-      // Get token from Authorization header (Bearer token)
-      const authHeader = req.headers.authorization;
-      let token: string | null = null;
-
-      if (authHeader) {
-        const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        token = match && match[1] ? match[1] : null;
-      }
-
-      // Fallback to cookie for backward compatibility
-      if (!token) {
-        const cookies = parseCookies(req.headers.cookie || '');
-        token = cookies.auth_token || null;
-      }
+      // Get token from httpOnly secure cookie only
+      // WebSocket connections will include cookies automatically from same origin
+      const cookies = parseCookies(req.headers.cookie || '');
+      const token = cookies.auth_token || null;
 
       if (!token) {
         socket.close(1008, 'Unauthorized: No token');

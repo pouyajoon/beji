@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSetAtom } from "../lib/jotai";
+
 import { userSubAtom } from "./atoms";
-import { useMessages } from "../i18n/DictionaryProvider";
 import LocaleSwitcher from "./LocaleSwitcher";
+import { useMessages } from "../i18n/DictionaryProvider";
+import { useSetAtom } from "../lib/jotai";
 
 interface UserInfo {
     userId: string;
@@ -24,7 +25,10 @@ export default function UserMenu() {
     useEffect(() => {
         async function fetchUserInfo() {
             try {
-                const response = await fetch("/api/authentication/get-token");
+                // httpOnly secure cookies are sent automatically with credentials: 'include'
+                const response = await fetch("/api/authentication/get-token", {
+                    credentials: 'include',
+                });
                 if (response.ok) {
                     const data = await response.json();
                     setUserInfo(data);
@@ -61,8 +65,11 @@ export default function UserMenu() {
 
     const handleLogout = async () => {
         try {
-            // Call logout endpoint to clear cookie
-            await fetch("/authentication/logout", { method: "POST" });
+            // Call logout endpoint to clear httpOnly secure cookie
+            await fetch("/authentication/logout", { 
+                method: "POST",
+                credentials: 'include',
+            });
         } catch (error) {
             console.error("Logout error:", error);
         } finally {

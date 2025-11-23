@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+
 import { JotaiProvider } from '../components/JotaiProvider';
 import { LanguageProvider } from '../components/LanguageProvider';
 import HomePage from './pages/HomePage';

@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { codepointsToEmoji } from '../components/emoji';
+import { describe, it, expect } from 'vitest';
+
 import type { StaticBeji } from '../components/atoms';
+import { codepointsToEmoji } from '../components/emoji';
 
 describe('Static Beji', () => {
     describe('Static Beji Creation', () => {

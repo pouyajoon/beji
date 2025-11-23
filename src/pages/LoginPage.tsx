@@ -1,34 +1,38 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSetAtom } from '../../lib/jotai';
-import { userSubAtom } from '../../components/atoms';
 
-export default function LoginPage() {
+import { userSubAtom } from '../../components/atoms';
+import { useSetAtom } from '../../lib/jotai';
+
+export default function LoginPage(): React.JSX.Element | null {
   const navigate = useNavigate();
   const [isClient, setIsClient] = useState(false);
   const setUserSub = useSetAtom(userSubAtom);
 
-  useEffect(() => {
+  useEffect((): void => {
     setIsClient(true);
   }, []);
 
-  useEffect(() => {
-    async function checkAuth() {
+  useEffect((): void => {
+    async function checkAuth(): Promise<void> {
       try {
-        const response = await fetch('/api/authentication/get-token');
+        // httpOnly secure cookies are sent automatically with credentials: 'include'
+        const response = await fetch('/api/authentication/get-token', {
+          credentials: 'include',
+        });
         if (response.ok) {
           const data = await response.json();
           setUserSub(data.userId);
           navigate('/');
         }
-      } catch (error) {
+      } catch {
         // Not authenticated, stay on login page
       }
     }
     checkAuth();
   }, [navigate, setUserSub]);
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (): Promise<void> => {
     try {
       const { getPublicConfig } = await import('../lib/rpc/configClient');
       const config = await getPublicConfig();

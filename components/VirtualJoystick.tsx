@@ -37,7 +37,6 @@ export function VirtualJoystick({ onVector }: Props) {
         return () => {
             if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [active, vec.x, vec.y]);
 
     const containerRef = useRef<HTMLDivElement | null>(null);

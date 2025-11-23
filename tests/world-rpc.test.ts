@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
 import type { Player, Beji, StaticBeji, World } from '../components/atoms';
 import { createTestFastifyWithRoutes } from './helpers/fastify-routes';
 

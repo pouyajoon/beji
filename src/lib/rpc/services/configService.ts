@@ -1,5 +1,5 @@
-import type { ConnectRouter, ServiceImpl } from '@connectrpc/connect';
 import type { Message } from '@bufbuild/protobuf';
+import type { ConnectRouter } from '@connectrpc/connect';
 
 // Helper function to create proto messages (compatible with v1 API)
 function create<T extends Message<T>>(MessageClass: new (data?: any) => T, data?: any): T {

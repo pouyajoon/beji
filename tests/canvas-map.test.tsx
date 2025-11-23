@@ -1,9 +1,9 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderToString } from 'react-dom/server';
 import React from 'react';
+import { renderToString } from 'react-dom/server';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock react-router-dom before importing the component
 vi.mock('react-router-dom', () => ({
@@ -16,8 +16,8 @@ vi.mock('react-router-dom', () => ({
   Route: ({ element }: { element: React.ReactNode }) => <>{element}</>,
 }));
 
-import { Map } from '../components/Map';
 import { JotaiProvider } from '../components/JotaiProvider';
+import { Map } from '../components/Map';
 
 describe('CanvasMap - Initialization Order', () => {
     beforeEach(() => {

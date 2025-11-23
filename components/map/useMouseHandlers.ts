@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import type { Beji, StaticBeji } from "../atoms";
+
 import { MAP_SIZE } from "../../lib/constants";
+import type { Beji, StaticBeji } from "../atoms";
 
 type UseMouseHandlersProps = {
     isTouchPreferred: boolean;

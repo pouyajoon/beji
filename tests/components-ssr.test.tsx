@@ -1,31 +1,31 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
 import { renderToString } from 'react-dom/server';
+import { describe, it, expect } from 'vitest';
 
 // Import all components
-import { Map } from '../components/Map';
-import { StartPage } from '../components/StartPage';
+import { CanvasMap } from '../components/CanvasMap';
+import { JotaiProvider } from '../components/JotaiProvider';
+import { LanguageProvider } from '../components/LanguageProvider';
 import LocaleSwitcher from '../components/LocaleSwitcher';
-import { Tooltip } from '../components/Tooltip';
-import { VirtualJoystick } from '../components/VirtualJoystick';
-import { Header } from '../components/start/Header';
-import { EmojiPicker } from '../components/start/EmojiPicker';
-import { BejiNameInput } from '../components/start/BejiNameInput';
-import { SelectedPreview } from '../components/start/SelectedPreview';
-import { StartAction } from '../components/start/StartAction';
-import { CreateBejiForm } from '../components/start/CreateBejiForm';
-import { BejisLoader } from '../components/start/BejisLoader';
+import { Map } from '../components/Map';
+import { ActionsBar } from '../components/map/ActionsBar';
 import { InventoryDisplay } from '../components/map/InventoryDisplay';
 import { ToggleFollowMouseAction } from '../components/map/ToggleFollowMouseAction';
 import { ZoomToBejiAction } from '../components/map/ZoomToBejiAction';
-import { ActionsBar } from '../components/map/ActionsBar';
+import { BejiNameInput } from '../components/start/BejiNameInput';
+import { BejisLoader } from '../components/start/BejisLoader';
+import { CreateBejiForm } from '../components/start/CreateBejiForm';
+import { EmojiPicker } from '../components/start/EmojiPicker';
+import { ExistingBejisList } from '../components/start/ExistingBejisList';
+import { Header } from '../components/start/Header';
+import { SelectedPreview } from '../components/start/SelectedPreview';
+import { StartAction } from '../components/start/StartAction';
+import { StartPage } from '../components/StartPage';
+import { Tooltip } from '../components/Tooltip';
+import UserMenu from '../components/UserMenu';
+import { VirtualJoystick } from '../components/VirtualJoystick';
 import { DictionaryProvider } from '../i18n/DictionaryProvider';
 import { Provider } from '../lib/jotai';
-import { JotaiProvider } from '../components/JotaiProvider';
-import { CanvasMap } from '../components/CanvasMap';
-import { LanguageProvider } from '../components/LanguageProvider';
-import UserMenu from '../components/UserMenu';
-import { ExistingBejisList } from '../components/start/ExistingBejisList';
 
 // Mock messages
 const mockMessages = {

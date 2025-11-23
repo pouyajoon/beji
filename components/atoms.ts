@@ -1,6 +1,6 @@
 import { atom, atomWithStorage, createJSONStorage } from "../lib/jotai";
-import { detectLanguage } from '../src/lib/language';
 import type { AppLocale } from '../src/i18n';
+import { detectLanguage } from '../src/lib/language';
 
 // Game State
 export interface IPosition {
@@ -62,6 +62,102 @@ export type GameState = {
     inventory: Record<string, Record<number, number>>; // Maps playerId -> codepoint -> count
 };
 
+// Types for old structures (before migration)
+type OldPlayer = Partial<Player> & {
+    id: string;
+    emoji: string;
+    emojiCodepoints: number[];
+};
+
+type OldBeji = Partial<Beji> & {
+    id: string;
+    playerId: string;
+    emoji: string;
+    name: string;
+    position: IPosition;
+};
+
+type OldStaticBeji = Partial<StaticBeji> & {
+    id: string;
+    emojiCodepoint: number;
+    emoji: string;
+    position: IPosition;
+};
+
+type OldGameState = {
+    players?: OldPlayer[];
+    worlds?: World[];
+    beji?: OldBeji[];
+    staticBeji?: OldStaticBeji[];
+    inventory?: Record<number, number> | Record<string, Record<number, number>>;
+};
+
+// Type guards
+function isGameState(obj: unknown): obj is GameState {
+    if (!obj || typeof obj !== 'object') return false;
+    const state = obj as Record<string, unknown>;
+    return (
+        Array.isArray(state.players) &&
+        Array.isArray(state.worlds) &&
+        Array.isArray(state.beji) &&
+        Array.isArray(state.staticBeji) &&
+        typeof state.inventory === 'object' &&
+        state.inventory !== null &&
+        !Array.isArray(state.inventory)
+    );
+}
+
+function isOldInventoryStructure(inv: unknown): inv is Record<number, number> {
+    if (!inv || typeof inv !== 'object' || Array.isArray(inv)) return false;
+    const keys = Object.keys(inv);
+    return keys.length > 0 && keys.every((k) => !isNaN(Number(k)));
+}
+
+function isOldPlayer(player: unknown): player is OldPlayer {
+    if (!player || typeof player !== 'object') return false;
+    const p = player as Record<string, unknown>;
+    return (
+        typeof p.id === 'string' &&
+        typeof p.emoji === 'string' &&
+        Array.isArray(p.emojiCodepoints)
+    );
+}
+
+function isOldBeji(beji: unknown): beji is OldBeji {
+    if (!beji || typeof beji !== 'object') return false;
+    const b = beji as Record<string, unknown>;
+    const position = b.position;
+    const hasValidPosition =
+        position !== null &&
+        position !== undefined &&
+        typeof position === 'object' &&
+        typeof (position as IPosition).x === 'number' &&
+        typeof (position as IPosition).y === 'number';
+    return (
+        typeof b.id === 'string' &&
+        typeof b.playerId === 'string' &&
+        typeof b.emoji === 'string' &&
+        typeof b.name === 'string' &&
+        hasValidPosition
+    );
+}
+
+function isOldStaticBeji(staticBeji: unknown): staticBeji is OldStaticBeji {
+    if (!staticBeji || typeof staticBeji !== 'object') return false;
+    const sb = staticBeji as Record<string, unknown>;
+    const position = sb.position;
+    return (
+        typeof sb.id === 'string' &&
+        typeof sb.emojiCodepoint === 'number' &&
+        typeof sb.emoji === 'string' &&
+        position !== null &&
+        position !== undefined &&
+        typeof position === 'object' &&
+        typeof (position as IPosition).x === 'number' &&
+        typeof (position as IPosition).y === 'number'
+    );
+}
+
 // Atoms
 const gameStorage = createJSONStorage<GameState>(() => {
     const baseStorage = localStorage;
@@ -70,70 +166,109 @@ const gameStorage = createJSONStorage<GameState>(() => {
             try {
                 const value = baseStorage.getItem(key);
                 if (value === null) return null;
-                const parsed: any = JSON.parse(value);
-                // Migrate old game state structure to new structure
-                if (parsed) {
-                    // Ensure all required arrays exist
-                    if (!parsed.players) parsed.players = [];
-                    if (!parsed.worlds) parsed.worlds = [];
-                    if (!parsed.beji) parsed.beji = [];
-                    if (!parsed.staticBeji) parsed.staticBeji = [];
-                    if (!parsed.inventory) parsed.inventory = {};
+                const parsed = JSON.parse(value);
 
-                    // Migrate old player structure (without bejiIds)
-                    if (parsed.players && Array.isArray(parsed.players)) {
-                        parsed.players = parsed.players.map((p: any) => ({
-                            ...p,
-                            bejiIds: p.bejiIds || [],
-                            createdAt: p.createdAt || Date.now(),
-                        }));
-                    }
-
-                    // Migrate old beji structure (without worldId)
-                    if (parsed.beji && Array.isArray(parsed.beji)) {
-                        parsed.beji = parsed.beji.map((b: any) => ({
-                            ...b,
-                            walk: b.walk !== undefined ? b.walk : true,
-                            worldId: b.worldId || '',
-                            createdAt: b.createdAt || Date.now(),
-                        }));
-                    }
-
-                    // Migrate old static beji structure (without worldId)
-                    if (parsed.staticBeji && Array.isArray(parsed.staticBeji)) {
-                        parsed.staticBeji = parsed.staticBeji.map((sb: any) => ({
-                            ...sb,
-                            worldId: sb.worldId || '',
-                        }));
-                    }
-
-                    // Migrate old inventory structure (player-level to per-player)
-                    if (parsed.inventory && !parsed.inventory[0]) {
-                        // Old structure: Record<number, number>
-                        // New structure: Record<playerId, Record<number, number>>
-                        // Type guard to check if it's the old structure
-                        const isOldInventoryStructure = (
-                            inv: unknown
-                        ): inv is Record<number, number> => {
-                            if (!inv || typeof inv !== 'object') return false;
-                            // Check if keys are numbers (old structure) vs strings (new structure)
-                            const keys = Object.keys(inv);
-                            return keys.length > 0 && keys.every((k) => !isNaN(Number(k)));
-                        };
-
-                        const inventory = parsed.inventory;
-                        if (isOldInventoryStructure(inventory) && parsed.players && parsed.players.length > 0) {
-                            // Migrate to first player's inventory
-                            const playerId = parsed.players[0]?.id || 'default';
-                            parsed.inventory = {
-                                [playerId]: inventory,
-                            };
-                        } else {
-                            parsed.inventory = {};
-                        }
-                    }
+                // If already valid GameState, return as-is
+                if (isGameState(parsed)) {
+                    return JSON.stringify(parsed);
                 }
-                return JSON.stringify(parsed);
+
+                // Otherwise, migrate from old structure
+                if (parsed && typeof parsed === 'object') {
+                    const oldState = parsed as OldGameState;
+                    const migratedState: GameState = {
+                        players: (oldState.players || []).map((p): Player => {
+                            if (isOldPlayer(p)) {
+                                return {
+                                    id: p.id,
+                                    userId: p.userId,
+                                    emoji: p.emoji,
+                                    emojiCodepoints: p.emojiCodepoints,
+                                    bejiIds: p.bejiIds || [],
+                                    createdAt: p.createdAt || Date.now(),
+                                };
+                            }
+                            // Fallback for invalid player data
+                            return {
+                                id: '',
+                                emoji: '',
+                                emojiCodepoints: [],
+                                bejiIds: [],
+                                createdAt: Date.now(),
+                            };
+                        }),
+                        worlds: oldState.worlds || [],
+                        beji: (oldState.beji || []).map((b): Beji => {
+                            if (isOldBeji(b)) {
+                                return {
+                                    id: b.id,
+                                    playerId: b.playerId,
+                                    worldId: b.worldId || '',
+                                    emoji: b.emoji,
+                                    name: b.name,
+                                    position: b.position,
+                                    target: b.target,
+                                    walk: b.walk !== undefined ? b.walk : true,
+                                    createdAt: b.createdAt || Date.now(),
+                                };
+                            }
+                            // Fallback for invalid beji data
+                            return {
+                                id: '',
+                                playerId: '',
+                                worldId: '',
+                                emoji: '',
+                                name: '',
+                                position: { x: 0, y: 0 },
+                                walk: true,
+                                createdAt: Date.now(),
+                            };
+                        }),
+                        staticBeji: (oldState.staticBeji || []).map((sb): StaticBeji => {
+                            if (isOldStaticBeji(sb)) {
+                                return {
+                                    id: sb.id,
+                                    worldId: sb.worldId || '',
+                                    emojiCodepoint: sb.emojiCodepoint,
+                                    emoji: sb.emoji,
+                                    position: sb.position,
+                                    harvested: sb.harvested || false,
+                                };
+                            }
+                            // Fallback for invalid static beji data
+                            return {
+                                id: '',
+                                worldId: '',
+                                emojiCodepoint: 0x1f600,
+                                emoji: '😀',
+                                position: { x: 0, y: 0 },
+                                harvested: false,
+                            };
+                        }),
+                        inventory: (() => {
+                            if (!oldState.inventory) return {};
+                            if (isOldInventoryStructure(oldState.inventory)) {
+                                // Migrate old inventory structure to new structure
+                                const firstPlayerId = oldState.players?.[0]?.id || 'default';
+                                return {
+                                    [firstPlayerId]: oldState.inventory,
+                                };
+                            }
+                            // Already in new structure
+                            return oldState.inventory as Record<string, Record<number, number>>;
+                        })(),
+                    };
+                    return JSON.stringify(migratedState);
+                }
+                // Invalid data, return empty state
+                const emptyState: GameState = {
+                    players: [],
+                    worlds: [],
+                    beji: [],
+                    staticBeji: [],
+                    inventory: {},
+                };
+                return JSON.stringify(emptyState);
             } catch {
                 return null;
             }
