@@ -37,6 +37,14 @@ const mockMessages = {
     startButton: "Start Adventure! 🚀",
     creating: "Creating...",
   },
+  Actions: {
+    toggleFollowMouse: "Toggle follow mouse",
+    followingMouse: "Following mouse (click to stop)",
+    notFollowingMouse: "Not following mouse (click to enable)",
+    shortcutSuffix: " • Shortcut:",
+    zoomToBeji: "Zoom to beji",
+    zoomToBejiShortcut: "Zoom to beji • Shortcut: Z",
+  },
 };
 
 describe('Components SSR', () => {
@@ -174,7 +182,6 @@ describe('Components SSR', () => {
     it('renders null (component does not render anything)', () => {
       const html = renderToString(
         <BejisLoader
-          setUserSub={() => {}}
           setUserId={() => {}}
           setExistingBejis={() => {}}
           setIsLoadingBejis={() => {}}
@@ -216,10 +223,12 @@ describe('Components SSR', () => {
     it('renders to an HTML string without throwing', () => {
       const html = renderToString(
         <Provider>
-          <ToggleFollowMouseAction
-            followMouse={true}
-            onToggle={() => {}}
-          />
+          <DictionaryProvider value={{ locale: 'en', messages: mockMessages }}>
+            <ToggleFollowMouseAction
+              followMouse={true}
+              onToggle={() => {}}
+            />
+          </DictionaryProvider>
         </Provider>
       );
       expect(typeof html).toBe('string');
@@ -231,12 +240,14 @@ describe('Components SSR', () => {
     it('renders to an HTML string without throwing', () => {
       const html = renderToString(
         <Provider>
-          <ZoomToBejiAction
-            currentPlayerId="test"
-            setCameraOffset={() => {}}
-            getPhysicsPosition={() => undefined}
-            setBeji={() => {}}
-          />
+          <DictionaryProvider value={{ locale: 'en', messages: mockMessages }}>
+            <ZoomToBejiAction
+              currentPlayerId="test"
+              setCameraOffset={() => {}}
+              getPhysicsPosition={() => undefined}
+              setBeji={() => {}}
+            />
+          </DictionaryProvider>
         </Provider>
       );
       expect(typeof html).toBe('string');

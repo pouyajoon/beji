@@ -1,0 +1,221 @@
+# Internationalisation (i18n)
+
+## Vue d'ensemble
+
+Le système de traduction de Beji utilise un système de messages basé sur JSON avec support pour 4 langues :
+- `en` (English)
+- `fr` (Français)
+- `it` (Italiano)
+- `fa` (فارسی)
+
+## Structure des fichiers de traduction
+
+Les fichiers de traduction se trouvent dans le dossier `messages/` :
+- `messages/en.json` - Traductions en anglais (langue par défaut)
+- `messages/fr.json` - Traductions en français
+- `messages/it.json` - Traductions en italien
+- `messages/fa.json` - Traductions en persan
+
+## Structure des clés de traduction
+
+Les clés sont organisées par section/feature :
+
+```json
+{
+  "Start": {
+    "subtitle": "...",
+    "chooseEmojiLabel": "...",
+    ...
+  },
+  "Login": {
+    "title": "...",
+    "subtitle": "...",
+    ...
+  },
+  "UserMenu": {
+    "userMenuLabel": "...",
+    "disconnect": "...",
+    ...
+  },
+  "World": {
+    "loadingWorld": "...",
+    "error": "...",
+    ...
+  }
+}
+```
+
+## Utilisation dans les composants
+
+### 1. Importer le hook `useMessages`
+
+```tsx
+import { useMessages } from "../i18n/DictionaryProvider";
+```
+
+### 2. Utiliser le hook dans le composant
+
+```tsx
+export function MyComponent() {
+  const { messages } = useMessages<{ 
+    MySection: { 
+      myKey: string;
+      anotherKey: string;
+    } 
+  }>();
+  
+  return (
+    <div>
+      {messages.MySection?.myKey ?? "Fallback text"}
+    </div>
+  );
+}
+```
+
+### 3. Pattern recommandé
+
+- Toujours utiliser l'opérateur de coalescence nulle (`??`) pour fournir un texte de fallback
+- Le fallback doit être en anglais (langue par défaut)
+- Typage TypeScript pour la sécurité des types
+
+## Ajouter de nouvelles traductions
+
+### 1. Ajouter la clé dans `messages/en.json`
+
+```json
+{
+  "NewSection": {
+    "newKey": "English text"
+  }
+}
+```
+
+### 2. Ajouter la traduction dans tous les autres fichiers
+
+- `messages/fr.json` - Traduction française
+- `messages/it.json` - Traduction italienne
+- `messages/fa.json` - Traduction persane
+
+**Important** : Tous les fichiers doivent avoir la même structure de clés. Si une clé existe dans `en.json`, elle doit exister dans tous les autres fichiers.
+
+### 3. Utiliser dans le composant
+
+```tsx
+const { messages } = useMessages<{ 
+  NewSection: { newKey: string } 
+}>();
+
+// Utilisation
+{messages.NewSection?.newKey ?? "Fallback"}
+```
+
+## Sections de traduction existantes
+
+### `Start`
+- `subtitle` - Sous-titre de la page de démarrage
+- `chooseEmojiLabel` - Label pour choisir un emoji
+- `nameLabel` - Label pour le nom du Beji
+- `namePlaceholder` - Placeholder pour le champ nom
+- `startButton` - Texte du bouton de démarrage
+- `creating` - Texte pendant la création
+- `existingBejisLabel` - Label pour la liste des Bejis existants
+- `joinWorldLabel` - Label pour rejoindre un monde
+- `createNewBejiLabel` - Label pour créer un nouveau Beji
+- `loadingBejisLabel` - Texte pendant le chargement des Bejis
+- `noBejisLabel` - Message quand l'utilisateur n'a pas de Bejis
+
+### `Login`
+- `title` - Titre de la page de connexion
+- `subtitle` - Sous-titre de la page de connexion
+- `signInButton` - Texte du bouton de connexion
+
+### `UserMenu`
+- `userMenuLabel` - Label ARIA pour le menu utilisateur
+- `disconnect` - Texte du bouton de déconnexion
+- `language` - Label pour la section langue
+
+### `World`
+- `loadingWorld` - Texte pendant le chargement d'un monde
+- `error` - Préfixe pour les messages d'erreur
+- `worldIdRequired` - Message d'erreur quand l'ID du monde est requis
+- `worldNotFound` - Message d'erreur quand le monde n'est pas trouvé
+- `invalidWorldData` - Message d'erreur pour données invalides
+- `failedToLoadWorld` - Message d'erreur général
+
+### `WorldDrawer`
+- `home` - Label pour le bouton d'accueil
+- `homeAriaLabel` - Label ARIA pour le bouton d'accueil
+- `worldLabel` - Label pour "Monde" dans les tooltips
+- `goToWorldAriaLabel` - Label ARIA pour aller au monde d'un Beji
+
+### `Actions`
+- `zoomToBeji` - Label pour l'action zoom vers Beji
+- `zoomToBejiShortcut` - Tooltip avec raccourci pour zoom vers Beji
+- `toggleFollowMouse` - Label pour basculer le suivi de la souris
+- `followingMouse"` - État actif du suivi de la souris
+- `notFollowingMouse"` - État inactif du suivi de la souris
+- `shortcutSuffix"` - Suffixe pour les raccourcis clavier (ex: " • Shortcut: Z")
+
+## Bonnes pratiques
+
+1. **Cohérence** : Utilisez des noms de clés descriptifs et cohérents
+2. **Fallback** : Toujours fournir un texte de fallback en anglais
+3. **Typage** : Utilisez TypeScript pour typer les messages
+4. **Complétude** : Assurez-vous que toutes les clés existent dans tous les fichiers de langue
+5. **Contexte** : Les clés doivent être suffisamment descriptives pour comprendre leur usage
+6. **Pas de texte hardcodé** : Évitez les chaînes de caractères hardcodées dans les composants
+
+## Vérification
+
+Pour vérifier que toutes les traductions sont complètes :
+
+1. Vérifiez que toutes les clés de `en.json` existent dans les autres fichiers
+2. Recherchez les chaînes hardcodées dans le code avec des outils comme `grep`
+3. Testez l'application dans toutes les langues supportées
+
+## Exemple complet
+
+```tsx
+// Composant
+import { useMessages } from "../i18n/DictionaryProvider";
+
+export function LoginPage() {
+  const { messages } = useMessages<{ 
+    Login: { 
+      title: string;
+      subtitle: string;
+      signInButton: string;
+    } 
+  }>();
+  
+  return (
+    <div>
+      <h1>{messages.Login?.title ?? "Welcome to Beji 🎮"}</h1>
+      <p>{messages.Login?.subtitle ?? "Connect with your Google account"}</p>
+      <button>{messages.Login?.signInButton ?? "Sign in with Google"}</button>
+    </div>
+  );
+}
+```
+
+```json
+// messages/en.json
+{
+  "Login": {
+    "title": "Welcome to Beji 🎮",
+    "subtitle": "Connect with your Google account to start playing",
+    "signInButton": "Sign in with Google"
+  }
+}
+```
+
+```json
+// messages/fr.json
+{
+  "Login": {
+    "title": "Bienvenue sur Beji 🎮",
+    "subtitle": "Connectez-vous avec votre compte Google pour commencer à jouer",
+    "signInButton": "Se connecter avec Google"
+  }
+}
+```

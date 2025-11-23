@@ -54,9 +54,9 @@ The server:
 4. **Sets httpOnly secure cookie**:
    - Cookie name: `authorization`
    - `httpOnly: true` - Not accessible to JavaScript (XSS protection)
-   - `secure: true` in production - Only sent over HTTPS
+   - `secure: true` - Always enabled (HTTPS used in dev and production)
    - `sameSite: 'strict'` - CSRF protection
-   - `maxAge: 30 days`
+   - `maxAge: 30 days` (60 * 60 * 24 * 30 seconds)
    - `path: '/'`
 
 5. **Redirects to home page**:
@@ -93,21 +93,33 @@ For Connect RPC services (`PlayerService`, `WorldService`):
 
 2. **Service Implementation**:
    ```typescript
-   const authPayload = req.contextValues.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
+   const authPayload = context.values.get(AUTH_CONTEXT_KEY) as JWTPayload | undefined;
    if (!authPayload) {
      // Handle unauthenticated request
+     throw new ConnectError('Unauthorized', Code.Unauthenticated);
    }
    const userId = authPayload.userId;
    ```
+   
+   **Note**: `WorldService.createWorld` has a fallback mechanism that checks the `Authorization` header if the context is not set (for compatibility), but the primary method is via cookies through the interceptor.
 
 ### 5. WebSocket Authentication
 
 WebSocket connections authenticate using the `authorization` cookie:
 
-1. Client connects with cookies (automatically sent)
+1. Client connects to `/api/ws/beji-sync` with cookies (automatically sent from same origin)
 2. Server extracts and verifies JWT from cookie
-3. If invalid, connection is closed with code `1008` (policy violation)
+3. If invalid or missing, connection is closed with code `1008` (policy violation) and message "Unauthorized: No token" or "Authentication failed"
 4. If valid, connection proceeds with authenticated user context
+5. Server verifies user ownership of bejis before allowing operations:
+   - On `connect` message: Verifies the beji belongs to the authenticated user
+   - On `update` message: Verifies the beji belongs to the authenticated user
+   - Sends error messages if ownership verification fails
+
+**WebSocket Message Types**:
+- `connect`: Client sends `{ type: 'connect', bejiId: string }` to establish connection for a specific beji
+- `update`: Client sends `{ type: 'update', bejiId: string, position: { x, y }, target?: { x, y }, walk?: boolean }` to update beji position
+- `ping`: Client sends `{ type: 'ping' }` for keepalive, server responds with `{ type: 'pong' }`
 
 ### 6. Logout (`POST /authentication/logout`)
 
@@ -154,8 +166,8 @@ JWT_SECRET=your_jwt_secret_key  # Should be a strong random string
 - Cookies use `sameSite: 'strict'` - only sent with same-site requests
 - Cross-site requests cannot include authentication cookies
 
-### HTTPS in Production
-- Cookies use `secure: true` in production - only sent over HTTPS
+### HTTPS Protection
+- Cookies use `secure: true` always (HTTPS is used in both dev and production)
 - Prevents token interception on unencrypted connections
 
 ### Token Verification
@@ -166,29 +178,52 @@ JWT_SECRET=your_jwt_secret_key  # Should be a strong random string
 ## Implementation Files
 
 - **JWT Functions**: `src/lib/auth/jwt.ts`
-  - `signJWT(payload)` - Create JWT token
+  - `signJWT(payload)` - Create JWT token with 30-day expiration
   - `verifyJWT(token)` - Verify and extract payload
+  - `JWTPayload` interface: `{ userId: string, email: string, picture?: string, iat?: number, exp?: number }`
   
-- **Auth Helper**: `server.ts` (lines 86-100)
+- **Auth Helper**: `server.ts` (lines 118-134)
   - `authenticateRequest(request)` - Extract and verify cookie token
+  - Returns `JWTPayload | null`
   
-- **OAuth Routes**: `server.ts` (lines 186-336)
-  - `GET /authentication/oauth/google` - OAuth callback
+- **OAuth Routes**: `server.ts` (lines 220-367)
+  - `GET /authentication/oauth/google` - OAuth callback handler
   - `GET /api/authentication/get-token` - Check auth status
-  - `POST /authentication/logout` - Logout
+  - `POST /authentication/logout` - Logout (clears cookie)
   
-- **Auth Interceptor**: `server.ts` (lines 136-168)
+- **Auth Interceptor**: `server.ts` (lines 170-202)
   - Connect RPC interceptor for authenticated services
+  - Automatically extracts JWT from cookies for `PlayerService` and `WorldService`
+  - Stores payload in request context via `AUTH_CONTEXT_KEY`
+  
+- **WebSocket Handler**: `server.ts` (lines 420-563)
+  - `/api/ws/beji-sync` - WebSocket endpoint for real-time beji synchronization
+  - Authenticates via cookie, verifies beji ownership
+  
+- **Service Context Key**: `src/lib/rpc/services/playerService.ts` (line 28)
+  - `AUTH_CONTEXT_KEY` - Context key for accessing auth payload in RPC services
+  - Used by both `PlayerService` and `WorldService`
   
 - **Login Page**: `src/pages/LoginPage.tsx`
   - Client-side OAuth initiation
-  - Auth status checking
+  - Auth status checking on mount
+  - Redirects to home if already authenticated
 
 ## Testing
 
 Authentication is tested in:
-- `tests/auth-jwt.test.ts` - JWT signing and verification
-- `tests/auth-oauth.test.ts` - OAuth flow, callback, token exchange, error handling
+- `tests/auth-jwt.test.ts` - JWT signing and verification, token tampering, expiration, special characters
+- `tests/auth-oauth.test.ts` - OAuth flow, callback, token exchange, error handling, cookie security, redirect URI handling
+
+**Test Coverage**:
+- JWT creation and verification
+- Token tampering detection
+- OAuth callback with valid/invalid codes
+- Token exchange failures
+- User info fetch failures
+- Cookie security attributes
+- Error handling and redirects
+- Get token endpoint with valid/invalid tokens
 
 ## Public Config Endpoint
 

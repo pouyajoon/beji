@@ -126,10 +126,20 @@ export function CanvasMap() {
     const cameraTargetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
     const currentBejiIdRef = useRef<string | null>(null);
     const lastInitializedBejiIdRef = useRef<string | null>(null);
+    const lastWorldIdRef = useRef<string | null>(null);
+    const hasInitializedForWorldRef = useRef<Set<string>>(new Set());
     useEffect(() => {
         // Initialize camera target only when currentPlayerId changes or when beji is first created
         const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
         const currentFocusId = focus?.id ?? null;
+        const currentWorldId = focus?.worldId ?? null;
+        // Reset zoom initialization when world changes
+        if (currentWorldId && currentWorldId !== lastWorldIdRef.current) {
+            lastInitializedBejiIdRef.current = null;
+            lastWorldIdRef.current = currentWorldId;
+            // Clear initialization flag for old world if needed
+            hasInitializedForWorldRef.current.clear();
+        }
         // Only update if the beji ID changed (new beji) or currentPlayerId changed
         if (focus && currentFocusId !== currentBejiIdRef.current) {
             currentBejiIdRef.current = currentFocusId;
@@ -150,18 +160,51 @@ export function CanvasMap() {
     
     // Initialize zoom to show 20m around the beji when loading a world
     useEffect(() => {
-        const focus = currentPlayerId ? beji.find((b) => b.playerId === currentPlayerId) : beji[0];
-        // Initialize zoom when beji is loaded and viewport is ready, and only once per beji
-        if (focus && viewport.width > 0 && focus.id !== lastInitializedBejiIdRef.current) {
-            // Calculate zoom to show 20m around beji (40m total view)
-            const desiredViewWidthMeters = 40; // 20m on each side
-            const calculatedPixelsPerMeter = viewport.width / desiredViewWidthMeters;
-            setPixelsPerMeter(calculatedPixelsPerMeter);
-            // Reset camera offset to center on beji
-            setCameraOffset({ x: 0, y: 0 });
-            lastInitializedBejiIdRef.current = focus.id;
+        // Use currentBeji which is already computed
+        if (!currentBeji || !currentBeji.worldId) return;
+        
+        // Wait for viewport to be measured (not just default 800x800)
+        // Check if viewport has been measured by ResizeObserver (should be > 800 or match container)
+        if (viewport.width <= 800 && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            if (rect.width <= 0) return; // Container not ready yet
         }
-    }, [beji, currentPlayerId, viewport.width, setPixelsPerMeter, setCameraOffset]);
+        
+        // Check if we need to initialize zoom for this beji/world
+        // Initialize if beji changed OR if we haven't initialized for this world yet
+        const needsInitialization = 
+            currentBeji.id !== lastInitializedBejiIdRef.current || 
+            !hasInitializedForWorldRef.current.has(currentBeji.worldId);
+        
+        if (needsInitialization) {
+            // Use double requestAnimationFrame to ensure viewport is fully measured and DOM is ready
+            const rafId = requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Double-check that beji still exists and hasn't changed
+                    const stillCurrent = beji.find((b) => b.id === currentBeji.id);
+                    if (stillCurrent && stillCurrent.worldId && stillCurrent.id === currentBeji.id) {
+                        // Get actual viewport width (may have changed)
+                        const actualWidth = containerRef.current?.getBoundingClientRect().width ?? viewport.width;
+                        if (actualWidth > 0) {
+                            // Calculate zoom to show 20m around beji (40m total view)
+                            const desiredViewWidthMeters = 40; // 20m on each side
+                            const calculatedPixelsPerMeter = actualWidth / desiredViewWidthMeters;
+                            // Force zoom initialization by setting it directly
+                            // Use setTimeout to ensure localStorage zoom has been loaded first
+                            setTimeout(() => {
+                                setPixelsPerMeter(calculatedPixelsPerMeter);
+                                // Reset camera offset to center on beji
+                                setCameraOffset({ x: 0, y: 0 });
+                                lastInitializedBejiIdRef.current = currentBeji.id;
+                                hasInitializedForWorldRef.current.add(currentBeji.worldId);
+                            }, 0);
+                        }
+                    }
+                });
+            });
+            return () => cancelAnimationFrame(rafId);
+        }
+    }, [currentBeji, viewport.width, beji, pixelsPerMeter, setPixelsPerMeter, setCameraOffset]);
     const cameraCenterX = cameraTarget.x + cameraOffset.x;
     const cameraCenterY = cameraTarget.y + cameraOffset.y;
 

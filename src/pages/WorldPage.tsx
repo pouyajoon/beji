@@ -12,8 +12,10 @@ import {
   type World,
 } from '../../components/atoms';
 import { AuthenticatedPage } from '../../components/AuthenticatedPage';
+import { HourglassLoader } from '../../components/HourglassLoader';
 import { Map } from '../../components/Map';
 import { WorldDrawer } from '../../components/world/WorldDrawer';
+import { useMessages } from '../../i18n/DictionaryProvider';
 import { useSetAtom } from '../../lib/jotai';
 import { getWorld } from '../lib/rpc/worldClient';
 import type { StaticBeji as ProtoStaticBeji } from '../proto/staticbeji/v1/staticbeji_pb';
@@ -23,6 +25,16 @@ function WorldPageContent() {
   const worldId = params.id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { messages } = useMessages<{ 
+    World: { 
+      loadingWorld: string;
+      error: string;
+      worldIdRequired: string;
+      worldNotFound: string;
+      invalidWorldData: string;
+      failedToLoadWorld: string;
+    } 
+  }>();
 
   const setPlayers = useSetAtom(playersAtom);
   const setBeji = useSetAtom(bejiAtom);
@@ -31,7 +43,7 @@ function WorldPageContent() {
 
   useEffect(() => {
     if (!worldId) {
-      setError('World ID is required');
+      setError(messages.World?.worldIdRequired ?? 'World ID is required');
       setLoading(false);
       return;
     }
@@ -44,13 +56,13 @@ function WorldPageContent() {
         const response = await getWorld(worldId!);
 
         if (!response || !response.world) {
-          throw new Error('World not found or invalid response structure');
+          throw new Error(messages.World?.worldNotFound ?? 'World not found or invalid response structure');
         }
 
         const worldData = response.world;
 
         if (!worldData.beji || !worldData.player || !worldData.world) {
-          throw new Error('Invalid world data structure');
+          throw new Error(messages.World?.invalidWorldData ?? 'Invalid world data structure');
         }
 
         const player: Player = {
@@ -112,14 +124,14 @@ function WorldPageContent() {
         setStaticBeji(staticBeji);
       } catch (err) {
         console.error('Error loading world:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load world');
+        setError(err instanceof Error ? err.message : (messages.World?.failedToLoadWorld ?? 'Failed to load world'));
       } finally {
         setLoading(false);
       }
     }
 
     loadWorld();
-  }, [worldId, setPlayers, setBeji, setStaticBeji, setWorlds]);
+  }, [worldId, setPlayers, setBeji, setStaticBeji, setWorlds, messages]);
 
   return (
     <div
@@ -151,9 +163,11 @@ function WorldPageContent() {
         }}
       >
         {loading ? (
-          <div style={{ fontSize: '18px', color: '#000000' }}>Loading world...</div>
+          <HourglassLoader text={messages.World?.loadingWorld ?? 'Loading world...'} size={32} />
         ) : error ? (
-          <div style={{ fontSize: '18px', color: '#ef4444' }}>Error: {error}</div>
+          <div style={{ fontSize: '18px', color: '#ef4444' }}>
+            {messages.World?.error ?? 'Error'}: {error}
+          </div>
         ) : (
           <div style={{ width: '100%', height: '100%' }}>
             <Map />

@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from "react";
 
 import { useAtomValue, useSetAtom } from "../../lib/jotai";
+import { useMessages } from "../../i18n/DictionaryProvider";
 import { registerShortcut, unregisterShortcutById, RESERVED_KEYS } from "../../src/lib/shortcuts";
 import { bejiAtom, playersAtom, zoomPxPerMeterAtom } from "../atoms";
 import type { Beji } from "../atoms";
@@ -19,6 +20,12 @@ export function ZoomToBejiAction({ currentPlayerId, setCameraOffset, getPhysicsP
     const beji = useAtomValue(bejiAtom);
     const players = useAtomValue(playersAtom);
     const setPixelsPerMeter = useSetAtom(zoomPxPerMeterAtom);
+    const { messages } = useMessages<{ 
+        Actions: { 
+            zoomToBeji: string;
+            zoomToBejiShortcut: string;
+        } 
+    }>();
 
     // Get current player's emoji
     const currentPlayerEmoji = players[0]?.emoji ?? "👤";
@@ -56,18 +63,21 @@ export function ZoomToBejiAction({ currentPlayerId, setCameraOffset, getPhysicsP
         registerShortcut({
             id: "zoom-to-beji",
             key: "z",
-            description: "Zoom to beji",
+            description: messages.Actions?.zoomToBeji ?? "Zoom to beji",
             preventDefault: true,
             handler: () => handleZoomToBeji(),
         });
         return () => unregisterShortcutById("zoom-to-beji");
-    }, [handleZoomToBeji]);
+    }, [handleZoomToBeji, messages]);
+
+    const tooltipLabel = messages.Actions?.zoomToBejiShortcut ?? "Zoom to beji • Shortcut: Z";
+    const ariaLabel = messages.Actions?.zoomToBeji ?? "Zoom to beji";
 
     return (
-        <Tooltip label="Zoom to beji • Shortcut: Z">
+        <Tooltip label={tooltipLabel}>
             <button
                 type="button"
-                aria-label="Zoom to beji"
+                aria-label={ariaLabel}
                 onClick={handleZoomToBeji}
                 style={{
                     fontSize: 18,

@@ -143,3 +143,17 @@ th, td {
   border-right: 4px solid transparent;
   border-bottom: 4px solid #111827;
 }
+
+/* Hourglass loader animation */
+.hourglass-loader {
+  animation: hourglass-rotate 2s linear infinite;
+}
+
+@keyframes hourglass-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

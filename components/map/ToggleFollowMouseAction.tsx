@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { useMessages } from "../../i18n/DictionaryProvider";
 import { registerShortcut, unregisterShortcutById, RESERVED_KEYS } from "../../src/lib/shortcuts";
 import { Tooltip } from "../Tooltip";
 
@@ -11,6 +12,15 @@ type ToggleFollowMouseActionProps = {
 };
 
 export function ToggleFollowMouseAction({ followMouse, onToggle }: ToggleFollowMouseActionProps) {
+    const { messages } = useMessages<{ 
+        Actions: { 
+            toggleFollowMouse: string;
+            followingMouse: string;
+            notFollowingMouse: string;
+            shortcutSuffix: string;
+        } 
+    }>();
+
     // Register keyboard shortcut
     useEffect(() => {
         // Avoid using reserved arrow keys
@@ -18,14 +28,17 @@ export function ToggleFollowMouseAction({ followMouse, onToggle }: ToggleFollowM
         registerShortcut({
             id: "toggle-follow-mouse",
             key: "f",
-            description: "Toggle follow mouse",
+            description: messages.Actions?.toggleFollowMouse ?? "Toggle follow mouse",
             preventDefault: true,
             handler: () => onToggle(!followMouse),
         });
         return () => unregisterShortcutById("toggle-follow-mouse");
-    }, [followMouse, onToggle]);
+    }, [followMouse, onToggle, messages]);
 
-    const tooltipLabel = (followMouse ? "Following mouse (click to stop)" : "Not following mouse (click to enable)") + " • Shortcut: F";
+    const shortcutSuffix = messages.Actions?.shortcutSuffix ?? " • Shortcut:";
+    const tooltipLabel = (followMouse 
+        ? (messages.Actions?.followingMouse ?? "Following mouse (click to stop)")
+        : (messages.Actions?.notFollowingMouse ?? "Not following mouse (click to enable)")) + shortcutSuffix + " F";
 
     return (
         <Tooltip label={tooltipLabel}>

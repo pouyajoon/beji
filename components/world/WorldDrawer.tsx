@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { Beji, World } from '../atoms';
-import { Tooltip } from '../Tooltip';
+import { useMessages } from '../../i18n/DictionaryProvider';
+import { useAtomValue } from '../../lib/jotai';
 import { getUserBejis } from '../../src/lib/rpc/playerClient';
 import type { BejiWithWorld } from '../../src/proto/player/v1/player_pb';
+import { userSubAtom, type Beji, type World } from '../atoms';
+import { HourglassLoader } from '../HourglassLoader';
+import { Tooltip } from '../Tooltip';
 
 type WorldDrawerProps = {
   currentWorldId: string | undefined;
@@ -14,59 +17,63 @@ export function WorldDrawer({ currentWorldId }: WorldDrawerProps) {
   const navigate = useNavigate();
   const [userBejis, setUserBejis] = useState<Array<Beji & { world?: World | null }>>([]);
   const [isLoadingBejis, setIsLoadingBejis] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const userId = useAtomValue(userSubAtom); // Utiliser l'atom au lieu de refetch /get-token
+  const { messages } = useMessages<{
+    WorldDrawer: {
+      home: string;
+      homeAriaLabel: string;
+      worldLabel: string;
+      goToWorldAriaLabel: string;
+    }
+  }>();
 
   // Fetch user bejis for the drawer
   useEffect(() => {
-    async function fetchUserAndBejis() {
+    async function fetchUserBejis() {
+      if (!userId) {
+        setUserBejis([]);
+        setIsLoadingBejis(false);
+        return;
+      }
+
       try {
-        const userResponse = await fetch("/api/authentication/get-token", {
-          credentials: 'include',
-        });
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          const currentUserId = userData.userId;
-          setUserId(currentUserId);
+        const bejisData = await getUserBejis(userId);
+        const convertedBejis = (bejisData.bejis || [])
+          .filter((bw: BejiWithWorld) => bw.beji != null)
+          .map((bw: BejiWithWorld) => {
+            const bejiData = bw.beji!; // Safe after filter
+            const beji: Beji = {
+              id: bejiData.id,
+              playerId: bejiData.playerId,
+              worldId: bejiData.worldId,
+              emoji: bejiData.emoji,
+              name: bejiData.name,
+              position: bejiData.position ? { x: bejiData.position.x, y: bejiData.position.y } : { x: 0, y: 0 },
+              target: bejiData.target ? { x: bejiData.target.x, y: bejiData.target.y } : undefined,
+              walk: bejiData.walk,
+              createdAt: Number(bejiData.createdAt),
+            };
 
-          try {
-            const bejisData = await getUserBejis(currentUserId);
-            const convertedBejis = (bejisData.bejis || []).map((bw: BejiWithWorld) => {
-              const beji: Beji = {
-                id: bw.beji.id,
-                playerId: bw.beji.playerId,
-                worldId: bw.beji.worldId,
-                emoji: bw.beji.emoji,
-                name: bw.beji.name,
-                position: bw.beji.position ? { x: bw.beji.position.x, y: bw.beji.position.y } : { x: 0, y: 0 },
-                target: bw.beji.target ? { x: bw.beji.target.x, y: bw.beji.target.y } : undefined,
-                walk: bw.beji.walk,
-                createdAt: Number(bw.beji.createdAt),
-              };
+            const world: World | null = bw.world ? {
+              id: bw.world.id,
+              mainBejiId: bw.world.mainBejiId,
+              staticBejiIds: [],
+              createdAt: Number(bw.world.createdAt),
+            } : null;
 
-              const world: World | null = bw.world ? {
-                id: bw.world.id,
-                mainBejiId: bw.world.mainBejiId,
-                staticBejiIds: [],
-                createdAt: Number(bw.world.createdAt),
-              } : null;
-
-              return { ...beji, world };
-            });
-            setUserBejis(convertedBejis);
-          } catch (error) {
-            console.error("Failed to fetch bejis:", error);
-            setUserBejis([]);
-          }
-        }
+            return { ...beji, world };
+          });
+        setUserBejis(convertedBejis);
       } catch (error) {
-        console.error("Failed to fetch user info:", error);
+        console.error("Failed to fetch bejis:", error);
+        setUserBejis([]);
       } finally {
         setIsLoadingBejis(false);
       }
     }
 
-    fetchUserAndBejis();
-  }, []);
+    fetchUserBejis();
+  }, [userId]); // Ne fetch que quand userId change
 
   const drawerWidth = '40px';
 
@@ -86,7 +93,7 @@ export function WorldDrawer({ currentWorldId }: WorldDrawerProps) {
       }}
     >
       {/* Home button */}
-      <Tooltip label="Accueil">
+      <Tooltip label={messages.WorldDrawer?.home ?? 'Home'}>
         <button
           onClick={() => navigate('/')}
           style={{
@@ -109,7 +116,7 @@ export function WorldDrawer({ currentWorldId }: WorldDrawerProps) {
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
-          aria-label="Retour à l'accueil"
+          aria-label={messages.WorldDrawer?.homeAriaLabel ?? 'Return to home'}
         >
           🏠
         </button>
@@ -126,8 +133,8 @@ export function WorldDrawer({ currentWorldId }: WorldDrawerProps) {
         }}
       >
         {isLoadingBejis ? (
-          <div style={{ padding: '8px', textAlign: 'center', color: 'var(--text-color, #000000)', opacity: 0.7, fontSize: '12px' }}>
-            ⏳
+          <div style={{ padding: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <HourglassLoader text="" size={16} />
           </div>
         ) : userBejis.length === 0 ? (
           <div style={{ padding: '8px', textAlign: 'center', color: 'var(--text-color, #000000)', opacity: 0.7, fontSize: '12px' }}>
@@ -135,9 +142,11 @@ export function WorldDrawer({ currentWorldId }: WorldDrawerProps) {
           </div>
         ) : (
           userBejis.map((beji) => {
-            const tooltipText = `${beji.name}${beji.world ? `\nMonde: ${beji.world.id.slice(0, 8)}...` : ''}`;
+            const worldLabel = messages.WorldDrawer?.worldLabel ?? 'World';
+            const tooltipText = `${beji.name}${beji.world ? `\n${worldLabel}: ${beji.world.id.slice(0, 8)}...` : ''}`;
             const isActive = beji.worldId === currentWorldId;
-            
+            const goToWorldLabel = messages.WorldDrawer?.goToWorldAriaLabel ?? 'Go to world of';
+
             return (
               <Tooltip key={beji.id} label={tooltipText}>
                 <button
@@ -171,7 +180,7 @@ export function WorldDrawer({ currentWorldId }: WorldDrawerProps) {
                       e.currentTarget.style.background = 'transparent';
                     }
                   }}
-                  aria-label={`Aller au monde de ${beji.name}`}
+                  aria-label={`${goToWorldLabel} ${beji.name}`}
                 >
                   {beji.emoji}
                 </button>

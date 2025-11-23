@@ -21,6 +21,7 @@ import { BejisLoader } from "./start/BejisLoader";
 import { CreateBejiForm } from "./start/CreateBejiForm";
 import { ExistingBejisList } from "./start/ExistingBejisList";
 import { Header } from "./start/Header";
+import { HourglassLoader } from "./HourglassLoader";
 import { createWorld } from "../src/lib/rpc/worldClient";
 import type { StaticBeji as ProtoStaticBeji } from "../src/proto/staticbeji/v1/staticbeji_pb";
 
@@ -155,7 +156,6 @@ export function StartPage() {
                 transform: "translateZ(0)",
             }}>
                 <BejisLoader
-                    setUserSub={setUserSub}
                     setUserId={setUserId}
                     setExistingBejis={setExistingBejis}
                     setIsLoadingBejis={setIsLoadingBejis}
@@ -167,34 +167,11 @@ export function StartPage() {
                 />
 
                 {isLoadingBejis && (
-                    <div style={{ 
-                        marginBottom: "16px", 
-                        display: "flex", 
-                        flexDirection: "column", 
-                        alignItems: "center", 
-                        justifyContent: "center",
-                        gap: "12px"
-                    }}>
-                        <div style={{
-                            fontSize: "48px",
-                            animation: "spin 1s linear infinite",
-                            display: "inline-block"
-                        }}>
-                            ⏳
-                        </div>
-                        <div style={{ 
-                            fontSize: "14px", 
-                            color: "var(--text-color, #000000)", 
-                            opacity: 0.7 
-                        }}>
-                            {messages.Start?.loadingBejisLabel ?? "Loading your bejis..."}
-                        </div>
-                        <style>{`
-                            @keyframes spin {
-                                from { transform: rotate(0deg); }
-                                to { transform: rotate(360deg); }
-                            }
-                        `}</style>
+                    <div style={{ marginBottom: "16px" }}>
+                        <HourglassLoader 
+                            text={messages.Start?.loadingBejisLabel ?? "Loading your bejis..."} 
+                            size={48} 
+                        />
                     </div>
                 )}
 

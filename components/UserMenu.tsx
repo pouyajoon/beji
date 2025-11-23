@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { userSubAtom } from "./atoms";
 import LocaleSwitcher from "./LocaleSwitcher";
 import { useMessages } from "../i18n/DictionaryProvider";
-import { useSetAtom } from "../lib/jotai";
+import { useAtomValue } from "../lib/jotai";
 
 interface UserInfo {
     userId: string;
@@ -18,23 +18,27 @@ export default function UserMenu() {
     const [isLoading, setIsLoading] = useState(true);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
-    const setUserSub = useSetAtom(userSubAtom);
-    const { messages } = useMessages<{ UserMenu: { userMenuLabel: string; disconnect: string } }>();
+    const userId = useAtomValue(userSubAtom); // Utiliser l'atom au lieu de refetch
+    const { messages } = useMessages<{ UserMenu: { userMenuLabel: string; disconnect: string; language: string } }>();
     const userMenuMessages = messages.UserMenu;
 
     useEffect(() => {
         async function fetchUserInfo() {
+            if (!userId) {
+                setUserInfo(null);
+                setIsLoading(false);
+                return;
+            }
+
             try {
-                // httpOnly secure cookies are sent automatically with credentials: 'include'
+                // On a déjà le userId depuis l'atom, on récupère juste les infos complètes (email, picture)
                 const response = await fetch("/api/authentication/get-token", {
                     credentials: 'include',
                 });
                 if (response.ok) {
                     const data = await response.json();
                     setUserInfo(data);
-                    setUserSub(data.userId);
                 } else {
-                    // Not authenticated, redirect will happen via proxy
                     setUserInfo(null);
                 }
             } catch (error) {
@@ -45,7 +49,7 @@ export default function UserMenu() {
             }
         }
         fetchUserInfo();
-    }, [setUserSub]);
+    }, [userId]); // Ne fetch que quand userId change
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -73,8 +77,7 @@ export default function UserMenu() {
         } catch (error) {
             console.error("Logout error:", error);
         } finally {
-            // Clear local state
-            setUserSub(null);
+            // Clear local state - userSubAtom sera mis à jour par AuthenticatedPage
             setUserInfo(null);
             // Redirect to login
             navigate("/login");
@@ -168,7 +171,9 @@ export default function UserMenu() {
                             </div>
                         </div>
                         <div className="user-menu-interactive" style={{ padding: "12px 16px", borderBottom: "1px solid", borderColor: "inherit", transition: "background 0.2s ease" }}>
-                            <div style={{ fontSize: "12px", opacity: 0.7, marginBottom: "8px", fontWeight: "500" }}>Language</div>
+                            <div style={{ fontSize: "12px", opacity: 0.7, marginBottom: "8px", fontWeight: "500" }}>
+                                {userMenuMessages.language ?? "Language"}
+                            </div>
                             <LocaleSwitcher />
                         </div>
                         <button

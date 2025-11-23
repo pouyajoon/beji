@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { userSubAtom } from './atoms';
+import { HourglassLoader } from './HourglassLoader';
 import { useSetAtom } from '../lib/jotai';
 
 interface AuthenticatedPageProps {
@@ -36,7 +37,8 @@ export function AuthenticatedPage({ children }: AuthenticatedPageProps) {
       }
     }
     checkAuth();
-  }, [navigate, setUserSub]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]); // setUserSub est stable (Jotai), pas besoin dans les dépendances
 
   if (isChecking) {
     return (
@@ -49,7 +51,7 @@ export function AuthenticatedPage({ children }: AuthenticatedPageProps) {
           justifyContent: 'center',
         }}
       >
-        <div style={{ fontSize: '18px' }}>Loading...</div>
+        <HourglassLoader text="Loading..." size={24} />
       </div>
     );
   }

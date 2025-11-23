@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { userSubAtom } from '../../components/atoms';
+import { useMessages } from '../../i18n/DictionaryProvider';
 import { useSetAtom } from '../../lib/jotai';
 
 export default function LoginPage(): React.JSX.Element | null {
   const navigate = useNavigate();
   const [isClient, setIsClient] = useState(false);
   const setUserSub = useSetAtom(userSubAtom);
+  const { messages } = useMessages<{ Login: { welcome: string; signInToContinue: string; signInButton: string } }>();
 
   useEffect((): void => {
     setIsClient(true);
@@ -30,7 +32,8 @@ export default function LoginPage(): React.JSX.Element | null {
       }
     }
     checkAuth();
-  }, [navigate, setUserSub]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]); // setUserSub est stable (Jotai), pas besoin dans les dépendances
 
   const handleGoogleLogin = async (): Promise<void> => {
     try {
@@ -145,7 +148,7 @@ export default function LoginPage(): React.JSX.Element | null {
               letterSpacing: '-0.02em',
             }}
           >
-            Welcome
+            {messages.Login?.welcome ?? 'Welcome'}
           </h1>
           <p
             className="login-subtitle"
@@ -155,7 +158,7 @@ export default function LoginPage(): React.JSX.Element | null {
               fontWeight: '300',
             }}
           >
-            Sign in with Google to continue
+            {messages.Login?.signInToContinue ?? 'Sign in with Google to continue'}
           </p>
           <button
             onClick={handleGoogleLogin}
@@ -187,7 +190,7 @@ export default function LoginPage(): React.JSX.Element | null {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
-            Sign in with Google
+            {messages.Login?.signInButton ?? 'Sign in with Google'}
           </button>
         </div>
       </div>

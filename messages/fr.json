@@ -15,11 +15,36 @@
   "Login": {
     "title": "Bienvenue sur Beji 🎮",
     "subtitle": "Connectez-vous avec votre compte Google pour commencer à jouer",
-    "signInButton": "Se connecter avec Google"
+    "signInButton": "Se connecter avec Google",
+    "welcome": "Bienvenue",
+    "signInToContinue": "Connectez-vous avec Google pour continuer"
   },
   "UserMenu": {
     "userMenuLabel": "Menu utilisateur",
-    "disconnect": "Se déconnecter"
+    "disconnect": "Se déconnecter",
+    "language": "Langue"
+  },
+  "World": {
+    "loadingWorld": "Chargement du monde...",
+    "error": "Erreur",
+    "worldIdRequired": "L'identifiant du monde est requis",
+    "worldNotFound": "Monde introuvable ou structure de réponse invalide",
+    "invalidWorldData": "Structure de données du monde invalide",
+    "failedToLoadWorld": "Échec du chargement du monde"
+  },
+  "WorldDrawer": {
+    "home": "Accueil",
+    "homeAriaLabel": "Retour à l'accueil",
+    "worldLabel": "Monde",
+    "goToWorldAriaLabel": "Aller au monde de"
+  },
+  "Actions": {
+    "zoomToBeji": "Zoomer vers le Beji",
+    "zoomToBejiShortcut": "Zoomer vers le Beji • Raccourci : Z",
+    "toggleFollowMouse": "Basculer le suivi de la souris",
+    "followingMouse": "Suivi de la souris actif (cliquez pour arrêter)",
+    "notFollowingMouse": "Suivi de la souris inactif (cliquez pour activer)",
+    "shortcutSuffix": " • Raccourci :"
   }
 }
 

@@ -61,7 +61,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: { x: 5, y: 10 },
                 beji,
                 physicsPositions,
@@ -95,7 +94,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: null,
                 beji,
                 physicsPositions,
@@ -129,7 +127,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: null,
                 beji,
                 physicsPositions,
@@ -163,7 +160,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: null,
                 beji,
                 physicsPositions,
@@ -198,7 +194,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: null,
                 beji,
                 physicsPositions,
@@ -216,7 +211,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: null,
                 beji: [],
                 physicsPositions: new Map(),
@@ -261,7 +255,6 @@ describe('drawDebugOverlay', () => {
         expect(() => {
             drawDebugOverlay({
                 ctx,
-                canvas,
                 mouseWorld: { x: 5, y: 10 },
                 beji,
                 physicsPositions,
