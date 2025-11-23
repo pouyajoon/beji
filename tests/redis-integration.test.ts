@@ -8,15 +8,21 @@ import type { RedisClientType } from 'redis';
 config({ path: resolve(process.cwd(), '.env.local') });
 
 describe('Redis Integration Test', () => {
-    let redis: RedisClientType;
+    let redis: RedisClientType | undefined;
     let isConnected = false;
     const testPrefix = 'test:integration:';
 
     beforeAll(async () => {
-        redis = getRedisClient();
+        // Skip if REDISCLI_AUTH is not set
+        if (!process.env.REDISCLI_AUTH) {
+            console.warn('REDISCLI_AUTH not set, skipping Redis integration test');
+            return;
+        }
 
-        // Try to connect and verify Redis is accessible
         try {
+            redis = getRedisClient();
+
+            // Try to connect and verify Redis is accessible
             // Check if already connected or open
             if (redis.isReady || redis.isOpen) {
                 await redis.ping();
@@ -65,7 +71,7 @@ describe('Redis Integration Test', () => {
     });
 
     it('should connect to Redis successfully', async () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return; // Skip if Redis is not available
         }
         const pong = await redis.ping();
@@ -73,7 +79,7 @@ describe('Redis Integration Test', () => {
     });
 
     it('should create and retrieve a hash', async () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return; // Skip if Redis is not available
         }
         const hashKey = `${testPrefix}hash:test`;
@@ -99,7 +105,7 @@ describe('Redis Integration Test', () => {
     });
 
     it('should create and manipulate a list', async () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return; // Skip if Redis is not available
         }
         const listKey = `${testPrefix}list:test`;
@@ -133,7 +139,7 @@ describe('Redis Integration Test', () => {
     });
 
     it('should handle hash with nested data', async () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return; // Skip if Redis is not available
         }
         const hashKey = `${testPrefix}hash:nested`;
@@ -155,7 +161,7 @@ describe('Redis Integration Test', () => {
     });
 
     it('should handle list operations: append and trim', async () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return; // Skip if Redis is not available
         }
         const listKey = `${testPrefix}list:operations`;
@@ -175,11 +181,16 @@ describe('Redis Integration Test', () => {
         await redis.del(listKey);
     });
 
-    it('should verify Redis connection uses REDIS_URL environment variable', () => {
-        // Check that REDIS_URL is set for real connection
-        const hasRedisConfig = !!process.env.REDIS_URL;
+    it('should verify Redis connection uses REDISCLI_AUTH environment variable', () => {
+        // Check that REDISCLI_AUTH is set for real connection
+        if (!process.env.REDISCLI_AUTH) {
+            return; // Skip if REDISCLI_AUTH is not set
+        }
 
         // This test verifies that we're using actual Redis config, not mocks
+        if (!redis) {
+            return; // Skip if Redis is not available
+        }
         expect(redis).toBeDefined();
         if (isConnected) {
             expect(redis.isReady).toBe(true);

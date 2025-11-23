@@ -15,14 +15,20 @@ import { codepointsToEmoji } from "../components/emoji";
 config({ path: resolve(process.cwd(), ".env.local") });
 
 describe("User Registration in Redis", () => {
-    let redis: ReturnType<typeof getRedisClient>;
+    let redis: ReturnType<typeof getRedisClient> | undefined;
     let isConnected = false;
     const testPrefix = "test:user-reg:";
 
     beforeAll(async () => {
-        redis = getRedisClient();
+        // Skip if REDISCLI_AUTH is not set
+        if (!process.env.REDISCLI_AUTH) {
+            console.warn("REDISCLI_AUTH not set, skipping user registration test");
+            return;
+        }
 
         try {
+            redis = getRedisClient();
+
             if (redis.isReady || redis.isOpen) {
                 await redis.ping();
                 isConnected = true;
@@ -72,7 +78,7 @@ describe("User Registration in Redis", () => {
     });
 
     it("should return null for unlinked user", async () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return;
         }
 

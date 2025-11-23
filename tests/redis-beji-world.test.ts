@@ -19,7 +19,7 @@ import { codepointsToEmoji } from '../components/emoji';
 config({ path: resolve(process.cwd(), '.env.local') });
 
 describe('Redis Beji and World Integration Test', () => {
-    let redis: ReturnType<typeof getRedisClient>;
+    let redis: ReturnType<typeof getRedisClient> | undefined;
     let isConnected = false;
     const testPrefix = 'test:beji-world:';
 
@@ -30,10 +30,16 @@ describe('Redis Beji and World Integration Test', () => {
     let testStaticBejiIds: string[];
 
     beforeAll(async () => {
-        redis = getRedisClient();
+        // Skip if REDISCLI_AUTH is not set
+        if (!process.env.REDISCLI_AUTH) {
+            console.warn('REDISCLI_AUTH not set, skipping Redis beji-world integration test');
+            return;
+        }
 
-        // Try to connect and verify Redis is accessible
         try {
+            redis = getRedisClient();
+
+            // Try to connect and verify Redis is accessible
             // Check if already connected or open
             if (redis.isReady || redis.isOpen) {
                 await redis.ping();
@@ -116,7 +122,7 @@ describe('Redis Beji and World Integration Test', () => {
     });
 
     it('should verify Redis connection is available', () => {
-        if (!isConnected) {
+        if (!isConnected || !redis) {
             return; // Skip if Redis is not available
         }
         expect(redis).toBeDefined();
@@ -461,23 +467,25 @@ describe('Redis Beji and World Integration Test', () => {
         expect(savedStaticBeji.map((sb) => sb.id)).toEqual(expect.arrayContaining(staticBejiIds));
 
         // Clean up this test's data
-        try {
-            const keysToDelete = [
-                `beji:player:${playerId}`,
-                `beji:player:${playerId}:beji`,
-                `beji:beji:${bejiId}`,
-                `beji:world:${worldId}:beji`,
-                `beji:world:${worldId}`,
-                `beji:world:${worldId}:staticBeji`,
-                ...staticBejis.map((sb) => `beji:staticBeji:${sb.id}`)
-            ];
-            await redis.del(keysToDelete);
-            await redis.sRem('beji:players', playerId);
-            await redis.sRem('beji:beji', bejiId);
-            await redis.sRem('beji:staticBeji', staticBejiIds);
-            await redis.sRem('beji:worlds', worldId);
-        } catch (error) {
-            console.warn('Error cleaning up complete test data:', error);
+        if (redis) {
+            try {
+                const keysToDelete = [
+                    `beji:player:${playerId}`,
+                    `beji:player:${playerId}:beji`,
+                    `beji:beji:${bejiId}`,
+                    `beji:world:${worldId}:beji`,
+                    `beji:world:${worldId}`,
+                    `beji:world:${worldId}:staticBeji`,
+                    ...staticBejis.map((sb) => `beji:staticBeji:${sb.id}`)
+                ];
+                await redis.del(keysToDelete);
+                await redis.sRem('beji:players', playerId);
+                await redis.sRem('beji:beji', bejiId);
+                await redis.sRem('beji:staticBeji', staticBejiIds);
+                await redis.sRem('beji:worlds', worldId);
+            } catch (error) {
+                console.warn('Error cleaning up complete test data:', error);
+            }
         }
     });
 });

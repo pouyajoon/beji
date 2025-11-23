@@ -13,39 +13,50 @@ export function getRedisClient(): RedisClientType {
         return redis;
     }
 
-    const redisUrl = getEnvVar("REDIS_URL");
-    const redisCliAuth = getEnvVar("REDISCLI_AUTH"); // Optional: used by Render.com CLI, can contain password or username:password
+    const redisCliAuth = getEnvVar("REDISCLI_AUTH");
 
-    if (!redisUrl) {
-        throw new Error("REDIS_URL environment variable is required");
+    if (!redisCliAuth) {
+        throw new Error("REDISCLI_AUTH environment variable is required");
     }
 
-    // Render.com internal Redis uses redis:// without TLS
-    // Keep the URL as-is (no TLS conversion needed for Render internal Redis)
-    let url = redisUrl;
+    // REDISCLI_AUTH should contain the full connection URL
+    // Format: redis://host:port or rediss://host:port (with TLS)
+    // Or with authentication: redis://username:password@host:port
+    if (!redisCliAuth.startsWith('redis://') && !redisCliAuth.startsWith('rediss://')) {
+        throw new Error("REDISCLI_AUTH must contain a full Redis URL starting with redis:// or rediss://");
+    }
 
-    // If URL doesn't contain credentials and REDISCLI_AUTH is provided, add credentials to URL
-    // REDISCLI_AUTH can be just password or username:password
-    if (redisCliAuth && !url.includes('@') && !url.includes('://:')) {
-        // Check if REDISCLI_AUTH contains username:password or just password
-        const authParts = redisCliAuth.includes(':') ? redisCliAuth.split(':') : [null, redisCliAuth];
-        const [authUsername, authPassword] = authParts;
-        
-        // Insert credentials into URL: redis://host:port -> redis://username:password@host:port
-        const urlMatch = url.match(/^(redis[s]?:\/\/)([^\/]+)$/);
-        if (urlMatch) {
-            const protocol = urlMatch[1];
-            const hostPort = urlMatch[2];
-            if (authUsername) {
-                url = `${protocol}${authUsername}:${authPassword}@${hostPort}`;
-            } else {
-                url = `${protocol}:${authPassword}@${hostPort}`;
-            }
+    // Validate URL format - ensure it has host and port
+    let url: URL;
+    try {
+        url = new URL(redisCliAuth);
+    } catch (error) {
+        if (error instanceof TypeError) {
+            // URL parsing failed
+            throw new Error(`REDISCLI_AUTH contains an invalid URL format: ${error.message}`);
         }
+        throw error;
+    }
+    
+    // Check that hostname is present
+    if (!url.hostname || url.hostname.trim() === '') {
+        throw new Error("REDISCLI_AUTH URL is missing hostname");
+    }
+    
+    // Check that port is present
+    // We require explicit port to avoid ambiguity
+    if (!url.port || url.port.trim() === '') {
+        throw new Error("REDISCLI_AUTH URL is missing port number. Format: redis://host:port or rediss://host:port");
+    }
+    
+    // Validate port is a number
+    const portNum = parseInt(url.port, 10);
+    if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+        throw new Error(`REDISCLI_AUTH URL has invalid port number: ${url.port}`);
     }
 
     redis = createClient({
-        url: url,
+        url: redisCliAuth,
     });
 
     redis.on("error", (err) => {

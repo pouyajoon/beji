@@ -8,23 +8,20 @@ This project uses Redis for persistent game state storage in the MMORPG.
 
 ## Configuration
 
-Redis connection is configured via the `REDIS_URL` environment variable. Create a `.env.local` file (or set environment variables in your deployment):
+Redis connection is configured via the `REDISCLI_AUTH` environment variable. This should contain the full Redis connection URL.
 
 ```bash
-REDIS_URL=redis://red-d4g9n4hr0fns739f93vg:6379
+REDISCLI_AUTH=redis://red-d4g9n4hr0fns739f93vg:6379
+# or with authentication
+REDISCLI_AUTH=redis://default:password@red-d4g9n4hr0fns739f93vg:6379
+# or with TLS
+REDISCLI_AUTH=rediss://redis.example.com:6380
 ```
 
-### Optional: Authentication
-
-If credentials are not included in the URL, you can set `REDISCLI_AUTH`:
-
-```bash
-REDISCLI_AUTH=password
-# or
-REDISCLI_AUTH=username:password
-```
-
-**Note:** Render.com internal Redis uses `redis://` without TLS. The URL format is `redis://red-xxxxx:6379`.
+**Note:** 
+- Render.com internal Redis uses `redis://` without TLS. The URL format is `redis://red-xxxxx:6379`.
+- `REDISCLI_AUTH` must contain a full URL starting with `redis://` or `rediss://`.
+- Render.com provides the full connection string in `REDISCLI_AUTH` when you link a Key Value instance to your service.
 
 ## Redis Provider
 

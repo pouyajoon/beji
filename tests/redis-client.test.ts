@@ -36,8 +36,8 @@ describe('Redis Client', () => {
     });
 
     it('creates Redis client with Render Redis URL (no TLS)', async () => {
-        const originalEnv = process.env.REDIS_URL;
-        process.env.REDIS_URL = 'redis://red-d4g9n4hr0fns739f93vg:6379';
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'redis://red-d4g9n4hr0fns739f93vg:6379';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
@@ -48,12 +48,16 @@ describe('Redis Client', () => {
             url: 'redis://red-d4g9n4hr0fns739f93vg:6379',
         });
 
-        process.env.REDIS_URL = originalEnv;
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
     });
 
     it('creates Redis client with rediss:// URL (TLS already)', async () => {
-        const originalEnv = process.env.REDIS_URL;
-        process.env.REDIS_URL = 'rediss://localhost:6379';
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'rediss://localhost:6379';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
@@ -64,35 +68,6 @@ describe('Redis Client', () => {
             url: 'rediss://localhost:6379',
         });
 
-        process.env.REDIS_URL = originalEnv;
-    });
-
-    it('throws error when REDIS_URL is not set', async () => {
-        const originalEnv = process.env.REDIS_URL;
-        delete process.env.REDIS_URL;
-
-        const { getRedisClient } = await import('../src/lib/redis/client');
-
-        expect(() => getRedisClient()).toThrow('REDIS_URL environment variable is required');
-
-        process.env.REDIS_URL = originalEnv;
-    });
-
-    it('adds credentials from REDISCLI_AUTH to URL when not in URL', async () => {
-        const originalUrl = process.env.REDIS_URL;
-        const originalCliAuth = process.env.REDISCLI_AUTH;
-        process.env.REDIS_URL = 'redis://red-xxxxx:6379';
-        process.env.REDISCLI_AUTH = 'mypassword';
-
-        const { getRedisClient } = await import('../src/lib/redis/client');
-
-        getRedisClient();
-
-        expect(mockCreateClient).toHaveBeenCalledWith({
-            url: 'redis://:mypassword@red-xxxxx:6379',
-        });
-
-        process.env.REDIS_URL = originalUrl;
         if (originalCliAuth) {
             process.env.REDISCLI_AUTH = originalCliAuth;
         } else {
@@ -100,21 +75,93 @@ describe('Redis Client', () => {
         }
     });
 
-    it('adds username:password from REDISCLI_AUTH to URL', async () => {
-        const originalUrl = process.env.REDIS_URL;
+    it('throws error when REDISCLI_AUTH is not set', async () => {
         const originalCliAuth = process.env.REDISCLI_AUTH;
-        process.env.REDIS_URL = 'redis://red-xxxxx:6379';
-        process.env.REDISCLI_AUTH = 'username:mypassword';
+        delete process.env.REDISCLI_AUTH;
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        expect(() => getRedisClient()).toThrow('REDISCLI_AUTH environment variable is required');
+
+        if (originalCliAuth) process.env.REDISCLI_AUTH = originalCliAuth;
+    });
+
+    it('throws error when REDISCLI_AUTH does not contain a valid URL', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'invalid-url';
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        expect(() => getRedisClient()).toThrow('REDISCLI_AUTH must contain a full Redis URL starting with redis:// or rediss://');
+
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
+    });
+
+    it('throws error when REDISCLI_AUTH URL is missing hostname', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'redis://:6379';
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        // URL constructor will catch this as invalid URL format
+        expect(() => getRedisClient()).toThrow('REDISCLI_AUTH contains an invalid URL format');
+
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
+    });
+
+    it('throws error when REDISCLI_AUTH URL is missing port', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'redis://localhost';
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        expect(() => getRedisClient()).toThrow('REDISCLI_AUTH URL is missing port number');
+
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
+    });
+
+    it('throws error when REDISCLI_AUTH URL has invalid port', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        // Use a port that's out of valid range (1-65535)
+        // Note: Very large ports may be rejected by URL constructor, so test with a port that parses but is invalid
+        process.env.REDISCLI_AUTH = 'redis://localhost:0';
+
+        const { getRedisClient } = await import('../src/lib/redis/client');
+
+        expect(() => getRedisClient()).toThrow('REDISCLI_AUTH URL has invalid port number');
+
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
+    });
+
+
+    it('creates Redis client with authenticated URL', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'redis://default:password@red-xxxxx:6379';
 
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         getRedisClient();
 
         expect(mockCreateClient).toHaveBeenCalledWith({
-            url: 'redis://username:mypassword@red-xxxxx:6379',
+            url: 'redis://default:password@red-xxxxx:6379',
         });
 
-        process.env.REDIS_URL = originalUrl;
         if (originalCliAuth) {
             process.env.REDISCLI_AUTH = originalCliAuth;
         } else {
@@ -123,11 +170,20 @@ describe('Redis Client', () => {
     });
 
     it('returns same Redis client instance on subsequent calls', async () => {
+        const originalCliAuth = process.env.REDISCLI_AUTH;
+        process.env.REDISCLI_AUTH = 'redis://test:6379';
+
         const { getRedisClient } = await import('../src/lib/redis/client');
 
         const client1 = getRedisClient();
         const client2 = getRedisClient();
 
         expect(client1).toBe(client2);
+
+        if (originalCliAuth) {
+            process.env.REDISCLI_AUTH = originalCliAuth;
+        } else {
+            delete process.env.REDISCLI_AUTH;
+        }
     });
 });

@@ -17,8 +17,9 @@ services:
       #   sync: false
       # - key: JWT_SECRET
       #   sync: false
-      # Redis - Set this in Render dashboard (use Redis service URL)
-      # - key: REDIS_URL
+      # Redis - Automatically set when linking a Render Redis service
+      # Or set manually for external Redis:
+      # - key: REDISCLI_AUTH
       #   sync: false
       # Optional: CORS origins
       # - key: ALLOWED_ORIGINS

@@ -104,13 +104,13 @@ const response = await fastify.inject({
 });
 ```
 
-**Note:** Redis integration tests require a properly configured `.env.local` file with `REDIS_URL` environment variable (e.g., `REDIS_URL=redis://red-xxxxx:6379`). Optionally, `REDISCLI_AUTH` can be set if credentials are not in the URL. If Redis is not available, these tests will skip gracefully without failing the test suite.
+**Note:** Redis integration tests require a properly configured `.env.local` file with `REDISCLI_AUTH` environment variable (e.g., `REDISCLI_AUTH=redis://red-xxxxx:6379`). If Redis is not available, these tests will skip gracefully without failing the test suite.
 
 ## Redis Client
 
 The project uses `node-redis` (the official Redis client for Node.js) as specified in the [Redis documentation](https://redis.io/docs/latest/develop/clients/nodejs/). All Redis operations use the `node-redis` API:
 
-- Client creation: `createClient({ url })` where `url` comes from `REDIS_URL` environment variable
+- Client creation: `createClient({ url })` where `url` comes from `REDISCLI_AUTH` environment variable
 - **TLS:** Render.com internal Redis uses `redis://` without TLS
 - Methods use camelCase: `sAdd`, `sMembers`, `hSet`, `hGetAll`, etc.
 - Transactions use `multi()` instead of `pipeline()`

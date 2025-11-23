@@ -1,4 +1,5 @@
 import type { ConnectRouter, ServiceImpl } from '@connectrpc/connect';
+import { ConnectError, Code } from '@connectrpc/connect';
 import type { Message } from '@bufbuild/protobuf';
 import { protoInt64 } from '@bufbuild/protobuf';
 import { WorldService } from '../../../proto/world/v1/world_connect';
@@ -177,33 +178,49 @@ export function registerWorldService(router: ConnectRouter) {
         try {
           if (!req.worldId) {
             console.error('[WorldService.getWorld] Validation failed: worldId is required');
-            throw new Error('worldId is required');
+            throw new ConnectError('worldId is required', Code.InvalidArgument);
           }
 
           const world = await getWorldFromRedis(req.worldId);
           if (!world) {
             console.error('[WorldService.getWorld] World not found:', req.worldId);
-            throw new Error('World not found');
+            throw new ConnectError(`World not found: ${req.worldId}`, Code.NotFound);
           }
 
           const beji = await getBeji(world.mainBejiId);
           if (!beji) {
             console.error('[WorldService.getWorld] Main beji not found:', world.mainBejiId);
-            throw new Error('Main beji not found');
+            throw new ConnectError(`Main beji not found: ${world.mainBejiId}`, Code.NotFound);
           }
 
           const player = await getPlayer(beji.playerId);
           if (!player) {
             console.error('[WorldService.getWorld] Player not found:', beji.playerId);
-            throw new Error('Player not found');
+            throw new ConnectError(`Player not found: ${beji.playerId}`, Code.NotFound);
           }
 
           const staticBeji = await getStaticBejiForWorld(world.id);
           const worldData = convertAppToProto(world, player, beji, staticBeji);
           return create(GetWorldResponse, { world: worldData });
         } catch (error) {
-          console.error('[WorldService.getWorld] Error:', error, { worldId: req.worldId });
-          throw error;
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorStack = error instanceof Error ? error.stack : undefined;
+          console.error('[WorldService.getWorld] Error:', error, { 
+            worldId: req.worldId,
+            message: errorMessage,
+            stack: errorStack 
+          });
+          
+          // If it's already a ConnectError, re-throw it
+          if (error instanceof ConnectError) {
+            throw error;
+          }
+          
+          // Otherwise, wrap it in a ConnectError with the actual error message
+          throw new ConnectError(
+            `GetWorld failed: ${errorMessage}${errorStack ? `\nStack: ${errorStack}` : ''}`,
+            Code.Internal
+          );
         }
       },
     }
